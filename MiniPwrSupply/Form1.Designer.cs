@@ -31,6 +31,8 @@
             this.components = new System.ComponentModel.Container();
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
             this.grpBox_port_setting = new System.Windows.Forms.GroupBox();
+            this.txtbx_baudrate = new System.Windows.Forms.TextBox();
+            this.txtbx_com = new System.Windows.Forms.TextBox();
             this.btn_sendcmd = new System.Windows.Forms.Button();
             this.txtbx_addr = new System.Windows.Forms.TextBox();
             this.label_com = new System.Windows.Forms.Label();
@@ -50,8 +52,6 @@
             this.txtbx_ovp = new System.Windows.Forms.TextBox();
             this.label_Iset = new System.Windows.Forms.Label();
             this.label_Vset = new System.Windows.Forms.Label();
-            this.txtbx_com = new System.Windows.Forms.TextBox();
-            this.txtbx_baudrate = new System.Windows.Forms.TextBox();
             this.grpBox_port_setting.SuspendLayout();
             this.grpBox_dashboard.SuspendLayout();
             this.SuspendLayout();
@@ -78,6 +78,22 @@
             this.grpBox_port_setting.TabIndex = 0;
             this.grpBox_port_setting.TabStop = false;
             this.grpBox_port_setting.Text = "PortSetting";
+            // 
+            // txtbx_baudrate
+            // 
+            this.txtbx_baudrate.Location = new System.Drawing.Point(97, 88);
+            this.txtbx_baudrate.Name = "txtbx_baudrate";
+            this.txtbx_baudrate.Size = new System.Drawing.Size(66, 22);
+            this.txtbx_baudrate.TabIndex = 5;
+            this.txtbx_baudrate.Text = "9600";
+            // 
+            // txtbx_com
+            // 
+            this.txtbx_com.Location = new System.Drawing.Point(97, 38);
+            this.txtbx_com.Name = "txtbx_com";
+            this.txtbx_com.Size = new System.Drawing.Size(66, 22);
+            this.txtbx_com.TabIndex = 5;
+            this.txtbx_com.Text = "11";
             // 
             // btn_sendcmd
             // 
@@ -115,7 +131,7 @@
             this.btn_open.Name = "btn_open";
             this.btn_open.Size = new System.Drawing.Size(65, 42);
             this.btn_open.TabIndex = 2;
-            this.btn_open.Text = "open";
+            this.btn_open.Text = "Connect Serialport";
             this.btn_open.UseVisualStyleBackColor = true;
             this.btn_open.Click += new System.EventHandler(this.btn_open_Click);
             // 
@@ -185,6 +201,7 @@
             // 
             // txtbx_Iset
             // 
+            this.txtbx_Iset.Enabled = false;
             this.txtbx_Iset.Location = new System.Drawing.Point(258, 81);
             this.txtbx_Iset.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Iset.Name = "txtbx_Iset";
@@ -193,6 +210,7 @@
             // 
             // txtbx_Vset
             // 
+            this.txtbx_Vset.Enabled = false;
             this.txtbx_Vset.Location = new System.Drawing.Point(101, 81);
             this.txtbx_Vset.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Vset.Name = "txtbx_Vset";
@@ -271,22 +289,6 @@
             this.label_Vset.Size = new System.Drawing.Size(25, 12);
             this.label_Vset.TabIndex = 4;
             this.label_Vset.Text = "Vset";
-            // 
-            // txtbx_com
-            // 
-            this.txtbx_com.Location = new System.Drawing.Point(97, 38);
-            this.txtbx_com.Name = "txtbx_com";
-            this.txtbx_com.Size = new System.Drawing.Size(66, 22);
-            this.txtbx_com.TabIndex = 5;
-            this.txtbx_com.Text = "5";
-            // 
-            // txtbx_baudrate
-            // 
-            this.txtbx_baudrate.Location = new System.Drawing.Point(97, 88);
-            this.txtbx_baudrate.Name = "txtbx_baudrate";
-            this.txtbx_baudrate.Size = new System.Drawing.Size(66, 22);
-            this.txtbx_baudrate.TabIndex = 5;
-            this.txtbx_baudrate.Text = "9600";
             // 
             // Form1
             // 

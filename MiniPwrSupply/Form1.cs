@@ -81,14 +81,9 @@ namespace MiniPwrSupply
                 }
                 serialPort1.Open();
                 richTextBox1.AppendText("\nSerialPort is opened");
-                System.Threading.Thread.Sleep(500);
-                serialPort1.Write(@"#START%");
+                //System.Threading.Thread.Sleep(500);
+                //serialPort1.Write(@"#START%");
                 System.Threading.Thread.Sleep(300);
-                int length = serialPort1.BytesToRead;
-                string receiveData = string.Empty;
-                if (true)
-                {
-                }
             }
             catch (Exception ex)
             {
@@ -97,47 +92,67 @@ namespace MiniPwrSupply
             }
         }
 
-        private void serialport1_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        private void btn_sendcmd_Click(object sender, EventArgs e)
         {
+            string sResult = string.Empty;
+            string cmdName = "Voltage_current";
+            string setVoltage = txtbx_Vset.Text;
+            string setIcurrent = txtbx_Iset.Text;
             int length = serialPort1.BytesToRead;
-            string receivedata = string.Empty;
-            string datatime = string.Empty;
+            string receiveData = string.Empty;
+
             try
             {
-                //if (IsFirstTest == true)
-                //{
-                //    receiveCall.Clear();
-                //    receiveCall.Append(receivedata);
-
-                //    Thread.Sleep(1000);
-                //    serialPort1.Write(@"#START%");
-                //    richTextBox1.AppendText(@"Receive #START%");
-                //    Thread.Sleep(200);
-
-                //    receiveCall.Clear();
-                //    IsFirstTest = false;
-                //}
-                if (length != 0)
+                byte[] cmd = new byte[20];
+                cmd[0] = 0xAA;
+                cmd[1] = 0x01;
+                cmd[2] = 0x22;
+                cmd[3] = 0x01;
+                cmd[4] = 0x00;
+                cmd[5] = 0x00;
+                cmd[6] = 0x00;
+                cmd[7] = 0x00;
+                cmd[8] = 0x00;      // Voltage
+                cmd[9] = 0x00;      //  current hex+
+                cmd[10] = 0x00;     // current hex+
+                cmd[11] = 0x00;
+                cmd[12] = 0x00;
+                cmd[13] = 0x00;
+                cmd[14] = 0x00;
+                cmd[15] = 0x00;
+                cmd[16] = 0x00;
+                cmd[17] = 0x00;
+                cmd[18] = 0x00;
+                cmd[19] = 0xce;
+                byte[] result = null;
+                //this._SendCmd(cmd, ref result);
+                try
                 {
-                    byte[] buff = new byte[length];
-                    serialPort1.Read(buff, 0, length);
-                    receivedata = Encoding.Default.GetString(buff);
-                }
-                switch (receivedata)
-                {
-                    //case String a when a.Contains()
-
-                    default:
-                        receiveCall.Clear();
-                        receiveCall.Append(receivedata);
+                    do
+                    {
+                        //byte[] buff = new byte[length];
+                        //serialPort1.Read(cmd, 0, 20);
+                        //receiveData = Encoding.Default.GetString(cmd);
+                        //richTextBox1.AppendText("\n show receviveData " + receiveData);
+                        Thread.Sleep(300);
+                        serialPort1.Write(cmd, 0, cmd.Length);
+                        richTextBox1.AppendText("\n show cmd " + cmd);
                         break;
+                    } while (receiveData == null);
                 }
-                this.Invoke(new Action(() => { this.richTextBox1.AppendText(receivedata + "\r\n"); }));
+                catch (Exception)
+                {
+                    throw;
+                }
+                //sResult = this._ByteArrayToString(result);
             }
             catch (Exception ex)
             {
-                ShowErrMsg(@"serialport1_DataReceived Err" + ex.Message);
-                throw ex;
+                throw new Exception("cmd Err!!" + ex.Message);
+            }
+            finally
+            {
+                serialPort1.Close();
             }
         }
 
@@ -145,9 +160,6 @@ namespace MiniPwrSupply
         {
             Console.WriteLine("[ SEND ] " + this._ByteArrayToString(cmd).Trim());
             //this.Save_LOG_data("[ SEND ] " + this._ByteArrayToString(cmd).Trim());
-            string setVoltage = txtbx_Vset.Text;
-            string setIcurrent = txtbx_Iset.Text;
-            if (setVoltage != string.Empty) { }
 
             result = null;
 
@@ -184,44 +196,56 @@ namespace MiniPwrSupply
                 //hex.AppendFormat("{0:x2} ", b);
                 hex.Append(hexStr.ToUpper());
             }
-            Console.WriteLine("hexTostring --->" + hex.ToString());
+            //Console.WriteLine("hexTostring --->" + hex.ToString());
+            richTextBox1.AppendText("hexTostring --->" + hex.ToString());
             return hex.ToString();
         }
 
-        private void btn_sendcmd_Click(object sender, EventArgs e)
+        private void serialport1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            string sResult = string.Empty;
-            string cmdName = "Voltage_current";
+            int length = serialPort1.BytesToRead;
+            string receivedata = string.Empty;
+            string datatime = string.Empty;
             try
             {
-                byte[] cmd = new byte[20];
-                cmd[0] = 0xAA;
-                cmd[1] = 0x01;
-                cmd[2] = 0x2C;
-                cmd[3] = 0x14;
-                cmd[4] = 0x50;
-                cmd[5] = 0x14;
-                cmd[6] = 0x50;
-                cmd[7] = 0x00;
-                cmd[8] = 0xC8;      // Voltage
-                cmd[9] = 0x0C;      //  current hex+
-                cmd[10] = 0x80;     // current hex+
-                cmd[11] = 0x00;
-                cmd[12] = 0x00;
-                cmd[13] = 0x00;
-                cmd[14] = 0x42;
-                cmd[15] = 0x00;
-                cmd[16] = 0x00;
-                cmd[17] = 0x00;
-                cmd[18] = 0x00;
-                cmd[19] = 0x35;
-                byte[] result = null;
-                this._SendCmd(cmd, ref result);
-                sResult = this._ByteArrayToString(result);
+                SerialPort sp = (SerialPort)sender;
+                string indata = sp.ReadExisting();
+
+                //if (IsFirstTest == true)
+                //{
+                //    receiveCall.Clear();
+                //    receiveCall.Append(receivedata);
+
+                //    Thread.Sleep(1000);
+                //    serialPort1.Write(@"#START%");
+                //    richTextBox1.AppendText(@"Receive #START%");
+                //    Thread.Sleep(200);
+
+                //    receiveCall.Clear();
+                //    IsFirstTest = false;
+                //}
+                if (length != 0)
+                {
+                    byte[] buff = new byte[length];
+                    serialPort1.Read(buff, 0, length);
+                    receivedata = Encoding.Default.GetString(buff);
+                }
+                switch (receivedata)
+                {
+                    //case String a when a.Contains()
+
+                    default:
+                        receiveCall.Clear();
+                        receiveCall.Append(receivedata);
+                        richTextBox1.AppendText("Data acquire from : " + indata);
+                        break;
+                }
+                this.Invoke(new Action(() => { this.richTextBox1.AppendText(receivedata + "\r\n"); }));
             }
             catch (Exception ex)
             {
-                throw new Exception("cmd Err!!" + ex.Message);
+                ShowErrMsg(@"serialport1_DataReceived Err" + ex.Message);
+                throw ex;
             }
         }
     }
