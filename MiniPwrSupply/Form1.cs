@@ -22,7 +22,7 @@ namespace MiniPwrSupply
 
         private static Mutex mutex = new Mutex();
         private volatile bool mGet_Start;
-        private StringBuilder sb = new StringBuilder();
+        private StringBuilder receiveCall = new StringBuilder();
         private bool mIsConnectedSerialPort = false;
 
         public bool ReadySet
@@ -67,7 +67,7 @@ namespace MiniPwrSupply
                 richTextBox1.Clear();
                 if (!mIsConnectedSerialPort)
                 {
-                    this.serialPort1 = new System.IO.Ports.SerialPort(@"COM" + this.cmbx_com.Text, Convert.ToInt32(this.cmbx_baudrate), Parity.None, 8, StopBits.One);
+                    this.serialPort1 = new System.IO.Ports.SerialPort(@"COM" + this.txtbx_com.Text, Convert.ToInt32(this.txtbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
                     serialPort1.ReadTimeout = 100;
                     serialPort1.DataReceived += serialport1_DataReceived;
                     this.mIsConnectedSerialPort = true;
@@ -80,7 +80,7 @@ namespace MiniPwrSupply
                     System.Threading.Thread.Sleep(200);
                 }
                 serialPort1.Open();
-                richTextBox1.AppendText("\nSerialPort is open");
+                richTextBox1.AppendText("\nSerialPort is opened");
                 System.Threading.Thread.Sleep(500);
                 serialPort1.Write(@"#START%");
                 System.Threading.Thread.Sleep(300);
@@ -100,7 +100,7 @@ namespace MiniPwrSupply
         private void serialport1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             int length = serialPort1.BytesToRead;
-            string recevicedata = string.Empty;
+            string receivedata = string.Empty;
             string datatime = string.Empty;
             try
             {
@@ -121,15 +121,18 @@ namespace MiniPwrSupply
                 {
                     byte[] buff = new byte[length];
                     serialPort1.Read(buff, 0, length);
-                    recevicedata = Encoding.Default.GetString(buff);
+                    receivedata = Encoding.Default.GetString(buff);
                 }
-                switch (recevicedata)
+                switch (receivedata)
                 {
                     //case String a when a.Contains()
 
-                    //default:
-                    //    break;
+                    default:
+                        receiveCall.Clear();
+                        receiveCall.Append(receivedata);
+                        break;
                 }
+                this.Invoke(new Action(() => { this.richTextBox1.AppendText(receivedata + "\r\n"); }));
             }
             catch (Exception ex)
             {
@@ -142,7 +145,12 @@ namespace MiniPwrSupply
         {
             Console.WriteLine("[ SEND ] " + this._ByteArrayToString(cmd).Trim());
             //this.Save_LOG_data("[ SEND ] " + this._ByteArrayToString(cmd).Trim());
+            string setVoltage = txtbx_Vset.Text;
+            string setIcurrent = txtbx_Iset.Text;
+            if (setVoltage != string.Empty) { }
+
             result = null;
+
             //Binary_Serail_DLL.BINARY_SERIAL_RESULT serialResult = new Binary_Serail_DLL.BINARY_SERIAL_RESULT();
             IntPtr callbackPtr = IntPtr.Zero;
             //if (callback == null)
@@ -176,7 +184,7 @@ namespace MiniPwrSupply
                 //hex.AppendFormat("{0:x2} ", b);
                 hex.Append(hexStr.ToUpper());
             }
-
+            Console.WriteLine("hexTostring --->" + hex.ToString());
             return hex.ToString();
         }
 
@@ -195,9 +203,9 @@ namespace MiniPwrSupply
                 cmd[5] = 0x14;
                 cmd[6] = 0x50;
                 cmd[7] = 0x00;
-                cmd[8] = 0xC8;
-                cmd[9] = 0x0C;
-                cmd[10] = 0x80;
+                cmd[8] = 0xC8;      // Voltage
+                cmd[9] = 0x0C;      //  current hex+
+                cmd[10] = 0x80;     // current hex+
                 cmd[11] = 0x00;
                 cmd[12] = 0x00;
                 cmd[13] = 0x00;
