@@ -42,6 +42,9 @@
             this.label_Baudrate = new System.Windows.Forms.Label();
             this.label_OVP = new System.Windows.Forms.Label();
             this.grpBox_dashboard = new System.Windows.Forms.GroupBox();
+            this.radioButton1 = new System.Windows.Forms.RadioButton();
+            this.label_WuzhiCmd = new System.Windows.Forms.Label();
+            this.txtbx_WuzhiCmd = new System.Windows.Forms.TextBox();
             this.txtbx_Iset = new System.Windows.Forms.TextBox();
             this.txtbx_Vset = new System.Windows.Forms.TextBox();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
@@ -93,7 +96,7 @@
             this.txtbx_com.Name = "txtbx_com";
             this.txtbx_com.Size = new System.Drawing.Size(66, 22);
             this.txtbx_com.TabIndex = 5;
-            this.txtbx_com.Text = "11";
+            this.txtbx_com.Text = "13";
             // 
             // btn_sendcmd
             // 
@@ -179,6 +182,9 @@
             // grpBox_dashboard
             // 
             this.grpBox_dashboard.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.grpBox_dashboard.Controls.Add(this.radioButton1);
+            this.grpBox_dashboard.Controls.Add(this.label_WuzhiCmd);
+            this.grpBox_dashboard.Controls.Add(this.txtbx_WuzhiCmd);
             this.grpBox_dashboard.Controls.Add(this.txtbx_Iset);
             this.grpBox_dashboard.Controls.Add(this.txtbx_Vset);
             this.grpBox_dashboard.Controls.Add(this.richTextBox1);
@@ -198,6 +204,35 @@
             this.grpBox_dashboard.TabIndex = 1;
             this.grpBox_dashboard.TabStop = false;
             this.grpBox_dashboard.Text = "Dashboard";
+            // 
+            // radioButton1
+            // 
+            this.radioButton1.AutoSize = true;
+            this.radioButton1.Location = new System.Drawing.Point(405, 82);
+            this.radioButton1.Name = "radioButton1";
+            this.radioButton1.Size = new System.Drawing.Size(85, 16);
+            this.radioButton1.TabIndex = 7;
+            this.radioButton1.TabStop = true;
+            this.radioButton1.Text = "radioButton1";
+            this.radioButton1.UseVisualStyleBackColor = true;
+            this.radioButton1.CheckedChanged += new System.EventHandler(this.radioButton1_CheckedChanged);
+            // 
+            // label_WuzhiCmd
+            // 
+            this.label_WuzhiCmd.AutoSize = true;
+            this.label_WuzhiCmd.Location = new System.Drawing.Point(28, 123);
+            this.label_WuzhiCmd.Name = "label_WuzhiCmd";
+            this.label_WuzhiCmd.Size = new System.Drawing.Size(59, 12);
+            this.label_WuzhiCmd.TabIndex = 6;
+            this.label_WuzhiCmd.Text = "WuzhiCmd";
+            // 
+            // txtbx_WuzhiCmd
+            // 
+            this.txtbx_WuzhiCmd.Location = new System.Drawing.Point(102, 113);
+            this.txtbx_WuzhiCmd.Name = "txtbx_WuzhiCmd";
+            this.txtbx_WuzhiCmd.Size = new System.Drawing.Size(388, 22);
+            this.txtbx_WuzhiCmd.TabIndex = 5;
+            this.txtbx_WuzhiCmd.Text = "AA012201000000000000000000000000000000ce";
             // 
             // txtbx_Iset
             // 
@@ -219,7 +254,7 @@
             // 
             // richTextBox1
             // 
-            this.richTextBox1.Location = new System.Drawing.Point(31, 140);
+            this.richTextBox1.Location = new System.Drawing.Point(44, 152);
             this.richTextBox1.Margin = new System.Windows.Forms.Padding(2);
             this.richTextBox1.Name = "richTextBox1";
             this.richTextBox1.Size = new System.Drawing.Size(459, 218);
@@ -255,7 +290,7 @@
             // label_OCP
             // 
             this.label_OCP.AutoSize = true;
-            this.label_OCP.Location = new System.Drawing.Point(185, 46);
+            this.label_OCP.Location = new System.Drawing.Point(203, 48);
             this.label_OCP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_OCP.Name = "label_OCP";
             this.label_OCP.Size = new System.Drawing.Size(27, 12);
@@ -273,7 +308,7 @@
             // label_Iset
             // 
             this.label_Iset.AutoSize = true;
-            this.label_Iset.Location = new System.Drawing.Point(185, 89);
+            this.label_Iset.Location = new System.Drawing.Point(203, 91);
             this.label_Iset.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Iset.Name = "label_Iset";
             this.label_Iset.Size = new System.Drawing.Size(21, 12);
@@ -337,6 +372,9 @@
         private System.Windows.Forms.Label label_Baudrate;
         private System.Windows.Forms.TextBox txtbx_com;
         private System.Windows.Forms.TextBox txtbx_baudrate;
+        private System.Windows.Forms.Label label_WuzhiCmd;
+        private System.Windows.Forms.TextBox txtbx_WuzhiCmd;
+        private System.Windows.Forms.RadioButton radioButton1;
     }
 }
 
