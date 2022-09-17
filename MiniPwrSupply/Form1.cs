@@ -43,6 +43,7 @@ namespace MiniPwrSupply
         private StringBuilder receiveCall = new StringBuilder();
         private Action<string, UInt32> mLogCallback = null;
         private bool mIsConnectedSerialPort = false;
+        private static int iRetryTime = 6;
 
         private void ShowErrMsg(string errMsg)
         {
@@ -136,7 +137,7 @@ namespace MiniPwrSupply
 
         private void serialport1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            string receivedata = string.Empty;
+            string receivedata = string.Empty;      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
             int len = serialPort1.BytesToRead;
             try
             {
@@ -154,9 +155,35 @@ namespace MiniPwrSupply
 
                 if (len != 0)
                 {
-                    byte[] buff = new byte[len];
-                    (sender as SerialPort).Read(buff, 0, len);
+                    byte[] buff = new byte[1024]; //len
+                    (sender as SerialPort).Read(buff, 0, 1024); //len
+                    if (buff[3] == 0x90)       
+                    {
+                        richTextBox1.AppendText("checksum is wrong");
+                    }
+                    else if (buff[3] == 0xA0)
+                    {
+                        richTextBox1.AppendText("wrong params setting or params overflow");
+                    }
+                    else if (buff[3] == 0xB0)
+                    {
+                        richTextBox1.AppendText("cmd cannot executed");
+                    }
+                    else if (buff[3] == 0xC0)
+                    {
+                        richTextBox1.AppendText("cmd is invaild");
+                    }
+                    else if (buff[3] == 0xD0)
+                    {
+                        richTextBox1.AppendText("cmd is unknown");
+                    }
+                    else        // buff[3] == 0x80
+                    {
+                        richTextBox1.AppendText("WuzhiCmd succeed!!");
+                    }
+
                     receivedata = BitConverter.ToString(buff);
+
                 }
                 this._WaitForUIThread(() =>
                 {
@@ -164,7 +191,7 @@ namespace MiniPwrSupply
                     richTextBox1.AppendText(" \r\n receivedata --->" + receivedata);//receivedata.ToArray().ToString());
                 });
 
-                if (receivedata.Contains("第三bytes為80=succeed, 90=failure otherwise"))
+                if (receivedata.Length == 0)//(receivedata.Contains("第三bytes為80=succeed, 90=failure otherwise"))
                 {
                     ShowErrMsg("WuZhiCmd Err!!!" + MessageBox.Show("serialport1_DataReceived crash"));
                     throw new Exception("Cmd Err");
@@ -180,6 +207,28 @@ namespace MiniPwrSupply
 
         private void DisplayTxt(byte[] buffer)
         {
+        }
+
+        private void _comportScanning() 
+        {
+            string[] ports = SerialPort.GetPortNames();
+            SerialPort[] serialport = new SerialPort[ports.Length];
+            foreach (string p in ports)
+            {
+                int i = Array.IndexOf(ports, p);
+                serialport[i] = new SerialPort(); //note this line, otherwise you have no serial port declared, only array reference which can contains real SerialPort object
+                serialport[i].PortName = p;
+                serialport[i].BaudRate = 9600;
+                serialport[i].Open();
+                //Scan inputs for "connectAlready"
+            }
+
+            //1.Scan COM Ports
+            //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
+            //3.When an input has a specific phrase such as "connectAlready",
+            //4.Close all ports and create a new one on the port that received the phrase.
+            //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
+
         }
 
         private void btn_refresh_Click(object sender, EventArgs e)
@@ -221,7 +270,9 @@ namespace MiniPwrSupply
                 serialPort1.Open();
                 richTextBox1.AppendText("\n SerialPort is opened \n");
                 System.Threading.Thread.Sleep(300);
-
+                // ---------------------------------------------------------------------------
+                // ---------------------------------------------------------------------------
+                // ---------------------------------------------------------------------------
                 byte[] cmd = new byte[20];                                                                                                              // wuzhiCmd.Length = 20
                 cmd[0] = 0xaa;
                 cmd[1] = 0x01;
@@ -244,10 +295,12 @@ namespace MiniPwrSupply
                 cmd[18] = 0x00;
                 cmd[19] = 0x35;
                 //this._SendCmd(cmd, ref result);
-                try
+                Int32 tryCount = 1;
+                do
                 {
-                    do
+                    try
                     {
+                    tryCount++;
                         //byte[] buff = new byte[length];
                         //serialPort1.Read(cmd, 0, 20);
                         //receiveData = Encoding.Default.GetString(cmd);
@@ -257,12 +310,18 @@ namespace MiniPwrSupply
                         serialPort1.Write(cmd, 0, cmd.Length);
                         //richTextBox1.AppendText("\n show cmd ---> " + string.Format("0x{0:X}", cmd));
                         break;
-                    } while (receiveData == null);
                 }
-                catch (Exception)
-                {
-                    throw;
-                }
+                    catch (Exception ex)
+                    {
+                        if (iRetryTime < (tryCount - 1))
+                        {
+                            System.Threading.Thread.Sleep(5);
+                            continue;
+                        }
+                        ShowErrMsg("connect serialport ERR");
+                        throw new Exception("serialPort1.Write ERR" + ex.Message);
+                    }
+                } while (receiveData == null);
             }
             catch (Exception ex)
             {
@@ -281,11 +340,12 @@ namespace MiniPwrSupply
             //string cmdName = "Voltage_current";
             //int length = serialPort1.BytesToRead;
             string receiveData = string.Empty;
-            //string wuzhiCmd = txtbx_WuzhiCmd.Text;
+            byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
             byte[] Vset = Encoding.UTF8.GetBytes(txtbx_Vset.Text);  // convert string to HEX
             byte[] Iset = Encoding.UTF8.GetBytes(txtbx_Iset.Text);
             try
             {
+
                 byte[] cmd = new byte[20];      // wuzhiCmd.Length = 20
                 //cmd = Enumerable.Range(0, wuzhiCmd.Length - 2).Where(x => x % 2 == 0).Select(x => Convert.ToByte(wuzhiCmd.Substring(x, 2), 16)).ToArray();
                 //foreach (byte item in cmd)
@@ -293,6 +353,7 @@ namespace MiniPwrSupply
                 //    item.Substring(2, wuzhiCmd.Length);
                 //    string.Format("0x{0:X}", item).Append();
                 //}
+                
                 cmd[0] = 0xAA;
                 cmd[1] = 0x01;
                 cmd[2] = 0x22;
@@ -318,6 +379,11 @@ namespace MiniPwrSupply
                 {
                     do
                     {
+                        cmd.GetType();
+                        if (cmd == wuzhiCmd)
+                        {
+                            ShowErrMsg("OKOKOK");
+                        }
                         //byte[] buff = new byte[length];
                         //serialPort1.Read(cmd, 0, 20);
                         //receiveData = Encoding.Default.GetString(cmd);
@@ -346,15 +412,67 @@ namespace MiniPwrSupply
                 btn_sendcmd.Enabled = false;
             }
         }
+        public string ToHexString(string str)
+        {
+            var sb = new StringBuilder();
 
+            var bytes = Encoding.Unicode.GetBytes(str);
+            foreach (var t in bytes)
+            {
+                sb.Append(t.ToString("X2"));
+            }
+
+            return sb.ToString(); // returns: "48656C6C6F20776F726C64" for "Hello world"
+        }
         private void radioButton1_CheckedChanged(object sender, EventArgs e)
         {
-            string wuzhiCmd = txtbx_WuzhiCmd.Text;
-            byte[] hexAdded = Enumerable.Range(0, wuzhiCmd.Length - 2).Where(x => x % 2 == 0).Select(x => Convert.ToByte(wuzhiCmd.Substring(x, 2), 16)).ToArray();  //wuzhiCmd.Substring(x,2)
-            int total = hexAdded.Sum(x => x);
+            byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+            //array = input.Split(',')
+            byte[] aabyte = new byte[20];
+            byte[] cmd = new byte[20];      // wuzhiCmd.Length = 20
+            List<string> cmdlst = new List<string>();
+            //byte[] hexAdded = Enumerable.Range(0, wuzhiCmd.Length - 2).Where(x => x % 2 == 0).Select(x => Convert.ToByte(wuzhiCmd.Substring(x, 2), 16)).ToArray();  //wuzhiCmd.Substring(x,2)
+            //int total = hexAdded.Sum(x => x);
+            //foreach (string item in wuzhiCmd.Split(' '))
+            //{
+            //    string[] tmp = null;
+            //    cmdlst.Add(string.Concat("0x" + item) + string.Empty);
+            //    Convert.FromBase64String(string.Concat("0x" + item) + string.Empty);
+            //    //(2, wuzhiCmd.Length);
+            //    //tmp = string.Format("0x{0:X}", item);
+            //    //string.Concat("0x" + item)
+            //}
+            var aa = "aa";
+            for (int i = 1; i < 21; i++)
+            {
+                //cmd[i] = 
+                    string.Format("0x{0:X}", aa);  //string.Format();
+            }
+
+            Console.WriteLine("cmdddd: >>> ", cmd);
+
+
+
+            Encoding utf_8 = Encoding.UTF8;
+            byte[] result = cmdlst.SelectMany(x => utf_8.GetBytes(x)).ToArray();
+            richTextBox1.AppendText(cmdlst.ToArray().ToString());
+            //richTextBox1.AppendText(result[0].ToString() + result[1].ToString);
+
             //string totalStr = string.Format("0x{0:X}", total);
-            richTextBox1.AppendText(string.Format("0x{0:X}", total) + "\r\n" + string.Format("{0:X}", total));
-            //return /*string.Format("0x{0:X}", total)*/;
+            //richTextBox1.AppendText(string.Format("0x{0:X}", total) + "\r\n" + string.Format("{0:X}", total));
+            //this._ByteArrayToString();
+            string.Format("0x{0:X}", cmdlst);
+
+
+            //if ((hex.Length % 2) != 0) 
+            //{
+            //    hex = "0" + hex;
+            //}
+
+            //return Enumerable.Range(0, hex.Length)
+            //                 .Where(x => x % 2 == 0)
+            //                 .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+            //                 .ToArray();
         }
     }
 }
