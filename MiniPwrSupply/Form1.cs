@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO.Ports;
 using System.Runtime.InteropServices;
+using System.IO;
 
 namespace MiniPwrSupply
 {
@@ -142,8 +143,21 @@ namespace MiniPwrSupply
             try
             {
                 SerialPort sp = (SerialPort)sender;
-                //string indata = sp.ReadExisting();
-                //const int buffsize = 1024;
+                SerialPort serialPort1 = sender as SerialPort;
+                byte[] data = new byte[serialPort1.BytesToRead]; //this is to provide the data buffer
+                Stream portStream = serialPort1.BaseStream;
+                portStream.Read(data, 0, data.Length);
+                string dataString = Encoding.UTF8.GetString(data);
+                bool hasData = dataString.Split(' ').Contains("AA"); //this is to check if your data has this, if it doesn't do something
+                //You get your data from serial port as byte[]
+                //Do something on your data
+                byte[] globalBuffer = new byte[4000]; //large buffer, put globally
+
+                //In your data received, use Buffer.BlockCopy to copy data to your globalBuffer
+                if (globalBuffer.Length >= 20)          //Beware the index ---> 20*2+19
+                { //less than this length, then the data is incomplete
+                  //Do the checking if length is at least 14
+                }
 
                 //byte[] buff = new byte[serialPort1.BytesToRead];
                 //richTextBox1.AppendText("-------------Data Received!-------------");
@@ -153,7 +167,7 @@ namespace MiniPwrSupply
                 //MessageBox.Show(BitConverter.ToString(buff));
                 //Displays d = new Displays(DisplayTxt);
 
-                if (len != 0)
+                if (globalBuffer.Length >= 20)//legal       //(len != 0)
                 {
                     byte[] buff = new byte[1024]; //len
                     (sender as SerialPort).Read(buff, 0, 1024); //len
@@ -221,8 +235,14 @@ namespace MiniPwrSupply
                 serialport[i].BaudRate = 9600;
                 serialport[i].Open();
                 //Scan inputs for "connectAlready"
-            }
+                //Enumerable.Range(txtbx_com.Text).Append(serialport[i].ToString());
+                    //= serialport[i].ToString();
 
+            }
+            this._WaitForUIThread(() => 
+            {
+                richTextBox1.AppendText("comport scann: {x}" + serialport);
+            });
             //1.Scan COM Ports
             //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
             //3.When an input has a specific phrase such as "connectAlready",
@@ -253,6 +273,9 @@ namespace MiniPwrSupply
                 string receiveData = string.Empty;
                 serialPort1.DtrEnable = true;
                 serialPort1.RtsEnable = true;
+
+                this._comportScanning();
+
                 if (!mIsConnectedSerialPort)
                 {
                     this.serialPort1 = new System.IO.Ports.SerialPort(@"COM" + this.txtbx_com.Text, Convert.ToInt32(this.txtbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
@@ -427,7 +450,8 @@ namespace MiniPwrSupply
         private void radioButton1_CheckedChanged(object sender, EventArgs e)
         {
             byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
-            //array = input.Split(',')
+            richTextBox1.AppendText(wuzhiCmd.Length.ToString());
+
             byte[] aabyte = new byte[20];
             byte[] cmd = new byte[20];      // wuzhiCmd.Length = 20
             List<string> cmdlst = new List<string>();
@@ -473,6 +497,11 @@ namespace MiniPwrSupply
             //                 .Where(x => x % 2 == 0)
             //                 .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
             //                 .ToArray();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            //this._comportScanning();
         }
     }
 }
