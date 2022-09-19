@@ -31,6 +31,7 @@
             this.components = new System.ComponentModel.Container();
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
             this.grpBox_port_setting = new System.Windows.Forms.GroupBox();
+            this.cmbx_com = new System.Windows.Forms.ComboBox();
             this.txtbx_baudrate = new System.Windows.Forms.TextBox();
             this.btn_sendcmd = new System.Windows.Forms.Button();
             this.txtbx_addr = new System.Windows.Forms.TextBox();
@@ -41,7 +42,7 @@
             this.label_Baudrate = new System.Windows.Forms.Label();
             this.label_OVP = new System.Windows.Forms.Label();
             this.grpBox_dashboard = new System.Windows.Forms.GroupBox();
-            this.radioButton1 = new System.Windows.Forms.RadioButton();
+            this.radiobtn_hexadded = new System.Windows.Forms.RadioButton();
             this.label_WuzhiCmd = new System.Windows.Forms.Label();
             this.txtbx_WuzhiCmd = new System.Windows.Forms.TextBox();
             this.txtbx_Iset = new System.Windows.Forms.TextBox();
@@ -54,7 +55,7 @@
             this.txtbx_ovp = new System.Windows.Forms.TextBox();
             this.label_Iset = new System.Windows.Forms.Label();
             this.label_Vset = new System.Windows.Forms.Label();
-            this.cmbx_com = new System.Windows.Forms.ComboBox();
+            this.btn_hexaddition = new System.Windows.Forms.Button();
             this.grpBox_port_setting.SuspendLayout();
             this.grpBox_dashboard.SuspendLayout();
             this.SuspendLayout();
@@ -82,6 +83,14 @@
             this.grpBox_port_setting.TabStop = false;
             this.grpBox_port_setting.Text = "PortSetting";
             // 
+            // cmbx_com
+            // 
+            this.cmbx_com.FormattingEnabled = true;
+            this.cmbx_com.Location = new System.Drawing.Point(80, 38);
+            this.cmbx_com.Name = "cmbx_com";
+            this.cmbx_com.Size = new System.Drawing.Size(82, 20);
+            this.cmbx_com.TabIndex = 6;
+            // 
             // txtbx_baudrate
             // 
             this.txtbx_baudrate.Location = new System.Drawing.Point(97, 88);
@@ -92,10 +101,10 @@
             // 
             // btn_sendcmd
             // 
-            this.btn_sendcmd.Location = new System.Drawing.Point(25, 308);
+            this.btn_sendcmd.Location = new System.Drawing.Point(13, 308);
             this.btn_sendcmd.Margin = new System.Windows.Forms.Padding(2);
             this.btn_sendcmd.Name = "btn_sendcmd";
-            this.btn_sendcmd.Size = new System.Drawing.Size(106, 83);
+            this.btn_sendcmd.Size = new System.Drawing.Size(149, 72);
             this.btn_sendcmd.TabIndex = 2;
             this.btn_sendcmd.Text = "_sendCmd";
             this.btn_sendcmd.UseVisualStyleBackColor = true;
@@ -103,7 +112,7 @@
             // 
             // txtbx_addr
             // 
-            this.txtbx_addr.Location = new System.Drawing.Point(90, 244);
+            this.txtbx_addr.Location = new System.Drawing.Point(90, 133);
             this.txtbx_addr.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_addr.Name = "txtbx_addr";
             this.txtbx_addr.Size = new System.Drawing.Size(72, 22);
@@ -121,10 +130,10 @@
             // 
             // btn_open
             // 
-            this.btn_open.Location = new System.Drawing.Point(97, 150);
+            this.btn_open.Location = new System.Drawing.Point(11, 245);
             this.btn_open.Margin = new System.Windows.Forms.Padding(2);
             this.btn_open.Name = "btn_open";
-            this.btn_open.Size = new System.Drawing.Size(65, 42);
+            this.btn_open.Size = new System.Drawing.Size(149, 59);
             this.btn_open.TabIndex = 2;
             this.btn_open.Text = "Connect Serialport";
             this.btn_open.UseVisualStyleBackColor = true;
@@ -132,10 +141,10 @@
             // 
             // btn_refresh
             // 
-            this.btn_refresh.Location = new System.Drawing.Point(4, 150);
+            this.btn_refresh.Location = new System.Drawing.Point(13, 184);
             this.btn_refresh.Margin = new System.Windows.Forms.Padding(2);
             this.btn_refresh.Name = "btn_refresh";
-            this.btn_refresh.Size = new System.Drawing.Size(65, 42);
+            this.btn_refresh.Size = new System.Drawing.Size(149, 23);
             this.btn_refresh.TabIndex = 2;
             this.btn_refresh.Text = "refresh";
             this.btn_refresh.UseVisualStyleBackColor = true;
@@ -144,17 +153,17 @@
             // label_Addr
             // 
             this.label_Addr.AutoSize = true;
-            this.label_Addr.Location = new System.Drawing.Point(11, 254);
+            this.label_Addr.Location = new System.Drawing.Point(10, 138);
             this.label_Addr.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Addr.Name = "label_Addr";
-            this.label_Addr.Size = new System.Drawing.Size(29, 12);
+            this.label_Addr.Size = new System.Drawing.Size(70, 12);
             this.label_Addr.TabIndex = 4;
-            this.label_Addr.Text = "Addr";
+            this.label_Addr.Text = "Addr (1~255)";
             // 
             // label_Baudrate
             // 
             this.label_Baudrate.AutoSize = true;
-            this.label_Baudrate.Location = new System.Drawing.Point(11, 98);
+            this.label_Baudrate.Location = new System.Drawing.Point(11, 89);
             this.label_Baudrate.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Baudrate.Name = "label_Baudrate";
             this.label_Baudrate.Size = new System.Drawing.Size(47, 12);
@@ -164,7 +173,7 @@
             // label_OVP
             // 
             this.label_OVP.AutoSize = true;
-            this.label_OVP.Location = new System.Drawing.Point(28, 46);
+            this.label_OVP.Location = new System.Drawing.Point(42, 28);
             this.label_OVP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_OVP.Name = "label_OVP";
             this.label_OVP.Size = new System.Drawing.Size(27, 12);
@@ -174,7 +183,8 @@
             // grpBox_dashboard
             // 
             this.grpBox_dashboard.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.grpBox_dashboard.Controls.Add(this.radioButton1);
+            this.grpBox_dashboard.Controls.Add(this.btn_hexaddition);
+            this.grpBox_dashboard.Controls.Add(this.radiobtn_hexadded);
             this.grpBox_dashboard.Controls.Add(this.label_WuzhiCmd);
             this.grpBox_dashboard.Controls.Add(this.txtbx_WuzhiCmd);
             this.grpBox_dashboard.Controls.Add(this.txtbx_Iset);
@@ -197,17 +207,17 @@
             this.grpBox_dashboard.TabStop = false;
             this.grpBox_dashboard.Text = "Dashboard";
             // 
-            // radioButton1
+            // radiobtn_hexadded
             // 
-            this.radioButton1.AutoSize = true;
-            this.radioButton1.Location = new System.Drawing.Point(405, 82);
-            this.radioButton1.Name = "radioButton1";
-            this.radioButton1.Size = new System.Drawing.Size(85, 16);
-            this.radioButton1.TabIndex = 7;
-            this.radioButton1.TabStop = true;
-            this.radioButton1.Text = "radioButton1";
-            this.radioButton1.UseVisualStyleBackColor = true;
-            this.radioButton1.CheckedChanged += new System.EventHandler(this.radioButton1_CheckedChanged);
+            this.radiobtn_hexadded.AutoSize = true;
+            this.radiobtn_hexadded.Location = new System.Drawing.Point(407, 61);
+            this.radiobtn_hexadded.Name = "radiobtn_hexadded";
+            this.radiobtn_hexadded.Size = new System.Drawing.Size(83, 16);
+            this.radiobtn_hexadded.TabIndex = 7;
+            this.radiobtn_hexadded.TabStop = true;
+            this.radiobtn_hexadded.Text = "HexAddition";
+            this.radiobtn_hexadded.UseVisualStyleBackColor = true;
+            this.radiobtn_hexadded.CheckedChanged += new System.EventHandler(this.radioButton1_CheckedChanged);
             // 
             // label_WuzhiCmd
             // 
@@ -234,15 +244,17 @@
             this.txtbx_Iset.Name = "txtbx_Iset";
             this.txtbx_Iset.Size = new System.Drawing.Size(72, 22);
             this.txtbx_Iset.TabIndex = 0;
+            this.txtbx_Iset.Text = "1";
             // 
             // txtbx_Vset
             // 
             this.txtbx_Vset.Enabled = false;
-            this.txtbx_Vset.Location = new System.Drawing.Point(101, 81);
+            this.txtbx_Vset.Location = new System.Drawing.Point(98, 81);
             this.txtbx_Vset.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Vset.Name = "txtbx_Vset";
             this.txtbx_Vset.Size = new System.Drawing.Size(72, 22);
             this.txtbx_Vset.TabIndex = 0;
+            this.txtbx_Vset.Text = "1.38";
             // 
             // richTextBox1
             // 
@@ -255,7 +267,7 @@
             // 
             // txtbx_Vin
             // 
-            this.txtbx_Vin.Location = new System.Drawing.Point(431, 44);
+            this.txtbx_Vin.Location = new System.Drawing.Point(418, 25);
             this.txtbx_Vin.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Vin.Name = "txtbx_Vin";
             this.txtbx_Vin.Size = new System.Drawing.Size(72, 22);
@@ -264,7 +276,7 @@
             // label_Vin
             // 
             this.label_Vin.AutoSize = true;
-            this.label_Vin.Location = new System.Drawing.Point(358, 46);
+            this.label_Vin.Location = new System.Drawing.Point(360, 28);
             this.label_Vin.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Vin.Name = "label_Vin";
             this.label_Vin.Size = new System.Drawing.Size(22, 12);
@@ -273,7 +285,7 @@
             // 
             // txtbx_ocp
             // 
-            this.txtbx_ocp.Location = new System.Drawing.Point(258, 44);
+            this.txtbx_ocp.Location = new System.Drawing.Point(258, 25);
             this.txtbx_ocp.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_ocp.Name = "txtbx_ocp";
             this.txtbx_ocp.Size = new System.Drawing.Size(72, 22);
@@ -282,7 +294,7 @@
             // label_OCP
             // 
             this.label_OCP.AutoSize = true;
-            this.label_OCP.Location = new System.Drawing.Point(203, 48);
+            this.label_OCP.Location = new System.Drawing.Point(200, 28);
             this.label_OCP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_OCP.Name = "label_OCP";
             this.label_OCP.Size = new System.Drawing.Size(27, 12);
@@ -291,7 +303,7 @@
             // 
             // txtbx_ovp
             // 
-            this.txtbx_ovp.Location = new System.Drawing.Point(101, 44);
+            this.txtbx_ovp.Location = new System.Drawing.Point(98, 25);
             this.txtbx_ovp.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_ovp.Name = "txtbx_ovp";
             this.txtbx_ovp.Size = new System.Drawing.Size(72, 22);
@@ -300,30 +312,32 @@
             // label_Iset
             // 
             this.label_Iset.AutoSize = true;
-            this.label_Iset.Location = new System.Drawing.Point(203, 91);
+            this.label_Iset.Location = new System.Drawing.Point(198, 87);
             this.label_Iset.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Iset.Name = "label_Iset";
-            this.label_Iset.Size = new System.Drawing.Size(21, 12);
+            this.label_Iset.Size = new System.Drawing.Size(52, 12);
             this.label_Iset.TabIndex = 4;
-            this.label_Iset.Text = "Iset";
+            this.label_Iset.Text = "Iset (~5A)";
             // 
             // label_Vset
             // 
             this.label_Vset.AutoSize = true;
-            this.label_Vset.Location = new System.Drawing.Point(28, 89);
+            this.label_Vset.Location = new System.Drawing.Point(16, 89);
             this.label_Vset.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Vset.Name = "label_Vset";
-            this.label_Vset.Size = new System.Drawing.Size(25, 12);
+            this.label_Vset.Size = new System.Drawing.Size(66, 12);
             this.label_Vset.TabIndex = 4;
-            this.label_Vset.Text = "Vset";
+            this.label_Vset.Text = "Vset (6~55v)";
             // 
-            // cmbx_com
+            // btn_hexaddition
             // 
-            this.cmbx_com.FormattingEnabled = true;
-            this.cmbx_com.Location = new System.Drawing.Point(80, 38);
-            this.cmbx_com.Name = "cmbx_com";
-            this.cmbx_com.Size = new System.Drawing.Size(82, 20);
-            this.cmbx_com.TabIndex = 6;
+            this.btn_hexaddition.Location = new System.Drawing.Point(415, 83);
+            this.btn_hexaddition.Name = "btn_hexaddition";
+            this.btn_hexaddition.Size = new System.Drawing.Size(75, 23);
+            this.btn_hexaddition.TabIndex = 2;
+            this.btn_hexaddition.Text = "_hexaddition";
+            this.btn_hexaddition.UseVisualStyleBackColor = true;
+            this.btn_hexaddition.Click += new System.EventHandler(this.btn_hexaddition_Click);
             // 
             // Form1
             // 
@@ -374,8 +388,9 @@
         private System.Windows.Forms.TextBox txtbx_baudrate;
         private System.Windows.Forms.Label label_WuzhiCmd;
         private System.Windows.Forms.TextBox txtbx_WuzhiCmd;
-        private System.Windows.Forms.RadioButton radioButton1;
+        private System.Windows.Forms.RadioButton radiobtn_hexadded;
         private System.Windows.Forms.ComboBox cmbx_com;
+        private System.Windows.Forms.Button btn_hexaddition;
     }
 }
 
