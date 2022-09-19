@@ -39,6 +39,11 @@ namespace MiniPwrSupply
                 mutex.ReleaseMutex();
             }
         }
+        public enum WuzhiPower
+        {
+            PowerOn,
+            PowerOff
+        }
 
         private static Mutex mutex = new Mutex();
         private volatile bool mGet_Start;
@@ -363,6 +368,21 @@ namespace MiniPwrSupply
                 //serialPort1.Close();
             }
         }
+        private void _IsPowerOn(WuzhiPower status) 
+        {
+            if (status == WuzhiPower.PowerOn)
+            {
+                string powerOnCmd = "aa 01 22 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ce";
+                byte[] wuzhicmd = powerOnCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+                serialPort1.Write(wuzhicmd, 0, wuzhicmd.Length);
+            }
+            else if (status == WuzhiPower.PowerOff)
+            {
+                string powerOnCmd = "aa 01 22 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cd";
+                byte[] wuzhicmd = powerOnCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+                serialPort1.Write(wuzhicmd, 0, wuzhicmd.Length);
+            }
+        }
 
         private void btn_sendcmd_Click(object sender, EventArgs e)
         {
@@ -371,8 +391,26 @@ namespace MiniPwrSupply
             int length = serialPort1.BytesToRead;
             string receiveData = string.Empty;
             byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
-            byte[] Vset = Encoding.UTF8.GetBytes(txtbx_Vset.Text);  // convert string to HEX
-            byte[] Iset = Encoding.UTF8.GetBytes(txtbx_Iset.Text);
+
+
+
+
+
+            //https://stackoverflow.com/questions/415291/best-way-to-combine-two-or-more-byte-arrays-in-c-sharp
+
+
+
+
+
+            string synchroHead = "170";   //AA
+            byte powerAddr = Convert.ToByte(txtbx_addr.Text.Trim(), 16);
+            //byte[] Vset = Encoding.UTF8.GetBytes(txtbx_Vset.Text);  // convert string to HEX
+            //byte[] Iset = Encoding.UTF8.GetBytes(txtbx_Iset.Text);
+
+            byte[] Vset = BitConverter.GetBytes(Convert.ToDouble(txtbx_Vset.Text));  // convert string to hex
+            byte[] Iset = BitConverter.GetBytes(Convert.ToDouble(txtbx_Iset.Text));
+            byte[] V_I_set = (byte[])Vset.Concat(Iset);
+            byte[] sendWuzhiCmd = Encoding.UTF8.GetBytes(synchroHead);//.Concat(powerAddr);
             //try
             //{
             //    byte[] cmd = new byte[20];      // wuzhiCmd.Length = 20
