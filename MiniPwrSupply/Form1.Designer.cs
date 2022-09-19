@@ -32,7 +32,6 @@
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
             this.grpBox_port_setting = new System.Windows.Forms.GroupBox();
             this.txtbx_baudrate = new System.Windows.Forms.TextBox();
-            this.txtbx_com = new System.Windows.Forms.TextBox();
             this.btn_sendcmd = new System.Windows.Forms.Button();
             this.txtbx_addr = new System.Windows.Forms.TextBox();
             this.label_com = new System.Windows.Forms.Label();
@@ -55,6 +54,7 @@
             this.txtbx_ovp = new System.Windows.Forms.TextBox();
             this.label_Iset = new System.Windows.Forms.Label();
             this.label_Vset = new System.Windows.Forms.Label();
+            this.cmbx_com = new System.Windows.Forms.ComboBox();
             this.grpBox_port_setting.SuspendLayout();
             this.grpBox_dashboard.SuspendLayout();
             this.SuspendLayout();
@@ -63,8 +63,8 @@
             // 
             this.grpBox_port_setting.AutoSize = true;
             this.grpBox_port_setting.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.grpBox_port_setting.Controls.Add(this.cmbx_com);
             this.grpBox_port_setting.Controls.Add(this.txtbx_baudrate);
-            this.grpBox_port_setting.Controls.Add(this.txtbx_com);
             this.grpBox_port_setting.Controls.Add(this.btn_sendcmd);
             this.grpBox_port_setting.Controls.Add(this.txtbx_addr);
             this.grpBox_port_setting.Controls.Add(this.label_com);
@@ -89,14 +89,6 @@
             this.txtbx_baudrate.Size = new System.Drawing.Size(66, 22);
             this.txtbx_baudrate.TabIndex = 5;
             this.txtbx_baudrate.Text = "9600";
-            // 
-            // txtbx_com
-            // 
-            this.txtbx_com.Location = new System.Drawing.Point(97, 38);
-            this.txtbx_com.Name = "txtbx_com";
-            this.txtbx_com.Size = new System.Drawing.Size(66, 22);
-            this.txtbx_com.TabIndex = 5;
-            this.txtbx_com.Text = "13";
             // 
             // btn_sendcmd
             // 
@@ -232,7 +224,7 @@
             this.txtbx_WuzhiCmd.Name = "txtbx_WuzhiCmd";
             this.txtbx_WuzhiCmd.Size = new System.Drawing.Size(388, 22);
             this.txtbx_WuzhiCmd.TabIndex = 5;
-            this.txtbx_WuzhiCmd.Text = "AA012201000000000000000000000000000000ce";
+            this.txtbx_WuzhiCmd.Text = "aa 01 22 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ce";
             // 
             // txtbx_Iset
             // 
@@ -325,6 +317,14 @@
             this.label_Vset.TabIndex = 4;
             this.label_Vset.Text = "Vset";
             // 
+            // cmbx_com
+            // 
+            this.cmbx_com.FormattingEnabled = true;
+            this.cmbx_com.Location = new System.Drawing.Point(80, 38);
+            this.cmbx_com.Name = "cmbx_com";
+            this.cmbx_com.Size = new System.Drawing.Size(82, 20);
+            this.cmbx_com.TabIndex = 6;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -338,6 +338,7 @@
             this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
             this.Text = "Form1";
+            this.Load += new System.EventHandler(this.Form1_Load);
             this.grpBox_port_setting.ResumeLayout(false);
             this.grpBox_port_setting.PerformLayout();
             this.grpBox_dashboard.ResumeLayout(false);
@@ -370,11 +371,11 @@
         private System.Windows.Forms.TextBox txtbx_addr;
         private System.Windows.Forms.Label label_Addr;
         private System.Windows.Forms.Label label_Baudrate;
-        private System.Windows.Forms.TextBox txtbx_com;
         private System.Windows.Forms.TextBox txtbx_baudrate;
         private System.Windows.Forms.Label label_WuzhiCmd;
         private System.Windows.Forms.TextBox txtbx_WuzhiCmd;
         private System.Windows.Forms.RadioButton radioButton1;
+        private System.Windows.Forms.ComboBox cmbx_com;
     }
 }
 
