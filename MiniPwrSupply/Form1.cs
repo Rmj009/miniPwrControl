@@ -459,7 +459,7 @@ namespace MiniPwrSupply
 
         private void btn_sendcmd_Click(object sender, EventArgs e)
         {
-            int length = serialPort1.BytesToRead;
+            //int length = serialPort1.BytesToRead;
             string receiveData = string.Empty;
             //string[] PowerCmd = null;
             byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
@@ -474,12 +474,13 @@ namespace MiniPwrSupply
             string vsetting2 = string.Empty;
             string isetting1 = string.Empty;
             string isetting2 = string.Empty;
+
             string checksum = string.Empty;
 
             //https://stackoverflow.com/questions/415291/best-way-to-combine-two-or-more-byte-arrays-in-c-sharp
             try
             {
-                if (txtbx_Iset.Text.Length > 4 || txtbx_Vset.Text.Length > 4)
+                if (txtbx_Iset.Text.Length > 4 )
                 {   // confirm whether belong to double
                     //double isetting = Convert.ToDouble(txtbx_Iset.Text.Trim().Substring(0, 4));
                     if (Double.TryParse(txtbx_Iset.Text.Trim().Substring(0, txtbx_Iset.TextLength), out Iset))
@@ -536,41 +537,104 @@ namespace MiniPwrSupply
                     //Buffer.BlockCopy();
                     //string tmp = (string)txtbx_Vset.Text.Trim().Concat(txtbx_Iset.Text.Trim());
                 }
-                if (vsetting.ToCharArray().Length > 2)
+                //int vset_len = txtbx_Vset.Text.ToCharArray().Length;
+                //int iset_len = txtbx_Iset.Text.ToCharArray().Length;
+                int vset_len = vsetting.ToCharArray().Length;
+                int iset_len = isetting.ToCharArray().Length;
+                if (vset_len == 3)
                 {
-                    //int strcmd1 = Convert.ToInt32(vsetting);
-                    //int strcmd2 = Convert.ToInt32(isetting);
-
-                    if (isetting.ToCharArray().Length > 2)
+                    if (iset_len == 3) 
                     {
-                        vsetting1 = vsetting.Substring(0, 2);
-                        vsetting2 = vsetting.Substring(0, 2);
-                        isetting1 = isetting.Substring(0, 2);
-                        isetting2 = isetting.Substring(0, 2);
+                        vsetting1 = vsetting.Substring(0, vset_len - 2);
+                        vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 1);
+                        isetting1 = isetting.Substring(0, iset_len - 2);
+                        isetting2 = isetting.Substring(iset_len - 2, iset_len - 1);
+                    }
+                    else if (iset_len == 4)
+                    {
+                        vsetting1 = vsetting.Substring(0, vset_len - 2);
+                        vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 1);
+                        isetting1 = isetting.Substring(0, iset_len - 2);
+                        isetting2 = isetting.Substring(iset_len - 2, iset_len - 2);
                     }
                     else
                     {
-                        vsetting1 = vsetting.Substring(0, 2);
-                        vsetting2 = vsetting.Substring(2, vsetting.ToCharArray().Length);
+                        vsetting1 = vsetting.Substring(0, vset_len - 2);
+                        vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 1);
                         isetting1 = "00";
-                        isetting2 = isetting.Substring(0, 2);
+                        isetting2 = isetting;
                     }
                 }
-                else if (isetting.ToCharArray().Length > 2)
+                else if (vset_len == 4)
                 {
-                    if (vsetting.ToCharArray().Length > 2)
+                    if (iset_len == 3)
                     {
-                        vsetting1 = vsetting.Substring(0, 2);
-                        vsetting2 = vsetting.Substring(0, 2);
-                        isetting1 = isetting.Substring(0, 2);
-                        isetting2 = isetting.Substring(0, 2);
+                        vsetting1 = vsetting.Substring(0, vset_len - 2);
+                        vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 2);
+                        isetting1 = isetting.Substring(0, iset_len - 2);
+                        isetting2 = isetting.Substring(iset_len - 2, iset_len - 1);
+                    }
+                    else if (iset_len == 4)
+                    {
+                        vsetting1 = vsetting.Substring(0, vset_len - 2);
+                        vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 2);
+                        isetting1 = isetting.Substring(0, iset_len - 2);
+                        isetting2 = isetting.Substring(iset_len - 2, iset_len - 2);
+                    }
+                    else
+                    {
+                        vsetting1 = vsetting.Substring(0, vset_len - 2);
+                        vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 2);
+                        isetting1 = "00";
+                        isetting2 = isetting;
+                    }
+                }
+                else if (iset_len == 3)
+                {
+                    if (vset_len == 3)
+                    {
+                        vsetting1 = vsetting.Substring(0, vset_len - 2);
+                        vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 1);
+                        isetting1 = isetting.Substring(0, iset_len - 2);
+                        isetting2 = isetting.Substring(iset_len - 2, iset_len - 1);
+                    }
+                    else if (vset_len == 4)
+                    {
+                        vsetting1 = vsetting.Substring(0, vset_len - 2);
+                        vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 2);
+                        isetting1 = isetting.Substring(0, iset_len - 2);
+                        isetting2 = isetting.Substring(iset_len - 2, iset_len - 1);
                     }
                     else
                     {
                         vsetting1 = "00";
-                        vsetting2 = vsetting.Substring(0, 2);
-                        isetting1 = isetting.Substring(0, 2); //3E8 --> 3E ...........
-                        isetting2 = isetting.Substring(1, 2); // isetting.ToCharArray().Length - 1);
+                        vsetting2 = vsetting;
+                        isetting1 = isetting.Substring(0, iset_len - 2);
+                        isetting2 = isetting.Substring(iset_len - 2, iset_len - 1);
+                    }
+                }
+                else if (iset_len == 4)
+                {
+                    if (vset_len == 3)
+                    {
+                        vsetting1 = vsetting.Substring(0, vset_len - 2);
+                        vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 1);
+                        isetting1 = isetting.Substring(0, iset_len - 2);
+                        isetting2 = isetting.Substring(iset_len - 2, iset_len - 2);
+                    }
+                    else if (vset_len == 4)
+                    {
+                        vsetting1 = vsetting.Substring(0, vset_len - 2);
+                        vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 2);
+                        isetting1 = isetting.Substring(0, iset_len - 2);
+                        isetting2 = isetting.Substring(iset_len - 2, iset_len - 2);
+                    }
+                    else
+                    {
+                        vsetting1 = "00";
+                        vsetting2 = vsetting;
+                        isetting1 = isetting.Substring(0, iset_len - 2);
+                        isetting2 = isetting.Substring(iset_len - 2, iset_len - 2);
                     }
                 }
                 else
@@ -601,13 +665,12 @@ namespace MiniPwrSupply
                     "00",
                     "00",
                     "00",
-                    "00",
-                    //"checksum"
+                    "00"
                 };
                 //  00 ---> baudrate
                 //byte[] chksum  = PowerCmd.Select(i => Convert.ToByte(i,16)).ToArray();
                 byte[] chksum = Enumerable.Range(0, PowerCmd.Length).Select(x => Convert.ToByte(PowerCmd[x], 16)).ToArray();
-                checksum = Convert.ToString(chksum.Sum(i => i)).Substring(1, 2);  //TODO convert to string and substring last2
+                checksum = Convert.ToString(chksum.Sum(i => i));//.Substring(1, 2);  //TODO convert to string and substring last2
             }
             catch (ArgumentOutOfRangeException argex)
             {
