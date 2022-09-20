@@ -32,7 +32,6 @@
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
             this.grpBox_port_setting = new System.Windows.Forms.GroupBox();
             this.cmbx_com = new System.Windows.Forms.ComboBox();
-            this.txtbx_baudrate = new System.Windows.Forms.TextBox();
             this.btn_sendcmd = new System.Windows.Forms.Button();
             this.txtbx_addr = new System.Windows.Forms.TextBox();
             this.label_com = new System.Windows.Forms.Label();
@@ -42,6 +41,7 @@
             this.label_Baudrate = new System.Windows.Forms.Label();
             this.label_OVP = new System.Windows.Forms.Label();
             this.grpBox_dashboard = new System.Windows.Forms.GroupBox();
+            this.btn_hexaddition = new System.Windows.Forms.Button();
             this.radiobtn_hexadded = new System.Windows.Forms.RadioButton();
             this.label_WuzhiCmd = new System.Windows.Forms.Label();
             this.txtbx_WuzhiCmd = new System.Windows.Forms.TextBox();
@@ -55,7 +55,7 @@
             this.txtbx_ovp = new System.Windows.Forms.TextBox();
             this.label_Iset = new System.Windows.Forms.Label();
             this.label_Vset = new System.Windows.Forms.Label();
-            this.btn_hexaddition = new System.Windows.Forms.Button();
+            this.cmbx_baudrate = new System.Windows.Forms.ComboBox();
             this.grpBox_port_setting.SuspendLayout();
             this.grpBox_dashboard.SuspendLayout();
             this.SuspendLayout();
@@ -64,8 +64,8 @@
             // 
             this.grpBox_port_setting.AutoSize = true;
             this.grpBox_port_setting.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.grpBox_port_setting.Controls.Add(this.cmbx_baudrate);
             this.grpBox_port_setting.Controls.Add(this.cmbx_com);
-            this.grpBox_port_setting.Controls.Add(this.txtbx_baudrate);
             this.grpBox_port_setting.Controls.Add(this.btn_sendcmd);
             this.grpBox_port_setting.Controls.Add(this.txtbx_addr);
             this.grpBox_port_setting.Controls.Add(this.label_com);
@@ -86,18 +86,13 @@
             // cmbx_com
             // 
             this.cmbx_com.FormattingEnabled = true;
+            this.cmbx_com.Items.AddRange(new object[] {
+            "COM1"});
             this.cmbx_com.Location = new System.Drawing.Point(80, 38);
             this.cmbx_com.Name = "cmbx_com";
             this.cmbx_com.Size = new System.Drawing.Size(82, 20);
             this.cmbx_com.TabIndex = 6;
-            // 
-            // txtbx_baudrate
-            // 
-            this.txtbx_baudrate.Location = new System.Drawing.Point(97, 88);
-            this.txtbx_baudrate.Name = "txtbx_baudrate";
-            this.txtbx_baudrate.Size = new System.Drawing.Size(66, 22);
-            this.txtbx_baudrate.TabIndex = 5;
-            this.txtbx_baudrate.Text = "9600";
+            this.cmbx_com.SelectedIndexChanged += new System.EventHandler(this.cmbx_com_SelectedIndexChanged);
             // 
             // btn_sendcmd
             // 
@@ -112,11 +107,12 @@
             // 
             // txtbx_addr
             // 
-            this.txtbx_addr.Location = new System.Drawing.Point(90, 133);
+            this.txtbx_addr.Location = new System.Drawing.Point(112, 133);
             this.txtbx_addr.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_addr.Name = "txtbx_addr";
-            this.txtbx_addr.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_addr.Size = new System.Drawing.Size(50, 22);
             this.txtbx_addr.TabIndex = 0;
+            this.txtbx_addr.Text = "1";
             // 
             // label_com
             // 
@@ -158,7 +154,7 @@
             this.label_Addr.Name = "label_Addr";
             this.label_Addr.Size = new System.Drawing.Size(70, 12);
             this.label_Addr.TabIndex = 4;
-            this.label_Addr.Text = "Addr (1~255)";
+            this.label_Addr.Text = "Addr (0~255)";
             // 
             // label_Baudrate
             // 
@@ -206,6 +202,16 @@
             this.grpBox_dashboard.TabIndex = 1;
             this.grpBox_dashboard.TabStop = false;
             this.grpBox_dashboard.Text = "Dashboard";
+            // 
+            // btn_hexaddition
+            // 
+            this.btn_hexaddition.Location = new System.Drawing.Point(415, 83);
+            this.btn_hexaddition.Name = "btn_hexaddition";
+            this.btn_hexaddition.Size = new System.Drawing.Size(75, 23);
+            this.btn_hexaddition.TabIndex = 2;
+            this.btn_hexaddition.Text = "_hexaddition";
+            this.btn_hexaddition.UseVisualStyleBackColor = true;
+            this.btn_hexaddition.Click += new System.EventHandler(this.btn_hexaddition_Click);
             // 
             // radiobtn_hexadded
             // 
@@ -329,15 +335,17 @@
             this.label_Vset.TabIndex = 4;
             this.label_Vset.Text = "Vset (6~55v)";
             // 
-            // btn_hexaddition
+            // cmbx_baudrate
             // 
-            this.btn_hexaddition.Location = new System.Drawing.Point(415, 83);
-            this.btn_hexaddition.Name = "btn_hexaddition";
-            this.btn_hexaddition.Size = new System.Drawing.Size(75, 23);
-            this.btn_hexaddition.TabIndex = 2;
-            this.btn_hexaddition.Text = "_hexaddition";
-            this.btn_hexaddition.UseVisualStyleBackColor = true;
-            this.btn_hexaddition.Click += new System.EventHandler(this.btn_hexaddition_Click);
+            this.cmbx_baudrate.FormattingEnabled = true;
+            this.cmbx_baudrate.Items.AddRange(new object[] {
+            "9600",
+            "115200"});
+            this.cmbx_baudrate.Location = new System.Drawing.Point(87, 86);
+            this.cmbx_baudrate.Name = "cmbx_baudrate";
+            this.cmbx_baudrate.Size = new System.Drawing.Size(76, 20);
+            this.cmbx_baudrate.TabIndex = 7;
+            this.cmbx_baudrate.Text = "9600";
             // 
             // Form1
             // 
@@ -385,12 +393,12 @@
         private System.Windows.Forms.TextBox txtbx_addr;
         private System.Windows.Forms.Label label_Addr;
         private System.Windows.Forms.Label label_Baudrate;
-        private System.Windows.Forms.TextBox txtbx_baudrate;
         private System.Windows.Forms.Label label_WuzhiCmd;
         private System.Windows.Forms.TextBox txtbx_WuzhiCmd;
         private System.Windows.Forms.RadioButton radiobtn_hexadded;
         private System.Windows.Forms.ComboBox cmbx_com;
         private System.Windows.Forms.Button btn_hexaddition;
+        private System.Windows.Forms.ComboBox cmbx_baudrate;
     }
 }
 

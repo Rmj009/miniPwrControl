@@ -84,7 +84,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="ConvertWuzhiCmd\" />
     <Folder Include="Singleton\" />
+    <Folder Include="strategy\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
