@@ -429,43 +429,6 @@ namespace MiniPwrSupply
             return hexstr;
         }
 
-        //private string[] _Trim_V_I_set(string settingStr)
-        //{
-        //    //string[] _hexStr = null;
-        //    try
-        //    {
-        //        //settingStr = settingStr
-        //        //_hexStr = (string[])settingStr.ToCharArray().Select(c => c.ToString());
-        //        //if (_hexStr.Length <= 2)
-        //        //{
-        //        //    return new[] { settingStr };
-        //        //}
-        //        ////else if (_hexStr.Length == 2)
-        //        ////{
-        //        ////    return new[] { settingStr };
-        //        ////}
-        //        //else if (_hexStr.Length == 3)
-        //        //{
-        //        //    return _hexStr;
-        //        //}
-        //        //else if (_hexStr.Length == 4)
-        //        //{
-        //        //    return _hexStr;
-        //        //}
-        //        //else
-        //        //{
-        //        //    throw new Exception("Out of wuzhi protocol rulses");
-        //        //}
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        throw ex;
-        //    }
-
-        //    //return new[] { settingStr };          ----------->  string[] -> string
-        //    //return string.Join(" ", settingStr);  ----------->  string    > string[]
-        //}
-
         private void btn_sendcmd_Click(object sender, EventArgs e)
         {
             int length = serialPort1.BytesToRead;
@@ -473,7 +436,6 @@ namespace MiniPwrSupply
             byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
             string synchroHead = this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
             string Address = this._decstringToHex(txtbx_addr.Text.Trim());
-            byte[] V_I_set = new byte[4];
             double Vset = 0.0d;
             double Iset = 0.0d;
             string vsetting = string.Empty;
@@ -861,6 +823,27 @@ namespace MiniPwrSupply
             if (cmbx_com.SelectedIndex.ToString().Length != 0)
             {
                 cmbx_com.Enabled = true;
+            }
+        }
+
+        private void btn_Power_Click(object sender, EventArgs e)
+        {
+            Button OneShotBtn = (Button)sender;
+
+            switch (OneShotBtn.Text)
+            {
+                case "PowerOff":
+                    btn_Power.Text = "PowerOn";
+                    this._IsPowerOn(WuzhiPower.PowerOff);
+                    break;
+
+                case "PowerOn":
+                    btn_Power.Text = "PowerOff";
+                    this._IsPowerOn(WuzhiPower.PowerOn);
+                    break;
+
+                default:
+                    break;
             }
         }
 

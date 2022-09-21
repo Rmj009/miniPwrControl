@@ -31,6 +31,7 @@
             this.components = new System.ComponentModel.Container();
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
             this.grpBox_port_setting = new System.Windows.Forms.GroupBox();
+            this.cmbx_baudrate = new System.Windows.Forms.ComboBox();
             this.cmbx_com = new System.Windows.Forms.ComboBox();
             this.btn_sendcmd = new System.Windows.Forms.Button();
             this.txtbx_addr = new System.Windows.Forms.TextBox();
@@ -41,7 +42,6 @@
             this.label_Baudrate = new System.Windows.Forms.Label();
             this.label_OVP = new System.Windows.Forms.Label();
             this.grpBox_dashboard = new System.Windows.Forms.GroupBox();
-            this.btn_hexaddition = new System.Windows.Forms.Button();
             this.radiobtn_hexadded = new System.Windows.Forms.RadioButton();
             this.label_WuzhiCmd = new System.Windows.Forms.Label();
             this.txtbx_WuzhiCmd = new System.Windows.Forms.TextBox();
@@ -55,9 +55,20 @@
             this.txtbx_ovp = new System.Windows.Forms.TextBox();
             this.label_Iset = new System.Windows.Forms.Label();
             this.label_Vset = new System.Windows.Forms.Label();
-            this.cmbx_baudrate = new System.Windows.Forms.ComboBox();
+            this.tabCtrl_Dashboard = new System.Windows.Forms.TabControl();
+            this.tabCtrl1 = new System.Windows.Forms.TabPage();
+            this.tabCtrl2 = new System.Windows.Forms.TabPage();
+            this.btn_hexaddition = new System.Windows.Forms.Button();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.btn_Power = new System.Windows.Forms.Button();
+            this.label_PowerBtn = new System.Windows.Forms.Label();
             this.grpBox_port_setting.SuspendLayout();
             this.grpBox_dashboard.SuspendLayout();
+            this.tabCtrl_Dashboard.SuspendLayout();
+            this.tabCtrl1.SuspendLayout();
+            this.tabCtrl2.SuspendLayout();
+            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // grpBox_port_setting
@@ -74,14 +85,26 @@
             this.grpBox_port_setting.Controls.Add(this.label_Addr);
             this.grpBox_port_setting.Controls.Add(this.label_Baudrate);
             this.grpBox_port_setting.Dock = System.Windows.Forms.DockStyle.Left;
-            this.grpBox_port_setting.Location = new System.Drawing.Point(0, 0);
+            this.grpBox_port_setting.Location = new System.Drawing.Point(3, 3);
             this.grpBox_port_setting.Margin = new System.Windows.Forms.Padding(2);
             this.grpBox_port_setting.Name = "grpBox_port_setting";
             this.grpBox_port_setting.Padding = new System.Windows.Forms.Padding(2);
-            this.grpBox_port_setting.Size = new System.Drawing.Size(168, 408);
+            this.grpBox_port_setting.Size = new System.Drawing.Size(168, 567);
             this.grpBox_port_setting.TabIndex = 0;
             this.grpBox_port_setting.TabStop = false;
             this.grpBox_port_setting.Text = "PortSetting";
+            // 
+            // cmbx_baudrate
+            // 
+            this.cmbx_baudrate.FormattingEnabled = true;
+            this.cmbx_baudrate.Items.AddRange(new object[] {
+            "9600",
+            "115200"});
+            this.cmbx_baudrate.Location = new System.Drawing.Point(87, 86);
+            this.cmbx_baudrate.Name = "cmbx_baudrate";
+            this.cmbx_baudrate.Size = new System.Drawing.Size(76, 20);
+            this.cmbx_baudrate.TabIndex = 7;
+            this.cmbx_baudrate.Text = "9600";
             // 
             // cmbx_com
             // 
@@ -179,14 +202,14 @@
             // grpBox_dashboard
             // 
             this.grpBox_dashboard.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.grpBox_dashboard.Controls.Add(this.btn_hexaddition);
-            this.grpBox_dashboard.Controls.Add(this.radiobtn_hexadded);
+            this.grpBox_dashboard.Controls.Add(this.btn_Power);
             this.grpBox_dashboard.Controls.Add(this.label_WuzhiCmd);
             this.grpBox_dashboard.Controls.Add(this.txtbx_WuzhiCmd);
             this.grpBox_dashboard.Controls.Add(this.txtbx_Iset);
             this.grpBox_dashboard.Controls.Add(this.txtbx_Vset);
             this.grpBox_dashboard.Controls.Add(this.richTextBox1);
             this.grpBox_dashboard.Controls.Add(this.txtbx_Vin);
+            this.grpBox_dashboard.Controls.Add(this.label_PowerBtn);
             this.grpBox_dashboard.Controls.Add(this.label_Vin);
             this.grpBox_dashboard.Controls.Add(this.txtbx_ocp);
             this.grpBox_dashboard.Controls.Add(this.label_OCP);
@@ -194,29 +217,19 @@
             this.grpBox_dashboard.Controls.Add(this.label_Iset);
             this.grpBox_dashboard.Controls.Add(this.label_OVP);
             this.grpBox_dashboard.Controls.Add(this.label_Vset);
-            this.grpBox_dashboard.Location = new System.Drawing.Point(181, 10);
+            this.grpBox_dashboard.Location = new System.Drawing.Point(188, 14);
             this.grpBox_dashboard.Margin = new System.Windows.Forms.Padding(2);
             this.grpBox_dashboard.Name = "grpBox_dashboard";
             this.grpBox_dashboard.Padding = new System.Windows.Forms.Padding(2);
-            this.grpBox_dashboard.Size = new System.Drawing.Size(514, 382);
+            this.grpBox_dashboard.Size = new System.Drawing.Size(544, 490);
             this.grpBox_dashboard.TabIndex = 1;
             this.grpBox_dashboard.TabStop = false;
             this.grpBox_dashboard.Text = "Dashboard";
             // 
-            // btn_hexaddition
-            // 
-            this.btn_hexaddition.Location = new System.Drawing.Point(415, 83);
-            this.btn_hexaddition.Name = "btn_hexaddition";
-            this.btn_hexaddition.Size = new System.Drawing.Size(75, 23);
-            this.btn_hexaddition.TabIndex = 2;
-            this.btn_hexaddition.Text = "_hexaddition";
-            this.btn_hexaddition.UseVisualStyleBackColor = true;
-            this.btn_hexaddition.Click += new System.EventHandler(this.btn_hexaddition_Click);
-            // 
             // radiobtn_hexadded
             // 
             this.radiobtn_hexadded.AutoSize = true;
-            this.radiobtn_hexadded.Location = new System.Drawing.Point(407, 61);
+            this.radiobtn_hexadded.Location = new System.Drawing.Point(462, 50);
             this.radiobtn_hexadded.Name = "radiobtn_hexadded";
             this.radiobtn_hexadded.Size = new System.Drawing.Size(83, 16);
             this.radiobtn_hexadded.TabIndex = 7;
@@ -264,7 +277,7 @@
             // 
             // richTextBox1
             // 
-            this.richTextBox1.Location = new System.Drawing.Point(44, 152);
+            this.richTextBox1.Location = new System.Drawing.Point(18, 152);
             this.richTextBox1.Margin = new System.Windows.Forms.Padding(2);
             this.richTextBox1.Name = "richTextBox1";
             this.richTextBox1.Size = new System.Drawing.Size(459, 218);
@@ -335,17 +348,95 @@
             this.label_Vset.TabIndex = 4;
             this.label_Vset.Text = "Vset (6~55v)";
             // 
-            // cmbx_baudrate
+            // tabCtrl_Dashboard
             // 
-            this.cmbx_baudrate.FormattingEnabled = true;
-            this.cmbx_baudrate.Items.AddRange(new object[] {
-            "9600",
-            "115200"});
-            this.cmbx_baudrate.Location = new System.Drawing.Point(87, 86);
-            this.cmbx_baudrate.Name = "cmbx_baudrate";
-            this.cmbx_baudrate.Size = new System.Drawing.Size(76, 20);
-            this.cmbx_baudrate.TabIndex = 7;
-            this.cmbx_baudrate.Text = "9600";
+            this.tabCtrl_Dashboard.Controls.Add(this.tabCtrl1);
+            this.tabCtrl_Dashboard.Controls.Add(this.tabCtrl2);
+            this.tabCtrl_Dashboard.Dock = System.Windows.Forms.DockStyle.Left;
+            this.tabCtrl_Dashboard.Location = new System.Drawing.Point(0, 0);
+            this.tabCtrl_Dashboard.Name = "tabCtrl_Dashboard";
+            this.tabCtrl_Dashboard.SelectedIndex = 0;
+            this.tabCtrl_Dashboard.Size = new System.Drawing.Size(759, 599);
+            this.tabCtrl_Dashboard.TabIndex = 2;
+            // 
+            // tabCtrl1
+            // 
+            this.tabCtrl1.Controls.Add(this.grpBox_port_setting);
+            this.tabCtrl1.Controls.Add(this.grpBox_dashboard);
+            this.tabCtrl1.Location = new System.Drawing.Point(4, 22);
+            this.tabCtrl1.Name = "tabCtrl1";
+            this.tabCtrl1.Padding = new System.Windows.Forms.Padding(3);
+            this.tabCtrl1.Size = new System.Drawing.Size(751, 573);
+            this.tabCtrl1.TabIndex = 0;
+            this.tabCtrl1.Text = "Dashboard";
+            this.tabCtrl1.UseVisualStyleBackColor = true;
+            // 
+            // tabCtrl2
+            // 
+            this.tabCtrl2.Controls.Add(this.groupBox2);
+            this.tabCtrl2.Controls.Add(this.groupBox1);
+            this.tabCtrl2.Location = new System.Drawing.Point(4, 22);
+            this.tabCtrl2.Name = "tabCtrl2";
+            this.tabCtrl2.Padding = new System.Windows.Forms.Padding(3);
+            this.tabCtrl2.Size = new System.Drawing.Size(751, 573);
+            this.tabCtrl2.TabIndex = 1;
+            this.tabCtrl2.Text = "Verify_Calculation";
+            this.tabCtrl2.UseVisualStyleBackColor = true;
+            // 
+            // btn_hexaddition
+            // 
+            this.btn_hexaddition.Location = new System.Drawing.Point(579, 21);
+            this.btn_hexaddition.Name = "btn_hexaddition";
+            this.btn_hexaddition.Size = new System.Drawing.Size(118, 74);
+            this.btn_hexaddition.TabIndex = 2;
+            this.btn_hexaddition.Text = "_hexaddition";
+            this.btn_hexaddition.UseVisualStyleBackColor = true;
+            this.btn_hexaddition.Click += new System.EventHandler(this.btn_hexaddition_Click);
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.groupBox1.BackColor = System.Drawing.Color.Silver;
+            this.groupBox1.Controls.Add(this.radiobtn_hexadded);
+            this.groupBox1.Controls.Add(this.btn_hexaddition);
+            this.groupBox1.Dock = System.Windows.Forms.DockStyle.Top;
+            this.groupBox1.Location = new System.Drawing.Point(3, 3);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(745, 116);
+            this.groupBox1.TabIndex = 3;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "groupBox1";
+            // 
+            // groupBox2
+            // 
+            this.groupBox2.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.groupBox2.Dock = System.Windows.Forms.DockStyle.Top;
+            this.groupBox2.Location = new System.Drawing.Point(3, 119);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(745, 221);
+            this.groupBox2.TabIndex = 4;
+            this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "groupBox2";
+            // 
+            // btn_Power
+            // 
+            this.btn_Power.Location = new System.Drawing.Point(418, 81);
+            this.btn_Power.Name = "btn_Power";
+            this.btn_Power.Size = new System.Drawing.Size(75, 23);
+            this.btn_Power.TabIndex = 2;
+            this.btn_Power.Text = "PowerOn";
+            this.btn_Power.UseVisualStyleBackColor = true;
+            this.btn_Power.Click += new System.EventHandler(this.btn_Power_Click);
+            // 
+            // label_PowerBtn
+            // 
+            this.label_PowerBtn.AutoSize = true;
+            this.label_PowerBtn.Location = new System.Drawing.Point(360, 87);
+            this.label_PowerBtn.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.label_PowerBtn.Name = "label_PowerBtn";
+            this.label_PowerBtn.Size = new System.Drawing.Size(51, 12);
+            this.label_PowerBtn.TabIndex = 4;
+            this.label_PowerBtn.Text = "PowerBtn";
             // 
             // Form1
             // 
@@ -354,9 +445,8 @@
             this.AutoScroll = true;
             this.AutoSize = true;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.ClientSize = new System.Drawing.Size(740, 408);
-            this.Controls.Add(this.grpBox_dashboard);
-            this.Controls.Add(this.grpBox_port_setting);
+            this.ClientSize = new System.Drawing.Size(848, 599);
+            this.Controls.Add(this.tabCtrl_Dashboard);
             this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
             this.Text = "Form1";
@@ -365,8 +455,13 @@
             this.grpBox_port_setting.PerformLayout();
             this.grpBox_dashboard.ResumeLayout(false);
             this.grpBox_dashboard.PerformLayout();
+            this.tabCtrl_Dashboard.ResumeLayout(false);
+            this.tabCtrl1.ResumeLayout(false);
+            this.tabCtrl1.PerformLayout();
+            this.tabCtrl2.ResumeLayout(false);
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
@@ -397,8 +492,15 @@
         private System.Windows.Forms.TextBox txtbx_WuzhiCmd;
         private System.Windows.Forms.RadioButton radiobtn_hexadded;
         private System.Windows.Forms.ComboBox cmbx_com;
-        private System.Windows.Forms.Button btn_hexaddition;
         private System.Windows.Forms.ComboBox cmbx_baudrate;
+        private System.Windows.Forms.Button btn_Power;
+        private System.Windows.Forms.Label label_PowerBtn;
+        private System.Windows.Forms.TabControl tabCtrl_Dashboard;
+        private System.Windows.Forms.TabPage tabCtrl1;
+        private System.Windows.Forms.TabPage tabCtrl2;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.Button btn_hexaddition;
     }
 }
 
