@@ -42,27 +42,27 @@
             this.label_Baudrate = new System.Windows.Forms.Label();
             this.label_OVP = new System.Windows.Forms.Label();
             this.grpBox_dashboard = new System.Windows.Forms.GroupBox();
-            this.radiobtn_hexadded = new System.Windows.Forms.RadioButton();
+            this.btn_Power = new System.Windows.Forms.Button();
             this.label_WuzhiCmd = new System.Windows.Forms.Label();
             this.txtbx_WuzhiCmd = new System.Windows.Forms.TextBox();
             this.txtbx_Iset = new System.Windows.Forms.TextBox();
             this.txtbx_Vset = new System.Windows.Forms.TextBox();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
             this.txtbx_Vin = new System.Windows.Forms.TextBox();
+            this.label_PowerBtn = new System.Windows.Forms.Label();
             this.label_Vin = new System.Windows.Forms.Label();
             this.txtbx_ocp = new System.Windows.Forms.TextBox();
             this.label_OCP = new System.Windows.Forms.Label();
             this.txtbx_ovp = new System.Windows.Forms.TextBox();
             this.label_Iset = new System.Windows.Forms.Label();
             this.label_Vset = new System.Windows.Forms.Label();
+            this.radiobtn_hexadded = new System.Windows.Forms.RadioButton();
             this.tabCtrl_Dashboard = new System.Windows.Forms.TabControl();
             this.tabCtrl1 = new System.Windows.Forms.TabPage();
             this.tabCtrl2 = new System.Windows.Forms.TabPage();
-            this.btn_hexaddition = new System.Windows.Forms.Button();
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.btn_Power = new System.Windows.Forms.Button();
-            this.label_PowerBtn = new System.Windows.Forms.Label();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.btn_hexaddition = new System.Windows.Forms.Button();
             this.grpBox_port_setting.SuspendLayout();
             this.grpBox_dashboard.SuspendLayout();
             this.tabCtrl_Dashboard.SuspendLayout();
@@ -119,6 +119,7 @@
             // 
             // btn_sendcmd
             // 
+            this.btn_sendcmd.Enabled = false;
             this.btn_sendcmd.Location = new System.Drawing.Point(13, 308);
             this.btn_sendcmd.Margin = new System.Windows.Forms.Padding(2);
             this.btn_sendcmd.Name = "btn_sendcmd";
@@ -226,17 +227,16 @@
             this.grpBox_dashboard.TabStop = false;
             this.grpBox_dashboard.Text = "Dashboard";
             // 
-            // radiobtn_hexadded
+            // btn_Power
             // 
-            this.radiobtn_hexadded.AutoSize = true;
-            this.radiobtn_hexadded.Location = new System.Drawing.Point(462, 50);
-            this.radiobtn_hexadded.Name = "radiobtn_hexadded";
-            this.radiobtn_hexadded.Size = new System.Drawing.Size(83, 16);
-            this.radiobtn_hexadded.TabIndex = 7;
-            this.radiobtn_hexadded.TabStop = true;
-            this.radiobtn_hexadded.Text = "HexAddition";
-            this.radiobtn_hexadded.UseVisualStyleBackColor = true;
-            this.radiobtn_hexadded.CheckedChanged += new System.EventHandler(this.radioButton1_CheckedChanged);
+            this.btn_Power.Enabled = false;
+            this.btn_Power.Location = new System.Drawing.Point(418, 81);
+            this.btn_Power.Name = "btn_Power";
+            this.btn_Power.Size = new System.Drawing.Size(75, 23);
+            this.btn_Power.TabIndex = 2;
+            this.btn_Power.Text = "ON";
+            this.btn_Power.UseVisualStyleBackColor = true;
+            this.btn_Power.Click += new System.EventHandler(this.btn_Power_Click);
             // 
             // label_WuzhiCmd
             // 
@@ -291,6 +291,16 @@
             this.txtbx_Vin.Name = "txtbx_Vin";
             this.txtbx_Vin.Size = new System.Drawing.Size(72, 22);
             this.txtbx_Vin.TabIndex = 0;
+            // 
+            // label_PowerBtn
+            // 
+            this.label_PowerBtn.AutoSize = true;
+            this.label_PowerBtn.Location = new System.Drawing.Point(360, 87);
+            this.label_PowerBtn.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.label_PowerBtn.Name = "label_PowerBtn";
+            this.label_PowerBtn.Size = new System.Drawing.Size(51, 12);
+            this.label_PowerBtn.TabIndex = 4;
+            this.label_PowerBtn.Text = "PowerBtn";
             // 
             // label_Vin
             // 
@@ -348,6 +358,18 @@
             this.label_Vset.TabIndex = 4;
             this.label_Vset.Text = "Vset (6~55v)";
             // 
+            // radiobtn_hexadded
+            // 
+            this.radiobtn_hexadded.AutoSize = true;
+            this.radiobtn_hexadded.Location = new System.Drawing.Point(462, 50);
+            this.radiobtn_hexadded.Name = "radiobtn_hexadded";
+            this.radiobtn_hexadded.Size = new System.Drawing.Size(83, 16);
+            this.radiobtn_hexadded.TabIndex = 7;
+            this.radiobtn_hexadded.TabStop = true;
+            this.radiobtn_hexadded.Text = "HexAddition";
+            this.radiobtn_hexadded.UseVisualStyleBackColor = true;
+            this.radiobtn_hexadded.CheckedChanged += new System.EventHandler(this.radioButton1_CheckedChanged);
+            // 
             // tabCtrl_Dashboard
             // 
             this.tabCtrl_Dashboard.Controls.Add(this.tabCtrl1);
@@ -383,15 +405,16 @@
             this.tabCtrl2.Text = "Verify_Calculation";
             this.tabCtrl2.UseVisualStyleBackColor = true;
             // 
-            // btn_hexaddition
+            // groupBox2
             // 
-            this.btn_hexaddition.Location = new System.Drawing.Point(579, 21);
-            this.btn_hexaddition.Name = "btn_hexaddition";
-            this.btn_hexaddition.Size = new System.Drawing.Size(118, 74);
-            this.btn_hexaddition.TabIndex = 2;
-            this.btn_hexaddition.Text = "_hexaddition";
-            this.btn_hexaddition.UseVisualStyleBackColor = true;
-            this.btn_hexaddition.Click += new System.EventHandler(this.btn_hexaddition_Click);
+            this.groupBox2.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.groupBox2.Dock = System.Windows.Forms.DockStyle.Top;
+            this.groupBox2.Location = new System.Drawing.Point(3, 119);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(745, 221);
+            this.groupBox2.TabIndex = 4;
+            this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "groupBox2";
             // 
             // groupBox1
             // 
@@ -407,47 +430,25 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "groupBox1";
             // 
-            // groupBox2
+            // btn_hexaddition
             // 
-            this.groupBox2.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.groupBox2.Dock = System.Windows.Forms.DockStyle.Top;
-            this.groupBox2.Location = new System.Drawing.Point(3, 119);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(745, 221);
-            this.groupBox2.TabIndex = 4;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "groupBox2";
-            // 
-            // btn_Power
-            // 
-            this.btn_Power.Location = new System.Drawing.Point(418, 81);
-            this.btn_Power.Name = "btn_Power";
-            this.btn_Power.Size = new System.Drawing.Size(75, 23);
-            this.btn_Power.TabIndex = 2;
-            this.btn_Power.Text = "PowerOn";
-            this.btn_Power.UseVisualStyleBackColor = true;
-            this.btn_Power.Click += new System.EventHandler(this.btn_Power_Click);
-            // 
-            // label_PowerBtn
-            // 
-            this.label_PowerBtn.AutoSize = true;
-            this.label_PowerBtn.Location = new System.Drawing.Point(360, 87);
-            this.label_PowerBtn.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.label_PowerBtn.Name = "label_PowerBtn";
-            this.label_PowerBtn.Size = new System.Drawing.Size(51, 12);
-            this.label_PowerBtn.TabIndex = 4;
-            this.label_PowerBtn.Text = "PowerBtn";
+            this.btn_hexaddition.Location = new System.Drawing.Point(579, 21);
+            this.btn_hexaddition.Name = "btn_hexaddition";
+            this.btn_hexaddition.Size = new System.Drawing.Size(118, 74);
+            this.btn_hexaddition.TabIndex = 2;
+            this.btn_hexaddition.Text = "_hexaddition";
+            this.btn_hexaddition.UseVisualStyleBackColor = true;
+            this.btn_hexaddition.Click += new System.EventHandler(this.btn_hexaddition_Click);
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.AutoScroll = true;
-            this.AutoSize = true;
-            this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(848, 599);
             this.Controls.Add(this.tabCtrl_Dashboard);
+            this.IsMdiContainer = true;
             this.Margin = new System.Windows.Forms.Padding(2);
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
             this.Name = "Form1";
             this.Text = "Form1";
             this.Load += new System.EventHandler(this.Form1_Load);

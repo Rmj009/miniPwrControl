@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Drawing;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
@@ -289,6 +290,7 @@ namespace MiniPwrSupply
             try
             {
                 btn_open.Enabled = false;
+                btn_Power.Enabled = true;
                 txtbx_Iset.Enabled = true;
                 txtbx_Vset.Enabled = true;
                 richTextBox1.Clear();
@@ -829,17 +831,26 @@ namespace MiniPwrSupply
         private void btn_Power_Click(object sender, EventArgs e)
         {
             Button OneShotBtn = (Button)sender;
-
             switch (OneShotBtn.Text)
             {
-                case "PowerOff":
-                    btn_Power.Text = "PowerOn";
+                case "OFF":
+                    btn_Power.BackColor = Color.DarkRed;
+                    btn_Power.Text = "ON";
+                    label_PowerBtn.Text = "Power Off";
+                    label_PowerBtn.Text.ToUpper();
                     this._IsPowerOn(WuzhiPower.PowerOff);
+                    btn_open.Enabled = false;
+                    btn_sendcmd.Enabled = false;
                     break;
 
-                case "PowerOn":
-                    btn_Power.Text = "PowerOff";
+                case "ON":
+                    btn_Power.BackColor = Color.DarkGreen;
+                    btn_Power.Text = "OFF";
+                    label_PowerBtn.Text = "Power On";
+                    label_PowerBtn.Text.ToUpper();
                     this._IsPowerOn(WuzhiPower.PowerOn);
+                    btn_open.Enabled = true;
+                    btn_sendcmd.Enabled = true;
                     break;
 
                 default:
