@@ -1,17 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
+using System.IO;
+using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.IO.Ports;
-using System.Runtime.InteropServices;
-using System.IO;
-using MiniPwrSupply.Properties;
 
 namespace MiniPwrSupply
 {
@@ -96,18 +91,32 @@ namespace MiniPwrSupply
         //private void _hexAddition<Tiida>(IList<Tiida> tiidas)      //array<T>(string, T)改用Generic方式, 捨棄 byte[] hexBytes       // checksum = all hex addition substring last 2
         private Int32 _hexAddition(string[] strArray)
         {
-            if (strArray.Length >= 20)
+            if (strArray.Length == 20)
             {
                 Int32 total = 0;
                 //byte[] hexAdded = Enumerable.Range(0, wuzhiCmd.Length - 2).Where(x => x % 2 == 0).Select(x => Convert.ToByte(wuzhiCmd.Substring(x, 2), 16)).ToArray();  //wuzhiCmd.Substring(x,2)
-                byte[] hexAdded = Enumerable.Range(0, txtbx_WuzhiCmd.Text.Split(' ').Length - 2).Select(x => Convert.ToByte(txtbx_WuzhiCmd.Text.Split(' ')[x], 16)).ToArray();
+                byte[] hexAdded = Enumerable.Range(0, txtbx_WuzhiCmd.Text.Split(' ').Length - 1).Select(x => Convert.ToByte(txtbx_WuzhiCmd.Text.Split(' ')[x], 16)).ToArray();
+
                 total = hexAdded.Sum(x => x);
 
                 richTextBox1.AppendText("wuzhiCmd _hexAddition ---> " + string.Format("0x{0:X}", total));
 
                 return total;
             }
-            return 0;
+            else if (strArray.Length == 19)
+            {
+                Int32 total = 0;
+                byte[] hexAdded = Enumerable.Range(0, strArray.Length - 2).Select(x => Convert.ToByte(strArray[x], 16)).ToArray();
+                total = hexAdded.Sum(x => x);
+
+                richTextBox1.AppendText("strArray _hexAddition ---> " + string.Format("0x{0:X}", total));
+
+                return total;
+            }
+            else
+            {
+                return 0;
+            }
             //else if (1 == 1)
             //{
             //    richTextBox1.AppendText("IsReadyOnly return TRUE ---> array,\r\n while FLASE ---> list \r\n" + tiidas.IsReadOnly.ToString() + "\r\n");
@@ -412,7 +421,7 @@ namespace MiniPwrSupply
             }
         }
 
-        public string decstringToHex(string args)
+        private string _decstringToHex(string args)
         {
             //var hexstring = string.Join("", args.Select(i => string.Format("{0:X2}", Convert.ToInt32(i))));
             var decstring = Convert.ToInt32(args);
@@ -459,12 +468,11 @@ namespace MiniPwrSupply
 
         private void btn_sendcmd_Click(object sender, EventArgs e)
         {
-            //int length = serialPort1.BytesToRead;
+            int length = serialPort1.BytesToRead;
             string receiveData = string.Empty;
-            //string[] PowerCmd = null;
             byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
-            string synchroHead = this.decstringToHex("170");   //AA
-            string Address = this.decstringToHex(txtbx_addr.Text.Trim());
+            string synchroHead = this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
+            string Address = this._decstringToHex(txtbx_addr.Text.Trim());
             byte[] V_I_set = new byte[4];
             double Vset = 0.0d;
             double Iset = 0.0d;
@@ -474,13 +482,12 @@ namespace MiniPwrSupply
             string vsetting2 = string.Empty;
             string isetting1 = string.Empty;
             string isetting2 = string.Empty;
-
             string checksum = string.Empty;
 
             //https://stackoverflow.com/questions/415291/best-way-to-combine-two-or-more-byte-arrays-in-c-sharp
             try
             {
-                if (txtbx_Iset.Text.Length > 4 )
+                if (txtbx_Iset.Text.Length > 4)
                 {   // confirm whether belong to double
                     //double isetting = Convert.ToDouble(txtbx_Iset.Text.Trim().Substring(0, 4));
                     if (Double.TryParse(txtbx_Iset.Text.Trim().Substring(0, txtbx_Iset.TextLength), out Iset))
@@ -531,8 +538,8 @@ namespace MiniPwrSupply
                     }
                     string VsetStr = Convert.ToString((int)(Vset * 100));
                     string IsetStr = Convert.ToString((int)(Iset * 1000));
-                    vsetting = this.decstringToHex(VsetStr); //(Int32)Vset * 100
-                    isetting = this.decstringToHex(IsetStr); //Convert.ToString((Int32)Iset, 16));
+                    vsetting = this._decstringToHex(VsetStr); //(Int32)Vset * 100
+                    isetting = this._decstringToHex(IsetStr); //Convert.ToString((Int32)Iset, 16));
                     //byte[] bytes = BitConverter.GetBytes(Vset * 100).Concat(BitConverter.GetBytes(Iset * 100)) as byte[];
                     //Buffer.BlockCopy();
                     //string tmp = (string)txtbx_Vset.Text.Trim().Concat(txtbx_Iset.Text.Trim());
@@ -543,7 +550,7 @@ namespace MiniPwrSupply
                 int iset_len = isetting.ToCharArray().Length;
                 if (vset_len == 3)
                 {
-                    if (iset_len == 3) 
+                    if (iset_len == 3)
                     {
                         vsetting1 = vsetting.Substring(0, vset_len - 2);
                         vsetting2 = vsetting.Substring(vset_len - 2, vset_len - 1);
@@ -644,10 +651,19 @@ namespace MiniPwrSupply
                     isetting1 = "00";
                     isetting2 = isetting;
                 }
+            }
+            catch (ArgumentOutOfRangeException argex)
+            {
+                throw new ArgumentOutOfRangeException("Vset or Iset text substring Err!--->" + argex.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Sendcmd ERR!!" + ex.Message);
+            }
 
-                string[] PowerCmd =
-                {
-                    synchroHead,
+            //----------------------------------------------
+            string[] PowerCmd = {
+                 synchroHead,
                     Address,
                     "2C",
                     "14",
@@ -666,58 +682,42 @@ namespace MiniPwrSupply
                     "00",
                     "00",
                     "00"
-                };
-                //  00 ---> baudrate
-                //byte[] chksum  = PowerCmd.Select(i => Convert.ToByte(i,16)).ToArray();
-                byte[] chksum = Enumerable.Range(0, PowerCmd.Length).Select(x => Convert.ToByte(PowerCmd[x], 16)).ToArray();
-                checksum = Convert.ToString(chksum.Sum(i => i));//.Substring(1, 2);  //TODO convert to string and substring last2
-            }
-            catch (ArgumentOutOfRangeException argex)
-            {
-                throw new ArgumentOutOfRangeException("Vset or Iset text substring Err!--->" + argex.Message);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Sendcmd ERR!!" + ex.Message);
-            }
+            };
+            //mPowerCmd = Enumerable.Range(0, PowerCmd.Length).Select(i => this._decstringToHex(PowerCmd[i])).ToArray();
+            //  00 ---> baudrate
+            //var temp = PowerCmd;
+            //var temp2 = txtbx_WuzhiCmd.Text.Split(' ');
+            string chksum = string.Format("0x{0:X}", this._hexAddition(PowerCmd));
+            checksum = chksum.Substring(chksum.Length - 2, 2);
+            this._decstringToHex(checksum);
+            //byte[] chksum = Enumerable.Range(0, PowerCmd.Length).Select(x => Convert.ToByte(PowerCmd[x], 16)).ToArray();
+            //checksum = chksum.Sum(i => i);//.Substring(1, 2);  //TODO convert to string and substring last2
+            //----------------------------------------------
+            byte[] cmd = new byte[20];
+            cmd[0] = Convert.ToByte(synchroHead, 16); //0xAA
+            cmd[1] = Convert.ToByte(Address, 16);   //0x01
+            cmd[2] = 0x2C;
+            cmd[3] = 0x14;
+            cmd[4] = 0x50;
+            cmd[5] = 0x14;
+            cmd[6] = 0x50;
+            cmd[7] = Convert.ToByte(vsetting1, 16); //0x
+            cmd[8] = Convert.ToByte(vsetting2, 16); //0x
+            cmd[9] = Convert.ToByte(isetting1, 16); //0x
+            cmd[10] = Convert.ToByte(isetting2, 16); //0x
+            cmd[11] = 0x00;
+            cmd[12] = 0x00;
+            cmd[13] = 0x00;
+            cmd[14] = 0x42;
+            cmd[15] = 0x00;
+            cmd[16] = 0x00;
+            cmd[17] = 0x00;
+            cmd[18] = 0x00;
+            cmd[19] = Convert.ToByte(string.Format("0x{0:X}", checksum), 16);
 
-            //byte[] Vset = Encoding.UTF8.GetBytes(txtbx_Vset.Text);  // convert string to HEX
-            //byte[] Iset = Encoding.UTF8.GetBytes(txtbx_Iset.Text);
-
-            //byte[] Vset = BitConverter.GetBytes(Convert.ToDouble(txtbx_Vset.Text));  // convert string to hex
-            //byte[] Iset = BitConverter.GetBytes(Convert.ToDouble(txtbx_Iset.Text));
-            //byte[] V_I_set = (byte[])Vset.Concat(Iset);
-            //byte[] sendWuzhiCmd = Encoding.UTF8.GetBytes(synchroHead);//.Concat(powerAddr);
-            //try
-            //{
-            //    byte[] cmd = new byte[20];      // wuzhiCmd.Length = 20
-            //    //cmd = Enumerable.Range(0, wuzhiCmd.Length - 2).Where(x => x % 2 == 0).Select(x => Convert.ToByte(wuzhiCmd.Substring(x, 2), 16)).ToArray();
-            //    //foreach (byte item in cmd)
-            //    //{
-            //    //    item.Substring(2, wuzhiCmd.Length);
-            //    //    string.Format("0x{0:X}", item).Append();
-            //    //}
-
-            //    cmd[0] = 0xAA;
-            //    cmd[1] = 0x01;
-            //    cmd[2] = 0x22;
-            //    cmd[3] = 0x00;
-            //    cmd[4] = 0x00;
-            //    cmd[5] = 0x00;
-            //    cmd[6] = 0x00;
-            //    cmd[7] = 0x00; //Vset[0];       //0x00
-            //    cmd[8] = 0x00; //Vset[1];      //0x00;      // Voltage
-            //    cmd[9] = 0x00; //Iset[0];      //0x00;      //  current hex+
-            //    cmd[10] = 0x00; //Iset[1];       //0x00;     // current hex+
-            //    cmd[11] = 0x00;
-            //    cmd[12] = 0x00;
-            //    cmd[13] = 0x00;
-            //    cmd[14] = 0x00;
-            //    cmd[15] = 0x00;
-            //    cmd[16] = 0x00;
-            //    cmd[17] = 0x00;
-            //    cmd[18] = 0x00;
-            //    cmd[19] = 0xcd;
+            //int sumupCHECK = cmd.Sum(i => i);
+            //----------------------------------------------
+            //cmd[19] = (byte)cmd.Sum(i => i);
             //    //this._SendCmd(cmd, ref result);
             //    try
             //    {
@@ -769,7 +769,7 @@ namespace MiniPwrSupply
                     //richTextBox1.AppendText("\n show receviveData " + receiveData);
                     Thread.Sleep(300);
                     //Save_LOG_data("Sending cmd ---->" + BitConverter.ToString(cmd));
-                    serialPort1.Write(wuzhiCmd, 0, wuzhiCmd.Length);
+                    serialPort1.Write(cmd, 0, cmd.Length);
                     //richTextBox1.AppendText("\n show cmd ---> " + string.Format("0x{0:X}", cmd));
                     break;
                 }
