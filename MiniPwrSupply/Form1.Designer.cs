@@ -166,7 +166,7 @@
             this.btn_refresh.Name = "btn_refresh";
             this.btn_refresh.Size = new System.Drawing.Size(149, 23);
             this.btn_refresh.TabIndex = 2;
-            this.btn_refresh.Text = "refresh";
+            this.btn_refresh.Text = "Reconnect";
             this.btn_refresh.UseVisualStyleBackColor = true;
             this.btn_refresh.Click += new System.EventHandler(this.btn_refresh_Click);
             // 
@@ -402,7 +402,7 @@
             this.tabCtrl2.Padding = new System.Windows.Forms.Padding(3);
             this.tabCtrl2.Size = new System.Drawing.Size(751, 573);
             this.tabCtrl2.TabIndex = 1;
-            this.tabCtrl2.Text = "Verify_Calculation";
+            this.tabCtrl2.Text = "DebugPage";
             this.tabCtrl2.UseVisualStyleBackColor = true;
             // 
             // groupBox2

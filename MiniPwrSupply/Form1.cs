@@ -100,7 +100,7 @@ namespace MiniPwrSupply
 
                 total = hexAdded.Sum(x => x);
 
-                richTextBox1.AppendText("wuzhiCmd _hexAddition ---> " + string.Format("0x{0:X}", total));
+                //richTextBox1.AppendText("wuzhiCmd _hexAddition ---> " + string.Format("0x{0:X}", total));
 
                 return total;
             }
@@ -110,7 +110,7 @@ namespace MiniPwrSupply
                 byte[] hexAdded = Enumerable.Range(0, strArray.Length - 2).Select(x => Convert.ToByte(strArray[x], 16)).ToArray();
                 total = hexAdded.Sum(x => x);
 
-                richTextBox1.AppendText("strArray _hexAddition ---> " + string.Format("0x{0:X}", total));
+                //richTextBox1.AppendText("\r\n strArray _hexAddition ---> " + string.Format("0x{0:X}", total));
 
                 return total;
             }
@@ -159,7 +159,7 @@ namespace MiniPwrSupply
                 bool hasData = dataString.Split(' ').Contains("AA"); //this is to check if your data has this, if it doesn't do something
                 //You get your data from serial port as byte[]
                 //Do something on your data
-                byte[] globalBuffer = new byte[200]; //large buffer, put globally
+                byte[] globalBuffer = new byte[8800]; //large buffer, put globally
                 buff.CopyTo(globalBuffer, 0);
                 //In your data received, use Buffer.BlockCopy to copy data to your globalBuffer
                 //if (globalBuffer.Length >= 20)          //Beware the index ---> 20*2+19
@@ -210,7 +210,7 @@ namespace MiniPwrSupply
                 this.Invoke(new Action(() =>
                 {
                     receivedata = BitConverter.ToString(buff);      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
-                    richTextBox1.AppendText(" \r\n receivedata --->" + receivedata);//receivedata.ToArray().ToString());
+                    richTextBox1.AppendText(" \r\n receivedata: --->" + receivedata + "\r\n");//receivedata.ToArray().ToString());
                 }));
                 //this._WaitForUIThread(() =>
                 //{
@@ -271,6 +271,8 @@ namespace MiniPwrSupply
                     string[] ports = SerialPort.GetPortNames();
                     cmbx_com.Items.Clear();
                     cmbx_com.Items.AddRange(ports);
+                    btn_open.Enabled = true;
+                    btn_sendcmd.Enabled = false;
                     break;
                 }
                 catch (Exception ex)
@@ -316,34 +318,12 @@ namespace MiniPwrSupply
                     System.Threading.Thread.Sleep(200);
                 }
                 serialPort1.Open();
-                richTextBox1.AppendText("\n\r SerialPort is opened \n\r");
+                richTextBox1.AppendText("\n\r >>> SerialPort is opened \n\r");
                 System.Threading.Thread.Sleep(300);
                 // ---------------------------------------------------------------------------
                 // ---------------------------------------------------------------------------
                 // ---------------------------------------------------------------------------
-                //byte[] cmd = new byte[20];      // wuzhiCmd.Length = 20
-                //cmd[0] = 0xaa;
-                //cmd[1] = 0x01;
-                //cmd[2] = 0x22;
-                //cmd[3] = 0x00;
-                //cmd[4] = 0x00;
-                //cmd[5] = 0x00;
-                //cmd[6] = 0x00;
-                //cmd[7] = 0x00; //Vset[0];       //0x00
-                //cmd[8] = 0x00; //Vset[1];      //0x00;      // Voltage
-                //cmd[9] = 0x00; //Iset[0];      //0x00;      //  current hex+
-                //cmd[10] = 0x00; //Iset[1];       //0x00;     // current hex+
-                //cmd[11] = 0x00;
-                //cmd[12] = 0x00;
-                //cmd[13] = 0x00;
-                //cmd[14] = 0x00;
-                //cmd[15] = 0x00;
-                //cmd[16] = 0x00;
-                //cmd[17] = 0x00;
-                //cmd[18] = 0x00;
-                //cmd[19] = 0xcd;
-                //this._SendCmd(cmd, ref result);
-                byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+                //byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
                 Int32 tryCount = 1;
                 do
                 {
@@ -356,7 +336,7 @@ namespace MiniPwrSupply
                         //richTextBox1.AppendText("\n show receviveData " + receiveData);
                         Thread.Sleep(300);
                         //Save_LOG_data("Sending cmd ---->" + BitConverter.ToString(cmd));
-                        serialPort1.Write(wuzhiCmd, 0, wuzhiCmd.Length);
+                        //serialPort1.Write(wuzhiCmd, 0, wuzhiCmd.Length);
                         //richTextBox1.AppendText("\n show cmd ---> " + string.Format("0x{0:X}", cmd));
                         break;
                     }
@@ -374,12 +354,11 @@ namespace MiniPwrSupply
             }
             catch (Exception ex)
             {
-                ShowErrMsg("connect serialport ERR");
+                ShowErrMsg(@"尚未選擇COMPORT");
                 throw ex;
             }
             finally
             {
-                btn_sendcmd.Enabled = true;
                 //serialPort1.Close();
             }
         }
@@ -653,7 +632,7 @@ namespace MiniPwrSupply
             //var temp2 = txtbx_WuzhiCmd.Text.Split(' ');
             string chksum = string.Format("0x{0:X}", this._hexAddition(PowerCmd));
             checksum = chksum.Substring(chksum.Length - 2, 2);
-            this._decstringToHex(checksum);
+            //this._decstringToHex(checksum);
             //byte[] chksum = Enumerable.Range(0, PowerCmd.Length).Select(x => Convert.ToByte(PowerCmd[x], 16)).ToArray();
             //checksum = chksum.Sum(i => i);//.Substring(1, 2);  //TODO convert to string and substring last2
             //----------------------------------------------
@@ -839,8 +818,8 @@ namespace MiniPwrSupply
                     label_PowerBtn.Text = "Power Off";
                     label_PowerBtn.Text.ToUpper();
                     this._IsPowerOn(WuzhiPower.PowerOff);
-                    btn_open.Enabled = false;
                     btn_sendcmd.Enabled = false;
+                    btn_open.Enabled = false;
                     break;
 
                 case "ON":
@@ -849,9 +828,17 @@ namespace MiniPwrSupply
                     label_PowerBtn.Text = "Power On";
                     label_PowerBtn.Text.ToUpper();
                     this._IsPowerOn(WuzhiPower.PowerOn);
-                    btn_open.Enabled = true;
-                    btn_sendcmd.Enabled = true;
-                    break;
+                    if (!btn_open.Enabled)
+                    {
+                        btn_sendcmd.Enabled = true;
+                        break;
+                    }
+                    else
+                    {
+                        btn_open.Enabled = true;
+                        btn_sendcmd.Enabled = false;
+                        break;
+                    }
 
                 default:
                     break;
