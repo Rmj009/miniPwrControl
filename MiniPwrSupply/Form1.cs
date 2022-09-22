@@ -847,6 +847,7 @@ namespace MiniPwrSupply
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            this.richTextBox1.Clear();
             //this._comportScanning();
             // INIT port
             try
@@ -863,6 +864,36 @@ namespace MiniPwrSupply
                 throw ex;
             }
             // INIT baudrate
+        }
+        private void Form1_Closing(object sender, FormClosingEventArgs e)
+        {
+            DialogResult dr = MessageBox.Show(this, "Be sure to Eixt？", "Window Closing Notice", MessageBoxButtons.YesNo, MessageBoxIcon.Stop);
+
+            if (dr == DialogResult.Yes)
+            {
+                //if (this.mIC != null)
+                //{
+                //    this.mIC.Dispose(); // IC Free Resource
+                //    this.mIC.IDispose(); // Instrument Free Resource
+                //}
+
+                //try
+                //{
+                //    if (bWriteLogFlag)
+                //    {
+                //        this.WriteTotalCountData();
+                //    }
+                //    ResultCsvSingleton.Instance.DeleteEmptyTestResultCsv();
+                //    ResultCsvItSingleton.Instance.DeleteEmptyTestResultCsv();
+                //}
+                //catch { }
+
+                e.Cancel = false;
+            }
+            else
+            {
+                e.Cancel = true;
+            }
         }
     }
 }
