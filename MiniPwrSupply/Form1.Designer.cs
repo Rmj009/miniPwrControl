@@ -63,6 +63,9 @@
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.btn_hexaddition = new System.Windows.Forms.Button();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label_DataReceived = new System.Windows.Forms.Label();
+            this.textBox1 = new System.Windows.Forms.TextBox();
             this.grpBox_port_setting.SuspendLayout();
             this.grpBox_dashboard.SuspendLayout();
             this.tabCtrl_Dashboard.SuspendLayout();
@@ -75,6 +78,9 @@
             // 
             this.grpBox_port_setting.AutoSize = true;
             this.grpBox_port_setting.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.grpBox_port_setting.Controls.Add(this.textBox1);
+            this.grpBox_port_setting.Controls.Add(this.label_DataReceived);
+            this.grpBox_port_setting.Controls.Add(this.label1);
             this.grpBox_port_setting.Controls.Add(this.cmbx_baudrate);
             this.grpBox_port_setting.Controls.Add(this.cmbx_com);
             this.grpBox_port_setting.Controls.Add(this.btn_sendcmd);
@@ -89,7 +95,7 @@
             this.grpBox_port_setting.Margin = new System.Windows.Forms.Padding(2);
             this.grpBox_port_setting.Name = "grpBox_port_setting";
             this.grpBox_port_setting.Padding = new System.Windows.Forms.Padding(2);
-            this.grpBox_port_setting.Size = new System.Drawing.Size(168, 567);
+            this.grpBox_port_setting.Size = new System.Drawing.Size(168, 564);
             this.grpBox_port_setting.TabIndex = 0;
             this.grpBox_port_setting.TabStop = false;
             this.grpBox_port_setting.Text = "PortSetting";
@@ -102,7 +108,7 @@
             "115200"});
             this.cmbx_baudrate.Location = new System.Drawing.Point(87, 86);
             this.cmbx_baudrate.Name = "cmbx_baudrate";
-            this.cmbx_baudrate.Size = new System.Drawing.Size(76, 20);
+            this.cmbx_baudrate.Size = new System.Drawing.Size(76, 23);
             this.cmbx_baudrate.TabIndex = 7;
             this.cmbx_baudrate.Text = "9600";
             // 
@@ -113,7 +119,7 @@
             "COM1"});
             this.cmbx_com.Location = new System.Drawing.Point(80, 38);
             this.cmbx_com.Name = "cmbx_com";
-            this.cmbx_com.Size = new System.Drawing.Size(82, 20);
+            this.cmbx_com.Size = new System.Drawing.Size(82, 23);
             this.cmbx_com.TabIndex = 6;
             this.cmbx_com.SelectedIndexChanged += new System.EventHandler(this.cmbx_com_SelectedIndexChanged);
             // 
@@ -134,7 +140,7 @@
             this.txtbx_addr.Location = new System.Drawing.Point(112, 133);
             this.txtbx_addr.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_addr.Name = "txtbx_addr";
-            this.txtbx_addr.Size = new System.Drawing.Size(50, 22);
+            this.txtbx_addr.Size = new System.Drawing.Size(50, 25);
             this.txtbx_addr.TabIndex = 0;
             this.txtbx_addr.Text = "1";
             // 
@@ -144,7 +150,7 @@
             this.label_com.Location = new System.Drawing.Point(11, 38);
             this.label_com.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_com.Name = "label_com";
-            this.label_com.Size = new System.Drawing.Size(31, 12);
+            this.label_com.Size = new System.Drawing.Size(39, 15);
             this.label_com.TabIndex = 4;
             this.label_com.Text = "COM";
             // 
@@ -176,7 +182,7 @@
             this.label_Addr.Location = new System.Drawing.Point(10, 138);
             this.label_Addr.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Addr.Name = "label_Addr";
-            this.label_Addr.Size = new System.Drawing.Size(70, 12);
+            this.label_Addr.Size = new System.Drawing.Size(86, 15);
             this.label_Addr.TabIndex = 4;
             this.label_Addr.Text = "Addr (0~255)";
             // 
@@ -186,7 +192,7 @@
             this.label_Baudrate.Location = new System.Drawing.Point(11, 89);
             this.label_Baudrate.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Baudrate.Name = "label_Baudrate";
-            this.label_Baudrate.Size = new System.Drawing.Size(47, 12);
+            this.label_Baudrate.Size = new System.Drawing.Size(57, 15);
             this.label_Baudrate.TabIndex = 4;
             this.label_Baudrate.Text = "Baudrate";
             // 
@@ -196,7 +202,7 @@
             this.label_OVP.Location = new System.Drawing.Point(42, 28);
             this.label_OVP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_OVP.Name = "label_OVP";
-            this.label_OVP.Size = new System.Drawing.Size(27, 12);
+            this.label_OVP.Size = new System.Drawing.Size(35, 15);
             this.label_OVP.TabIndex = 4;
             this.label_OVP.Text = "OVP";
             // 
@@ -243,7 +249,7 @@
             this.label_WuzhiCmd.AutoSize = true;
             this.label_WuzhiCmd.Location = new System.Drawing.Point(28, 123);
             this.label_WuzhiCmd.Name = "label_WuzhiCmd";
-            this.label_WuzhiCmd.Size = new System.Drawing.Size(59, 12);
+            this.label_WuzhiCmd.Size = new System.Drawing.Size(71, 15);
             this.label_WuzhiCmd.TabIndex = 6;
             this.label_WuzhiCmd.Text = "WuzhiCmd";
             // 
@@ -251,19 +257,20 @@
             // 
             this.txtbx_WuzhiCmd.Location = new System.Drawing.Point(102, 113);
             this.txtbx_WuzhiCmd.Name = "txtbx_WuzhiCmd";
-            this.txtbx_WuzhiCmd.Size = new System.Drawing.Size(388, 22);
+            this.txtbx_WuzhiCmd.Size = new System.Drawing.Size(388, 25);
             this.txtbx_WuzhiCmd.TabIndex = 5;
             this.txtbx_WuzhiCmd.Text = "aa 01 22 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ce";
             // 
             // txtbx_Iset
             // 
             this.txtbx_Iset.Enabled = false;
-            this.txtbx_Iset.Location = new System.Drawing.Point(258, 81);
+            this.txtbx_Iset.Location = new System.Drawing.Point(258, 84);
             this.txtbx_Iset.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Iset.Name = "txtbx_Iset";
-            this.txtbx_Iset.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_Iset.Size = new System.Drawing.Size(72, 25);
             this.txtbx_Iset.TabIndex = 0;
             this.txtbx_Iset.Text = "1";
+            this.txtbx_Iset.TextChanged += new System.EventHandler(this.txtbx_Iset_TextChanged);
             // 
             // txtbx_Vset
             // 
@@ -271,7 +278,7 @@
             this.txtbx_Vset.Location = new System.Drawing.Point(98, 81);
             this.txtbx_Vset.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Vset.Name = "txtbx_Vset";
-            this.txtbx_Vset.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_Vset.Size = new System.Drawing.Size(72, 25);
             this.txtbx_Vset.TabIndex = 0;
             this.txtbx_Vset.Text = "1.38";
             // 
@@ -289,7 +296,7 @@
             this.txtbx_Vin.Location = new System.Drawing.Point(418, 25);
             this.txtbx_Vin.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Vin.Name = "txtbx_Vin";
-            this.txtbx_Vin.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_Vin.Size = new System.Drawing.Size(72, 25);
             this.txtbx_Vin.TabIndex = 0;
             // 
             // label_PowerBtn
@@ -298,7 +305,7 @@
             this.label_PowerBtn.Location = new System.Drawing.Point(360, 87);
             this.label_PowerBtn.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_PowerBtn.Name = "label_PowerBtn";
-            this.label_PowerBtn.Size = new System.Drawing.Size(51, 12);
+            this.label_PowerBtn.Size = new System.Drawing.Size(63, 15);
             this.label_PowerBtn.TabIndex = 4;
             this.label_PowerBtn.Text = "PowerBtn";
             // 
@@ -308,7 +315,7 @@
             this.label_Vin.Location = new System.Drawing.Point(360, 28);
             this.label_Vin.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Vin.Name = "label_Vin";
-            this.label_Vin.Size = new System.Drawing.Size(22, 12);
+            this.label_Vin.Size = new System.Drawing.Size(28, 15);
             this.label_Vin.TabIndex = 4;
             this.label_Vin.Text = "Vin";
             // 
@@ -317,7 +324,7 @@
             this.txtbx_ocp.Location = new System.Drawing.Point(258, 25);
             this.txtbx_ocp.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_ocp.Name = "txtbx_ocp";
-            this.txtbx_ocp.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_ocp.Size = new System.Drawing.Size(72, 25);
             this.txtbx_ocp.TabIndex = 0;
             // 
             // label_OCP
@@ -326,7 +333,7 @@
             this.label_OCP.Location = new System.Drawing.Point(200, 28);
             this.label_OCP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_OCP.Name = "label_OCP";
-            this.label_OCP.Size = new System.Drawing.Size(27, 12);
+            this.label_OCP.Size = new System.Drawing.Size(34, 15);
             this.label_OCP.TabIndex = 4;
             this.label_OCP.Text = "OCP";
             // 
@@ -335,18 +342,19 @@
             this.txtbx_ovp.Location = new System.Drawing.Point(98, 25);
             this.txtbx_ovp.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_ovp.Name = "txtbx_ovp";
-            this.txtbx_ovp.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_ovp.Size = new System.Drawing.Size(72, 25);
             this.txtbx_ovp.TabIndex = 0;
             // 
             // label_Iset
             // 
             this.label_Iset.AutoSize = true;
-            this.label_Iset.Location = new System.Drawing.Point(198, 87);
+            this.label_Iset.Location = new System.Drawing.Point(188, 91);
             this.label_Iset.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Iset.Name = "label_Iset";
-            this.label_Iset.Size = new System.Drawing.Size(52, 12);
+            this.label_Iset.Size = new System.Drawing.Size(66, 15);
             this.label_Iset.TabIndex = 4;
             this.label_Iset.Text = "Iset (~5A)";
+            this.label_Iset.Click += new System.EventHandler(this.label_Iset_Click);
             // 
             // label_Vset
             // 
@@ -354,7 +362,7 @@
             this.label_Vset.Location = new System.Drawing.Point(16, 89);
             this.label_Vset.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Vset.Name = "label_Vset";
-            this.label_Vset.Size = new System.Drawing.Size(66, 12);
+            this.label_Vset.Size = new System.Drawing.Size(82, 15);
             this.label_Vset.TabIndex = 4;
             this.label_Vset.Text = "Vset (6~55v)";
             // 
@@ -363,7 +371,7 @@
             this.radiobtn_hexadded.AutoSize = true;
             this.radiobtn_hexadded.Location = new System.Drawing.Point(462, 50);
             this.radiobtn_hexadded.Name = "radiobtn_hexadded";
-            this.radiobtn_hexadded.Size = new System.Drawing.Size(83, 16);
+            this.radiobtn_hexadded.Size = new System.Drawing.Size(101, 19);
             this.radiobtn_hexadded.TabIndex = 7;
             this.radiobtn_hexadded.TabStop = true;
             this.radiobtn_hexadded.Text = "HexAddition";
@@ -385,10 +393,10 @@
             // 
             this.tabCtrl1.Controls.Add(this.grpBox_port_setting);
             this.tabCtrl1.Controls.Add(this.grpBox_dashboard);
-            this.tabCtrl1.Location = new System.Drawing.Point(4, 22);
+            this.tabCtrl1.Location = new System.Drawing.Point(4, 25);
             this.tabCtrl1.Name = "tabCtrl1";
             this.tabCtrl1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCtrl1.Size = new System.Drawing.Size(751, 573);
+            this.tabCtrl1.Size = new System.Drawing.Size(751, 570);
             this.tabCtrl1.TabIndex = 0;
             this.tabCtrl1.Text = "Dashboard";
             this.tabCtrl1.UseVisualStyleBackColor = true;
@@ -397,10 +405,10 @@
             // 
             this.tabCtrl2.Controls.Add(this.groupBox2);
             this.tabCtrl2.Controls.Add(this.groupBox1);
-            this.tabCtrl2.Location = new System.Drawing.Point(4, 22);
+            this.tabCtrl2.Location = new System.Drawing.Point(4, 25);
             this.tabCtrl2.Name = "tabCtrl2";
             this.tabCtrl2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCtrl2.Size = new System.Drawing.Size(751, 573);
+            this.tabCtrl2.Size = new System.Drawing.Size(751, 570);
             this.tabCtrl2.TabIndex = 1;
             this.tabCtrl2.Text = "DebugPage";
             this.tabCtrl2.UseVisualStyleBackColor = true;
@@ -439,6 +447,31 @@
             this.btn_hexaddition.Text = "_hexaddition";
             this.btn_hexaddition.UseVisualStyleBackColor = true;
             this.btn_hexaddition.Click += new System.EventHandler(this.btn_hexaddition_Click);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(27, 449);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(41, 15);
+            this.label1.TabIndex = 4;
+            this.label1.Text = "label1";
+            // 
+            // label_DataReceived
+            // 
+            this.label_DataReceived.AutoSize = true;
+            this.label_DataReceived.Location = new System.Drawing.Point(51, 475);
+            this.label_DataReceived.Name = "label_DataReceived";
+            this.label_DataReceived.Size = new System.Drawing.Size(88, 15);
+            this.label_DataReceived.TabIndex = 4;
+            this.label_DataReceived.Text = "Byte Received";
+            // 
+            // textBox1
+            // 
+            this.textBox1.Location = new System.Drawing.Point(54, 508);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(100, 25);
+            this.textBox1.TabIndex = 2;
             // 
             // Form1
             // 
@@ -502,6 +535,9 @@
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Button btn_hexaddition;
+        private System.Windows.Forms.Label label_DataReceived;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.TextBox textBox1;
     }
 }
 

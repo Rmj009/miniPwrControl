@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MiniPwrSupply.WuizhiCmd;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
@@ -41,7 +42,13 @@ namespace MiniPwrSupply
             PowerOn,
             PowerOff
         }
+        private SerialPort comport;
+        private Int32 totalLength = 0;
+        delegate void Display(Byte[] buffer);
+        private Boolean Isreceiving = false;
+        //--------------------------
 
+        private IWuzhiCmd mWuzhiCmd = null;
         private static Mutex mutex = new Mutex();
         private volatile bool mGet_Start;
         private StringBuilder receiveCall = new StringBuilder();
@@ -59,7 +66,12 @@ namespace MiniPwrSupply
         {
             MessageBox.Show(errMsg, @"Error Occur", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
-
+        private void DisplayText(Byte[] buffer)
+        {
+            textBox1.Text += String.Format("{0}{1}", BitConverter.ToString(buffer), Environment.NewLine);
+            totalLength = totalLength + buffer.Length;
+            label_DataReceived.Text = totalLength.ToString();
+        }
         public void Save_LOG_data(string sTtestResult, bool isTitle = false, bool isCustom = false, bool isError = false)
         {
             uint type = isTitle ? RFTestTool.Util.MSG.TITLE : RFTestTool.Util.MSG.NORMAL;
@@ -148,6 +160,34 @@ namespace MiniPwrSupply
             int len = serialPort1.BytesToRead;      //      170-01-18-128-00-....-00-00-00-00-00-00 00-00-00-00-00-61
             string showInfo = string.Empty;
             Int32 wuzhi_ErrType = 0;
+            //--------------------------------------
+            if ((sender as SerialPort).BytesToRead > 0)
+            {
+                Byte[] buffer1 = new Byte[1024];
+                try
+                {
+                    Int32 length = (sender as SerialPort).Read(buffer1, 0, buffer1.Length);
+                    Array.Resize(ref buffer1, length);
+                    Display d = new Display(DisplayText);
+                    this.Invoke(d, new Object[] { buffer1 });
+                }
+                catch (TimeoutException timeoutEx)
+                {
+                    //以下這邊請自行撰寫你想要的例外處理
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(BitConverter.ToString(buffer1));
+                    //以下這邊請自行撰寫你想要的例外處理
+                }
+                
+            }
+
+            //--------------------------------------
+
+
+
+
             try
             {
                 SerialPort sp = (SerialPort)sender;
@@ -232,6 +272,44 @@ namespace MiniPwrSupply
         private void DisplayTxt(byte[] buffer)
         {
         }
+        private void parse(List<Byte> tempList)
+        {
+            MessageBox.Show(tempList[0].ToString());
+            //if (tempList[0] == (Byte)S && tempList[tempList.Count - 1] == (Byte)E)
+            if (true)
+            {
+                tempList.RemoveAt(0);
+                tempList.RemoveAt(tempList.Count - 1);
+                Display d = new Display(DisplayText);
+                this.Invoke(d, new Object[] { tempList.ToArray() });
+
+            }
+        }
+        private void DoReceive()
+        {
+            List<Byte> tempList = new List<Byte>();
+
+            while (Isreceiving)
+            {
+                Int32 receivedValue = comport.ReadByte();
+                switch (receivedValue)
+                {
+                    case 1:
+                        tempList.Clear();
+                        tempList.Add((Byte)receivedValue);
+                        break;
+                    case 2:
+                        tempList.Add((Byte)receivedValue);
+                        this.parse(tempList);
+                        break;
+                    case -1:
+                        break;
+                    default:
+                        tempList.Add((Byte)receivedValue);
+                        break;
+                }
+            }
+        }
 
         private void _comportScanning()
         {
@@ -306,7 +384,7 @@ namespace MiniPwrSupply
                     serialPort1.DtrEnable = true;           // Gets or sets a value that enables the Data Terminal Ready (DTR) signal during serial communication.
                     serialPort1.RtsEnable = true;           //序列通訊期間是否啟用 Request to Send (RTS)
 
-                    serialPort1.ReadTimeout = 100;
+                    serialPort1.ReadTimeout = 20000;        // stop received after 20000sec
                     //serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
                     this.mIsConnectedSerialPort = true;
                 }
@@ -410,6 +488,30 @@ namespace MiniPwrSupply
             return hexstr;
         }
 
+
+        private static void StartToTestRFThreadFunc(object obj)
+        {
+            Form1 self = obj as Form1;
+            //TestItem currentItem = TestFlowSingleton.Instance.GetNextTestItem();
+            //self.mIC.SetIsTesting(true);
+            //UtilsSingleton.Instance.SetMainForm(self);
+            // --- Show Group Status
+            self.BeginInvoke(new Action(() =>
+            {
+                //self.ShowTestGroupInformation(false, currentItem);
+            }));
+            try
+            {
+                //self.mIC.StartToTest();
+                self.mWuzhiCmd.TakeInitiatives();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
+        }
+
         private void btn_sendcmd_Click(object sender, EventArgs e)
         {
             int length = serialPort1.BytesToRead;
@@ -479,19 +581,22 @@ namespace MiniPwrSupply
                         double.TryParse(txtbx_Vset.Text.Trim(), out Vset);
                         double.TryParse(txtbx_Iset.Text.Trim(), out Iset);
                     }
-                    string VsetStr = Convert.ToString((int)(Vset * 100));
-                    string IsetStr = Convert.ToString((int)(Iset * 1000));
-                    vsetting = this._decstringToHex(VsetStr); //(Int32)Vset * 100
-                    isetting = this._decstringToHex(IsetStr); //Convert.ToString((Int32)Iset, 16));
                     //byte[] bytes = BitConverter.GetBytes(Vset * 100).Concat(BitConverter.GetBytes(Iset * 100)) as byte[];
                     //Buffer.BlockCopy();
                     //string tmp = (string)txtbx_Vset.Text.Trim().Concat(txtbx_Iset.Text.Trim());
                 }
+
+
+
                 //int vset_len = txtbx_Vset.Text.ToCharArray().Length;
                 //int iset_len = txtbx_Iset.Text.ToCharArray().Length;
+                string VsetStr = Convert.ToString((int)(Vset * 100));
+                string IsetStr = Convert.ToString((int)(Iset * 1000));
+                vsetting = this._decstringToHex(VsetStr); //(Int32)Vset * 100
+                isetting = this._decstringToHex(IsetStr); //Convert.ToString((Int32)Iset, 16));
                 int vset_len = vsetting.ToCharArray().Length;
                 int iset_len = isetting.ToCharArray().Length;
-                if (vset_len == 3)
+                if (vset_len == 3) // && iset_len ==3)
                 {
                     if (iset_len == 3)
                     {
@@ -594,6 +699,8 @@ namespace MiniPwrSupply
                     isetting1 = "00";
                     isetting2 = isetting;
                 }
+
+
             }
             catch (ArgumentOutOfRangeException argex)
             {
@@ -604,6 +711,8 @@ namespace MiniPwrSupply
                 throw new Exception("Sendcmd ERR!!" + ex.Message);
             }
 
+            Thread thread = new Thread(new ParameterizedThreadStart(StartToTestRFThreadFunc));
+            thread.Start(this);
             //----------------------------------------------
             string[] PowerCmd = {
                  synchroHead,
@@ -894,6 +1003,16 @@ namespace MiniPwrSupply
             {
                 e.Cancel = true;
             }
+        }
+
+        private void label_Iset_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtbx_Iset_TextChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

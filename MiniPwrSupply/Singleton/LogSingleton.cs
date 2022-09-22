@@ -99,13 +99,13 @@ namespace MiniPwrSupply.Singleton
             {
                 //m_logDirPath = System.Windows.Forms.Application.StartupPath + @"\Log\" + DateTime.Now.ToString("yyyyMMdd");
                 mInstance.CreateLogFileEnv();
-                string tmp = m_logDirPath + @"\" + OperatorSingleton.Instance.LotNo + "_" + TMP_FILE;
-                temp_logFileName = m_logDirPath + @"\" + OperatorSingleton.Instance.LotNo + "_" + fileName + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + @".log_temp";
-                m_logFileName = m_logDirPath + @"\" + OperatorSingleton.Instance.LotNo + "_" + fileName + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + @".log";
-                if (System.IO.File.Exists(tmp))
-                {
-                    System.IO.File.Move(tmp, temp_logFileName);
-                }
+                //string tmp = m_logDirPath + @"\" + OperatorSingleton.Instance.LotNo + "_" + TMP_FILE;
+                //temp_logFileName = m_logDirPath + @"\" + OperatorSingleton.Instance.LotNo + "_" + fileName + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + @".log_temp";
+                //m_logFileName = m_logDirPath + @"\" + OperatorSingleton.Instance.LotNo + "_" + fileName + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + @".log";
+                //if (System.IO.File.Exists(tmp))
+                //{
+                //    System.IO.File.Move(tmp, temp_logFileName);
+                //}
             }
             catch (Exception ex)
             {

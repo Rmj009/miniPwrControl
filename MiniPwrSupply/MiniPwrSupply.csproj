@@ -49,6 +49,9 @@
     <Compile Include="cmdDict.cs" />
     <Compile Include="Config\Ini.cs" />
     <Compile Include="Config\InterfaceSystemIin.cs" />
+    <Compile Include="DoWuzhiCmd\RS232.cs" />
+    <Compile Include="DoWuzhiCmd\WuzhiCmd.cs" />
+    <Compile Include="DoWuzhiCmd\WuzhiCmdBase.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
