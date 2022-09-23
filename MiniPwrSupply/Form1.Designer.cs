@@ -31,6 +31,9 @@
             this.components = new System.ComponentModel.Container();
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
             this.grpBox_port_setting = new System.Windows.Forms.GroupBox();
+            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.label_DataReceived = new System.Windows.Forms.Label();
+            this.label1 = new System.Windows.Forms.Label();
             this.cmbx_baudrate = new System.Windows.Forms.ComboBox();
             this.cmbx_com = new System.Windows.Forms.ComboBox();
             this.btn_sendcmd = new System.Windows.Forms.Button();
@@ -43,8 +46,6 @@
             this.label_OVP = new System.Windows.Forms.Label();
             this.grpBox_dashboard = new System.Windows.Forms.GroupBox();
             this.btn_Power = new System.Windows.Forms.Button();
-            this.label_WuzhiCmd = new System.Windows.Forms.Label();
-            this.txtbx_WuzhiCmd = new System.Windows.Forms.TextBox();
             this.txtbx_Iset = new System.Windows.Forms.TextBox();
             this.txtbx_Vset = new System.Windows.Forms.TextBox();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
@@ -56,11 +57,16 @@
             this.txtbx_ovp = new System.Windows.Forms.TextBox();
             this.label_Iset = new System.Windows.Forms.Label();
             this.label_Vset = new System.Windows.Forms.Label();
+            this.label_WuzhiCmd = new System.Windows.Forms.Label();
+            this.txtbx_WuzhiCmd = new System.Windows.Forms.TextBox();
             this.radiobtn_hexadded = new System.Windows.Forms.RadioButton();
             this.tabCtrl_Dashboard = new System.Windows.Forms.TabControl();
             this.tabCtrl1 = new System.Windows.Forms.TabPage();
             this.tabCtrl2 = new System.Windows.Forms.TabPage();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.btn_TryCmd = new System.Windows.Forms.Button();
+            this.textBox2 = new System.Windows.Forms.TextBox();
+            this.label_serial1DataReceived = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.btn_hexaddition = new System.Windows.Forms.Button();
             this.grpBox_port_setting.SuspendLayout();
@@ -68,6 +74,7 @@
             this.tabCtrl_Dashboard.SuspendLayout();
             this.tabCtrl1.SuspendLayout();
             this.tabCtrl2.SuspendLayout();
+            this.groupBox2.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -75,6 +82,9 @@
             // 
             this.grpBox_port_setting.AutoSize = true;
             this.grpBox_port_setting.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.grpBox_port_setting.Controls.Add(this.textBox1);
+            this.grpBox_port_setting.Controls.Add(this.label_DataReceived);
+            this.grpBox_port_setting.Controls.Add(this.label1);
             this.grpBox_port_setting.Controls.Add(this.cmbx_baudrate);
             this.grpBox_port_setting.Controls.Add(this.cmbx_com);
             this.grpBox_port_setting.Controls.Add(this.btn_sendcmd);
@@ -89,10 +99,35 @@
             this.grpBox_port_setting.Margin = new System.Windows.Forms.Padding(2);
             this.grpBox_port_setting.Name = "grpBox_port_setting";
             this.grpBox_port_setting.Padding = new System.Windows.Forms.Padding(2);
-            this.grpBox_port_setting.Size = new System.Drawing.Size(168, 567);
+            this.grpBox_port_setting.Size = new System.Drawing.Size(168, 596);
             this.grpBox_port_setting.TabIndex = 0;
             this.grpBox_port_setting.TabStop = false;
             this.grpBox_port_setting.Text = "PortSetting";
+            // 
+            // textBox1
+            // 
+            this.textBox1.Location = new System.Drawing.Point(54, 508);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(100, 22);
+            this.textBox1.TabIndex = 2;
+            // 
+            // label_DataReceived
+            // 
+            this.label_DataReceived.AutoSize = true;
+            this.label_DataReceived.Location = new System.Drawing.Point(51, 475);
+            this.label_DataReceived.Name = "label_DataReceived";
+            this.label_DataReceived.Size = new System.Drawing.Size(73, 12);
+            this.label_DataReceived.TabIndex = 4;
+            this.label_DataReceived.Text = "Byte Received";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(27, 449);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(33, 12);
+            this.label1.TabIndex = 4;
+            this.label1.Text = "label1";
             // 
             // cmbx_baudrate
             // 
@@ -204,8 +239,6 @@
             // 
             this.grpBox_dashboard.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.grpBox_dashboard.Controls.Add(this.btn_Power);
-            this.grpBox_dashboard.Controls.Add(this.label_WuzhiCmd);
-            this.grpBox_dashboard.Controls.Add(this.txtbx_WuzhiCmd);
             this.grpBox_dashboard.Controls.Add(this.txtbx_Iset);
             this.grpBox_dashboard.Controls.Add(this.txtbx_Vset);
             this.grpBox_dashboard.Controls.Add(this.richTextBox1);
@@ -222,7 +255,7 @@
             this.grpBox_dashboard.Margin = new System.Windows.Forms.Padding(2);
             this.grpBox_dashboard.Name = "grpBox_dashboard";
             this.grpBox_dashboard.Padding = new System.Windows.Forms.Padding(2);
-            this.grpBox_dashboard.Size = new System.Drawing.Size(544, 490);
+            this.grpBox_dashboard.Size = new System.Drawing.Size(546, 490);
             this.grpBox_dashboard.TabIndex = 1;
             this.grpBox_dashboard.TabStop = false;
             this.grpBox_dashboard.Text = "Dashboard";
@@ -238,27 +271,10 @@
             this.btn_Power.UseVisualStyleBackColor = true;
             this.btn_Power.Click += new System.EventHandler(this.btn_Power_Click);
             // 
-            // label_WuzhiCmd
-            // 
-            this.label_WuzhiCmd.AutoSize = true;
-            this.label_WuzhiCmd.Location = new System.Drawing.Point(28, 123);
-            this.label_WuzhiCmd.Name = "label_WuzhiCmd";
-            this.label_WuzhiCmd.Size = new System.Drawing.Size(59, 12);
-            this.label_WuzhiCmd.TabIndex = 6;
-            this.label_WuzhiCmd.Text = "WuzhiCmd";
-            // 
-            // txtbx_WuzhiCmd
-            // 
-            this.txtbx_WuzhiCmd.Location = new System.Drawing.Point(102, 113);
-            this.txtbx_WuzhiCmd.Name = "txtbx_WuzhiCmd";
-            this.txtbx_WuzhiCmd.Size = new System.Drawing.Size(388, 22);
-            this.txtbx_WuzhiCmd.TabIndex = 5;
-            this.txtbx_WuzhiCmd.Text = "aa 01 22 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ce";
-            // 
             // txtbx_Iset
             // 
             this.txtbx_Iset.Enabled = false;
-            this.txtbx_Iset.Location = new System.Drawing.Point(258, 81);
+            this.txtbx_Iset.Location = new System.Drawing.Point(258, 84);
             this.txtbx_Iset.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Iset.Name = "txtbx_Iset";
             this.txtbx_Iset.Size = new System.Drawing.Size(72, 22);
@@ -341,7 +357,7 @@
             // label_Iset
             // 
             this.label_Iset.AutoSize = true;
-            this.label_Iset.Location = new System.Drawing.Point(198, 87);
+            this.label_Iset.Location = new System.Drawing.Point(188, 91);
             this.label_Iset.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Iset.Name = "label_Iset";
             this.label_Iset.Size = new System.Drawing.Size(52, 12);
@@ -357,6 +373,23 @@
             this.label_Vset.Size = new System.Drawing.Size(66, 12);
             this.label_Vset.TabIndex = 4;
             this.label_Vset.Text = "Vset (6~55v)";
+            // 
+            // label_WuzhiCmd
+            // 
+            this.label_WuzhiCmd.AutoSize = true;
+            this.label_WuzhiCmd.Location = new System.Drawing.Point(56, 21);
+            this.label_WuzhiCmd.Name = "label_WuzhiCmd";
+            this.label_WuzhiCmd.Size = new System.Drawing.Size(59, 12);
+            this.label_WuzhiCmd.TabIndex = 6;
+            this.label_WuzhiCmd.Text = "WuzhiCmd";
+            // 
+            // txtbx_WuzhiCmd
+            // 
+            this.txtbx_WuzhiCmd.Location = new System.Drawing.Point(58, 49);
+            this.txtbx_WuzhiCmd.Name = "txtbx_WuzhiCmd";
+            this.txtbx_WuzhiCmd.Size = new System.Drawing.Size(388, 22);
+            this.txtbx_WuzhiCmd.TabIndex = 5;
+            this.txtbx_WuzhiCmd.Text = "aa 01 22 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ce";
             // 
             // radiobtn_hexadded
             // 
@@ -378,7 +411,7 @@
             this.tabCtrl_Dashboard.Location = new System.Drawing.Point(0, 0);
             this.tabCtrl_Dashboard.Name = "tabCtrl_Dashboard";
             this.tabCtrl_Dashboard.SelectedIndex = 0;
-            this.tabCtrl_Dashboard.Size = new System.Drawing.Size(759, 599);
+            this.tabCtrl_Dashboard.Size = new System.Drawing.Size(759, 628);
             this.tabCtrl_Dashboard.TabIndex = 2;
             // 
             // tabCtrl1
@@ -388,7 +421,7 @@
             this.tabCtrl1.Location = new System.Drawing.Point(4, 22);
             this.tabCtrl1.Name = "tabCtrl1";
             this.tabCtrl1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCtrl1.Size = new System.Drawing.Size(751, 573);
+            this.tabCtrl1.Size = new System.Drawing.Size(751, 602);
             this.tabCtrl1.TabIndex = 0;
             this.tabCtrl1.Text = "Dashboard";
             this.tabCtrl1.UseVisualStyleBackColor = true;
@@ -400,7 +433,7 @@
             this.tabCtrl2.Location = new System.Drawing.Point(4, 22);
             this.tabCtrl2.Name = "tabCtrl2";
             this.tabCtrl2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCtrl2.Size = new System.Drawing.Size(751, 573);
+            this.tabCtrl2.Size = new System.Drawing.Size(751, 602);
             this.tabCtrl2.TabIndex = 1;
             this.tabCtrl2.Text = "DebugPage";
             this.tabCtrl2.UseVisualStyleBackColor = true;
@@ -408,6 +441,9 @@
             // groupBox2
             // 
             this.groupBox2.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.groupBox2.Controls.Add(this.btn_TryCmd);
+            this.groupBox2.Controls.Add(this.textBox2);
+            this.groupBox2.Controls.Add(this.label_serial1DataReceived);
             this.groupBox2.Dock = System.Windows.Forms.DockStyle.Top;
             this.groupBox2.Location = new System.Drawing.Point(3, 119);
             this.groupBox2.Name = "groupBox2";
@@ -416,12 +452,40 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "groupBox2";
             // 
+            // btn_TryCmd
+            // 
+            this.btn_TryCmd.Location = new System.Drawing.Point(569, 38);
+            this.btn_TryCmd.Name = "btn_TryCmd";
+            this.btn_TryCmd.Size = new System.Drawing.Size(128, 35);
+            this.btn_TryCmd.TabIndex = 5;
+            this.btn_TryCmd.Text = "TryCmd";
+            this.btn_TryCmd.UseVisualStyleBackColor = true;
+            this.btn_TryCmd.Click += new System.EventHandler(this.btn_TryCmd_Click);
+            // 
+            // textBox2
+            // 
+            this.textBox2.Location = new System.Drawing.Point(58, 51);
+            this.textBox2.Name = "textBox2";
+            this.textBox2.Size = new System.Drawing.Size(451, 22);
+            this.textBox2.TabIndex = 8;
+            // 
+            // label_serial1DataReceived
+            // 
+            this.label_serial1DataReceived.AutoSize = true;
+            this.label_serial1DataReceived.Location = new System.Drawing.Point(56, 18);
+            this.label_serial1DataReceived.Name = "label_serial1DataReceived";
+            this.label_serial1DataReceived.Size = new System.Drawing.Size(99, 12);
+            this.label_serial1DataReceived.TabIndex = 6;
+            this.label_serial1DataReceived.Text = "serial1DataReceived";
+            // 
             // groupBox1
             // 
             this.groupBox1.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.groupBox1.BackColor = System.Drawing.Color.Silver;
             this.groupBox1.Controls.Add(this.radiobtn_hexadded);
+            this.groupBox1.Controls.Add(this.label_WuzhiCmd);
             this.groupBox1.Controls.Add(this.btn_hexaddition);
+            this.groupBox1.Controls.Add(this.txtbx_WuzhiCmd);
             this.groupBox1.Dock = System.Windows.Forms.DockStyle.Top;
             this.groupBox1.Location = new System.Drawing.Point(3, 3);
             this.groupBox1.Name = "groupBox1";
@@ -443,7 +507,7 @@
             // Form1
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.ClientSize = new System.Drawing.Size(848, 599);
+            this.ClientSize = new System.Drawing.Size(777, 628);
             this.Controls.Add(this.tabCtrl_Dashboard);
             this.IsMdiContainer = true;
             this.Margin = new System.Windows.Forms.Padding(2);
@@ -460,6 +524,8 @@
             this.tabCtrl1.ResumeLayout(false);
             this.tabCtrl1.PerformLayout();
             this.tabCtrl2.ResumeLayout(false);
+            this.groupBox2.ResumeLayout(false);
+            this.groupBox2.PerformLayout();
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
@@ -502,6 +568,12 @@
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Button btn_hexaddition;
+        private System.Windows.Forms.Label label_DataReceived;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.Label label_serial1DataReceived;
+        private System.Windows.Forms.Button btn_TryCmd;
     }
 }
 
