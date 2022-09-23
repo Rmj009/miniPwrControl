@@ -472,18 +472,17 @@ namespace MiniPwrSupply
 
         private void _IsPowerOn(WuzhiPower status)
         {
+            string powerCmd = string.Empty;
             if (status == WuzhiPower.PowerOn)
             {
-                string powerOnCmd = "aa 01 22 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ce";
-                byte[] wuzhicmd = powerOnCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
-                serialPort1.Write(wuzhicmd, 0, wuzhicmd.Length);
+                powerCmd = "aa 01 22 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ce";
             }
             else if (status == WuzhiPower.PowerOff)
             {
-                string powerOnCmd = "aa 01 22 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cd";
-                byte[] wuzhicmd = powerOnCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
-                serialPort1.Write(wuzhicmd, 0, wuzhicmd.Length);
+                powerCmd = "aa 01 22 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cd";
             }
+            byte[] pwrCmd = powerCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+            serialPort1.Write(pwrCmd, 0, pwrCmd.Length);
         }
 
         private string _decstringToHex(string args)
