@@ -44,6 +44,12 @@ namespace MiniPwrSupply
             PowerOff
         }
 
+        public enum WuzhiConnectStatus
+        {
+            Connect,
+            DisConnect
+        }
+
         private SerialPort comport;
         private Int32 totalLength = 0;
 
@@ -119,6 +125,7 @@ namespace MiniPwrSupply
                 total = hexAdded.Sum(x => x);
 
                 //richTextBox1.AppendText("wuzhiCmd _hexAddition ---> " + string.Format("0x{0:X}", total));
+                txtbx_TryCmd.Text += string.Format("0x{0:X}", total);
 
                 return total;
             }
@@ -129,6 +136,7 @@ namespace MiniPwrSupply
                 total = hexAdded.Sum(x => x);
 
                 //richTextBox1.AppendText("\r\n strArray _hexAddition ---> " + string.Format("0x{0:X}", total));
+                txtbx_TryCmd.Text += string.Format("0x{0:X}", total);
 
                 return total;
             }
@@ -162,6 +170,8 @@ namespace MiniPwrSupply
 
         private void serialport1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
+            WuzhiPower wuzhiPower = new WuzhiPower();
+
             string receivedata = string.Empty;      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
             int len = serialPort1.BytesToRead;      //      170-01-18-128-00-....-00-00-00-00-00-00 00-00-00-00-00-61
             string showInfo = string.Empty;
@@ -189,7 +199,12 @@ namespace MiniPwrSupply
             //}
 
             //--------------------------------------
-
+            if (wuzhiPower == WuzhiPower.PowerOff)
+            {
+            }
+            else if (wuzhiPower == WuzhiPower.PowerOn)
+            {
+            }
             try
             {
                 SerialPort sp = (SerialPort)sender;
@@ -198,7 +213,7 @@ namespace MiniPwrSupply
                 Stream portStream = serialPort1.BaseStream;
                 portStream.Read(buff, 0, buff.Length);
                 string dataString = Encoding.UTF8.GetString(buff);
-                bool hasData = dataString.Split(' ').Contains("AA"); //this is to check if your data has this, if it doesn't do something
+                //bool hasData = dataString.Split(' ').Contains("AA"); //this is to check if your data has this, if it doesn't do something
                 //You get your data from serial port as byte[]
                 //Do something on your data
                 byte[] globalBuffer = new byte[8800]; //large buffer, put globally
@@ -252,7 +267,9 @@ namespace MiniPwrSupply
                 this.Invoke(new Action(() =>
                 {
                     receivedata = BitConverter.ToString(buff);      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
-                    richTextBox1.AppendText(" \r\n receivedata: --->" + receivedata + "\r\n");//receivedata.ToArray().ToString());
+                    richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:f") + "receivedata: --->" + receivedata + "\r\n");//receivedata.ToArray().ToString());
+                    txtbx_TryCmd.Clear();
+                    txtbx_TryCmd.Text += string.Format(@"0x{0:X}", receivedata);
                 }));
                 //this._WaitForUIThread(() =>
                 //{
@@ -356,6 +373,7 @@ namespace MiniPwrSupply
                     cmbx_com.Items.Clear();
                     cmbx_com.Items.AddRange(ports);
                     btn_open.Enabled = true;
+                    btn_connection.Enabled = true;
                     btn_sendcmd.Enabled = false;
                     break;
                 }
@@ -483,6 +501,37 @@ namespace MiniPwrSupply
             }
             byte[] pwrCmd = powerCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
             serialPort1.Write(pwrCmd, 0, pwrCmd.Length);
+            serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+        }
+
+        private void _IsConnected(WuzhiConnectStatus status)
+        {
+            string syncCmd = string.Empty;
+            if (status == WuzhiConnectStatus.Connect)
+            {
+                //aa 01 20 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cc 是連線????
+                //aa 01 29 03 06 00 c8 00 00 00 00 00 00 00 00 00 00 00 00 a5
+                //aa 01 2b 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 d6
+                syncCmd = "aa 01 20 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cc";
+            }
+            else if (status == WuzhiConnectStatus.DisConnect)
+            {
+                //aa 01 29 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 d4 斷線後持續
+                //aa 01 20 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cb
+                syncCmd = "aa 01 20 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cb";
+            }
+            byte[] syncmd = syncCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+            serialPort1.Write(syncmd, 0, syncmd.Length);
+            serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+        }
+
+        private void _unknownCmd(string wCmd)
+        {
+            string unknownCmd = string.Empty;
+            //aa 01 20 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cc
+            byte[] xCmd = wCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+            serialPort1.Write(xCmd, 0, xCmd.Length);
+            serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
         }
 
         private string _decstringToHex(string args)
@@ -515,11 +564,93 @@ namespace MiniPwrSupply
             }
         }
 
+        public string ToHexString(string str)
+        {
+            var sb = new StringBuilder();
+
+            var bytes = Encoding.Unicode.GetBytes(str);
+            foreach (var t in bytes)
+            {
+                sb.Append(t.ToString("X2"));
+            }
+
+            return sb.ToString(); // returns: "48656C6C6F20776F726C64" for "Hello world"
+        }
+
+        private void cmbx_com_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbx_com.SelectedIndex.ToString().Length != 0)
+            {
+                cmbx_com.Enabled = true;
+            }
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            this.richTextBox1.Clear();
+            //this._comportScanning();
+            // INIT port
+            try
+            {
+                if (cmbx_com.Text.Length == 0)
+                {
+                    string[] ports = SerialPort.GetPortNames();
+                    cmbx_com.Items.Clear();
+                    cmbx_com.Items.AddRange(ports);
+                }
+                //comport = new SerialPort("COM5", 9600, Parity.None, 8, StopBits.One);
+                //comport.DataReceived += new SerialDataReceivedEventHandler(comport_DataReceived);
+                //if (!comport.IsOpen)
+                //{
+                //    comport.Open();
+                //}
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            // INIT baudrate
+        }
+
+        private void Form1_Closing(object sender, FormClosingEventArgs e)
+        {
+            DialogResult dr = MessageBox.Show(this, "Be sure to Eixt？", "Window Closing Notice", MessageBoxButtons.YesNo, MessageBoxIcon.Stop);
+
+            if (dr == DialogResult.Yes)
+            {
+                //if (this.mIC != null)
+                //{
+                //    this.mIC.Dispose(); // IC Free Resource
+                //    this.mIC.IDispose(); // Instrument Free Resource
+                //}
+
+                //try
+                //{
+                //    if (bWriteLogFlag)
+                //    {
+                //        this.WriteTotalCountData();
+                //    }
+                //    ResultCsvSingleton.Instance.DeleteEmptyTestResultCsv();
+                //    ResultCsvItSingleton.Instance.DeleteEmptyTestResultCsv();
+                //}
+                //catch { }
+
+                e.Cancel = false;
+            }
+            else
+            {
+                e.Cancel = true;
+            }
+        }
+
+        #region Dashboard
+
         private void btn_sendcmd_Click(object sender, EventArgs e)
         {
             //https://stackoverflow.com/questions/415291/best-way-to-combine-two-or-more-byte-arrays-in-c-sharp
 
             int length = serialPort1.BytesToRead;
+            btn_connection.Enabled = true;
             string synchroHead = this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
             string Address = this._decstringToHex(txtbx_addr.Text.Trim());
             double Vset = 0.0d;
@@ -688,27 +819,6 @@ namespace MiniPwrSupply
             } while (receiveData == null);
         }
 
-        public string ToHexString(string str)
-        {
-            var sb = new StringBuilder();
-
-            var bytes = Encoding.Unicode.GetBytes(str);
-            foreach (var t in bytes)
-            {
-                sb.Append(t.ToString("X2"));
-            }
-
-            return sb.ToString(); // returns: "48656C6C6F20776F726C64" for "Hello world"
-        }
-
-        private void cmbx_com_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (cmbx_com.SelectedIndex.ToString().Length != 0)
-            {
-                cmbx_com.Enabled = true;
-            }
-        }
-
         private void btn_Power_Click(object sender, EventArgs e)
         {
             Button OneShotBtn = (Button)sender;
@@ -747,63 +857,42 @@ namespace MiniPwrSupply
             }
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void btn_connection_Click(object sender, EventArgs e)
         {
-            this.richTextBox1.Clear();
-            //this._comportScanning();
-            // INIT port
-            try
+            Button OneShotBtn = (Button)sender;
+            switch (OneShotBtn.Text)
             {
-                if (cmbx_com.Text.Length == 0)
-                {
-                    string[] ports = SerialPort.GetPortNames();
-                    cmbx_com.Items.Clear();
-                    cmbx_com.Items.AddRange(ports);
-                }
-                //comport = new SerialPort("COM5", 9600, Parity.None, 8, StopBits.One);
-                //comport.DataReceived += new SerialDataReceivedEventHandler(comport_DataReceived);
-                //if (!comport.IsOpen)
-                //{
-                //    comport.Open();
-                //}
+                case "DisConnection":
+                    btn_connection.BackColor = Color.DarkRed;
+                    btn_connection.Text = "DisConnection";
+                    this._IsConnected(WuzhiConnectStatus.DisConnect);
+                    btn_sendcmd.Enabled = false;
+                    btn_open.Enabled = false;
+                    break;
+
+                case "Connection":
+                    btn_connection.BackColor = Color.DarkGreen;
+                    btn_connection.Text = "Connection";
+                    this._IsConnected(WuzhiConnectStatus.Connect);
+                    btn_connection.Enabled = false;
+                    if (!btn_open.Enabled)
+                    {
+                        btn_sendcmd.Enabled = true;
+                        break;
+                    }
+                    else
+                    {
+                        btn_open.Enabled = true;
+                        btn_sendcmd.Enabled = false;
+                        break;
+                    }
+
+                default:
+                    break;
             }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-            // INIT baudrate
         }
 
-        private void Form1_Closing(object sender, FormClosingEventArgs e)
-        {
-            DialogResult dr = MessageBox.Show(this, "Be sure to Eixt？", "Window Closing Notice", MessageBoxButtons.YesNo, MessageBoxIcon.Stop);
-
-            if (dr == DialogResult.Yes)
-            {
-                //if (this.mIC != null)
-                //{
-                //    this.mIC.Dispose(); // IC Free Resource
-                //    this.mIC.IDispose(); // Instrument Free Resource
-                //}
-
-                //try
-                //{
-                //    if (bWriteLogFlag)
-                //    {
-                //        this.WriteTotalCountData();
-                //    }
-                //    ResultCsvSingleton.Instance.DeleteEmptyTestResultCsv();
-                //    ResultCsvItSingleton.Instance.DeleteEmptyTestResultCsv();
-                //}
-                //catch { }
-
-                e.Cancel = false;
-            }
-            else
-            {
-                e.Cancel = true;
-            }
-        }
+        #endregion Dashboard
 
         #region DebugPage Button
 
@@ -864,7 +953,24 @@ namespace MiniPwrSupply
 
         private void btn_TryCmd_Click(object sender, EventArgs e)
         {
-            byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+            try
+            {
+                if (serialPort1.IsOpen)
+                {
+                    //serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+                    //byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+                    //serialPort1.Write(wuzhiCmd, 0, wuzhiCmd.Length);
+                    this._unknownCmd(txtbx_WuzhiCmd.Text.Trim());
+                }
+            }
+            catch (InvalidOperationException invaild)
+            {
+                throw new Exception("Comport already closed" + invaild.Message);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         #endregion DebugPage Button

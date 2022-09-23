@@ -31,6 +31,7 @@
             this.components = new System.ComponentModel.Container();
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
             this.grpBox_port_setting = new System.Windows.Forms.GroupBox();
+            this.btn_connection = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label_DataReceived = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
@@ -65,7 +66,7 @@
             this.tabCtrl2 = new System.Windows.Forms.TabPage();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.btn_TryCmd = new System.Windows.Forms.Button();
-            this.textBox2 = new System.Windows.Forms.TextBox();
+            this.txtbx_TryCmd = new System.Windows.Forms.TextBox();
             this.label_serial1DataReceived = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.btn_hexaddition = new System.Windows.Forms.Button();
@@ -82,6 +83,7 @@
             // 
             this.grpBox_port_setting.AutoSize = true;
             this.grpBox_port_setting.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.grpBox_port_setting.Controls.Add(this.btn_connection);
             this.grpBox_port_setting.Controls.Add(this.textBox1);
             this.grpBox_port_setting.Controls.Add(this.label_DataReceived);
             this.grpBox_port_setting.Controls.Add(this.label1);
@@ -104,9 +106,19 @@
             this.grpBox_port_setting.TabStop = false;
             this.grpBox_port_setting.Text = "PortSetting";
             // 
+            // btn_connection
+            // 
+            this.btn_connection.Location = new System.Drawing.Point(4, 332);
+            this.btn_connection.Name = "btn_connection";
+            this.btn_connection.Size = new System.Drawing.Size(156, 47);
+            this.btn_connection.TabIndex = 8;
+            this.btn_connection.Text = "Connection";
+            this.btn_connection.UseVisualStyleBackColor = true;
+            this.btn_connection.Click += new System.EventHandler(this.btn_connection_Click);
+            // 
             // textBox1
             // 
-            this.textBox1.Location = new System.Drawing.Point(54, 508);
+            this.textBox1.Location = new System.Drawing.Point(54, 557);
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(100, 22);
             this.textBox1.TabIndex = 2;
@@ -114,7 +126,7 @@
             // label_DataReceived
             // 
             this.label_DataReceived.AutoSize = true;
-            this.label_DataReceived.Location = new System.Drawing.Point(51, 475);
+            this.label_DataReceived.Location = new System.Drawing.Point(51, 524);
             this.label_DataReceived.Name = "label_DataReceived";
             this.label_DataReceived.Size = new System.Drawing.Size(73, 12);
             this.label_DataReceived.TabIndex = 4;
@@ -123,7 +135,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(27, 449);
+            this.label1.Location = new System.Drawing.Point(27, 498);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(33, 12);
             this.label1.TabIndex = 4;
@@ -155,10 +167,10 @@
             // btn_sendcmd
             // 
             this.btn_sendcmd.Enabled = false;
-            this.btn_sendcmd.Location = new System.Drawing.Point(13, 308);
+            this.btn_sendcmd.Location = new System.Drawing.Point(4, 403);
             this.btn_sendcmd.Margin = new System.Windows.Forms.Padding(2);
             this.btn_sendcmd.Name = "btn_sendcmd";
-            this.btn_sendcmd.Size = new System.Drawing.Size(149, 72);
+            this.btn_sendcmd.Size = new System.Drawing.Size(156, 69);
             this.btn_sendcmd.TabIndex = 2;
             this.btn_sendcmd.Text = "_sendCmd";
             this.btn_sendcmd.UseVisualStyleBackColor = true;
@@ -185,10 +197,10 @@
             // 
             // btn_open
             // 
-            this.btn_open.Location = new System.Drawing.Point(11, 245);
+            this.btn_open.Location = new System.Drawing.Point(4, 260);
             this.btn_open.Margin = new System.Windows.Forms.Padding(2);
             this.btn_open.Name = "btn_open";
-            this.btn_open.Size = new System.Drawing.Size(149, 59);
+            this.btn_open.Size = new System.Drawing.Size(156, 50);
             this.btn_open.TabIndex = 2;
             this.btn_open.Text = "Connect Serialport";
             this.btn_open.UseVisualStyleBackColor = true;
@@ -442,7 +454,7 @@
             // 
             this.groupBox2.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.groupBox2.Controls.Add(this.btn_TryCmd);
-            this.groupBox2.Controls.Add(this.textBox2);
+            this.groupBox2.Controls.Add(this.txtbx_TryCmd);
             this.groupBox2.Controls.Add(this.label_serial1DataReceived);
             this.groupBox2.Dock = System.Windows.Forms.DockStyle.Top;
             this.groupBox2.Location = new System.Drawing.Point(3, 119);
@@ -462,12 +474,12 @@
             this.btn_TryCmd.UseVisualStyleBackColor = true;
             this.btn_TryCmd.Click += new System.EventHandler(this.btn_TryCmd_Click);
             // 
-            // textBox2
+            // txtbx_TryCmd
             // 
-            this.textBox2.Location = new System.Drawing.Point(58, 51);
-            this.textBox2.Name = "textBox2";
-            this.textBox2.Size = new System.Drawing.Size(451, 22);
-            this.textBox2.TabIndex = 8;
+            this.txtbx_TryCmd.Location = new System.Drawing.Point(58, 51);
+            this.txtbx_TryCmd.Name = "txtbx_TryCmd";
+            this.txtbx_TryCmd.Size = new System.Drawing.Size(451, 22);
+            this.txtbx_TryCmd.TabIndex = 8;
             // 
             // label_serial1DataReceived
             // 
@@ -571,9 +583,10 @@
         private System.Windows.Forms.Label label_DataReceived;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.TextBox textBox1;
-        private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.TextBox txtbx_TryCmd;
         private System.Windows.Forms.Label label_serial1DataReceived;
         private System.Windows.Forms.Button btn_TryCmd;
+        private System.Windows.Forms.Button btn_connection;
     }
 }
 
