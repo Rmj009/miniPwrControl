@@ -55,7 +55,7 @@ namespace MiniPwrSupply
 
         private delegate void Display(Byte[] buffer);
 
-        private Boolean Isreceiving = false;
+        private Boolean Isreceiving = true;
         //--------------------------
 
         private IWuzhiCmd mWuzhiCmd = null;
@@ -65,6 +65,7 @@ namespace MiniPwrSupply
         private Action<string, UInt32> mLogCallback = null;
         private bool mIsConnectedSerialPort = false;
         public Form1 mInstatnce = null;
+        private Int32 innerReceiveDataFullLength;
         private static int iRetryTime = 6;
         public static int Err_checksum_is_wrong = 144;
         public static int Err_wrong_params_setting_or_params_overflow = 160;
@@ -225,7 +226,6 @@ namespace MiniPwrSupply
                 //}
 
                 //byte[] buff = new byte[serialPort1.BytesToRead];
-                //richTextBox1.AppendText("-------------Data Received!-------------");
                 //receivedata = Encoding.UTF8.GetString(buff);
                 //Int32 length = (sender as SerialPort).Read(buff, 0, buff.Length);   //serialPort1.BytesToRead;
                 //Array.Resize(ref buff, length);
@@ -281,6 +281,11 @@ namespace MiniPwrSupply
                     throw new Exception("Cmd Err");
                 }
             }
+            catch (IndexOutOfRangeException indexOut)
+            {
+                ShowErrMsg(@"DataReceived 回傳Array index在界線之外" + indexOut.Message);
+                throw new Exception();
+            }
             catch (Exception ex)
             {
                 ShowErrMsg(@"serialport1_DataReceived Err" + ex.Message);
@@ -302,6 +307,60 @@ namespace MiniPwrSupply
                 tempList.RemoveAt(tempList.Count - 1);
                 Display d = new Display(DisplayText);
                 this.Invoke(d, new Object[] { tempList.ToArray() });
+            }
+        }
+
+        private Boolean GetFullReceiveData(List<Byte> tempList)
+        {
+            byte Head = 2;
+            if (innerReceiveDataFullLength > 0 && tempList.Count >= tempList.IndexOf(Head) + innerReceiveDataFullLength)
+            {
+                Byte[] temp = new Byte[innerReceiveDataFullLength];
+                Array.Copy(tempList.ToArray(), tempList.IndexOf(Head), temp, 0, temp.Length);
+                //innerResponseFullBytes = temp;
+                InterpretReceiveData();
+                innerReceiveDataFullLength = 0;
+                return true;
+            }
+            else
+            { return false; }
+        }
+
+        private void InterpretReceiveData()
+        {
+            //if (CheckData())
+            //{
+            //    innerResponseCommand = (CommandCode)innerResponseFullBytes[3];
+            //    switch (innerResponseCommand)
+            //    {
+            //        case CommandCode.ReadBlock:
+            //            InterpretReadBlock();
+            //            break;
+            //        case CommandCode.WriteBlock:
+            //            ReceiveActionResult(Convert.ToBoolean(innerResponseFullBytes[4]), innerResponseCommand);
+            //            break;
+            //        case CommandCode.LightControl:
+            //            ReceiveActionResult(Convert.ToBoolean(innerResponseFullBytes[4]), innerResponseCommand);
+            //            break;
+            //        case CommandCode.DataError:
+            //            ReceiveErrorData();
+            //            break;
+            //        default:
+            //            throw new ArgumentOutOfRangeException();
+            //    }
+            //}
+        }
+
+        private void GetReceiveDataFullLength(List<Byte> tempList)
+        {
+            byte Head = 2;
+            if (tempList.Count >= 2 && innerReceiveDataFullLength == 0)
+            {
+                Int32 startIndex = tempList.IndexOf(Head);
+                if (startIndex >= 0 && startIndex < tempList.Count - 1)
+                {
+                    innerReceiveDataFullLength = Convert.ToInt32(tempList[startIndex + 1]) + 2;
+                }
             }
         }
 
