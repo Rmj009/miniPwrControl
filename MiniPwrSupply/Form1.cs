@@ -10,6 +10,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Management;
+
 
 namespace MiniPwrSupply
 {
@@ -51,6 +53,7 @@ namespace MiniPwrSupply
         }
 
         private SerialPort comport;
+        private string wuzhiComport = string.Empty;
         private Int32 totalLength = 0;
 
         private delegate void Display(Byte[] buffer);
@@ -62,6 +65,7 @@ namespace MiniPwrSupply
         private static Mutex mutex = new Mutex();
         private volatile bool mGet_Start;
         private StringBuilder receiveCall = new StringBuilder();
+        private static string DEVICE_ID = "FTDIBUS" + "COMPORT" + "&" + "VID_0403" + "&" + "PID_6001";
         
         private bool mIsConnectedSerialPort = false;
         public Form1 mInstatnce = null;
@@ -409,6 +413,77 @@ namespace MiniPwrSupply
             //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
         }
 
+        //-------------------------------------------------------------------------------------------------
+        //-------------------------------------------------------------------------------------------------
+        //----------------------------------User Input-----------------------------------------------------
+        //--------------------------------------UI---------------------------------------------------------
+        //-------------------------------------------------------------------------------------------------
+        //-------------------------------------------------------------------------------------------------
+        //private string getAvailablePorts()
+        //{
+        //    string[] ss = MulGetHardwareInfo(HardwareEnum.Win32_PnPEntity, "Name");    //Get PC hardware information
+        //    System.Collections.ArrayList portArray = new System.Collections.ArrayList();
+        //    try
+        //    {
+        //        for (var i = 0; i < ss.Length; i++)
+        //        {
+        //            if (ss[i].IndexOf("(") > -1 && ss[i].IndexOf(")") > -1)
+        //            {
+        //                portArray.Add(ss[i].Substring(ss[i].IndexOf("(") + 1, ss[i].IndexOf(")") - ss[i].IndexOf("(") - 1));
+        //            }
+        //        }
+
+        //        if (portArray.Count <= 0)
+        //            return "";
+        //        else
+        //            return portArray[0].ToString();
+        //    }
+        //    catch
+        //    {
+        //        MessageBox.Show("Get serial ports error!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        //        return "";
+        //    }
+
+        //    //if (portArray.Count > 0)
+        //    //{
+        //    //    //cmbPortName.Items.AddRange(portArray.ToArray());
+        //    //    //cmbPortName.SelectedIndex = 0;
+        //    //    //return portArray[0].ToString ();
+        //    //}
+        //}
+
+        ///// <summary>
+        ///// Get PC hardware information
+        ///// </summary>
+        ///// <param name="hardType"></param>
+        ///// <param name="propKey"></param>
+        ///// <returns></returns>
+        //public static string[] MulGetHardwareInfo(HardwareEnum hardType, string propKey)
+        //{
+        //    List<string> strs = new List<string>();
+        //    try
+        //    {
+        //        using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("select * from " + hardType))
+        //        {
+        //            var hardInfos = searcher.Get();
+        //            foreach (var hardInfo in hardInfos)
+        //            {
+        //                if (hardInfo["PNPDeviceID"].ToString().Contains(TWE_LITE_ID))
+        //                {
+        //                    strs.Add(hardInfo.Properties[propKey].Value.ToString());
+        //                }
+        //            }
+        //            searcher.Dispose();
+        //        }
+        //        return strs.ToArray();
+        //    }
+        //    catch
+        //    {
+        //        return null;
+        //    }
+        //    finally
+        //    { strs = null; }
+        //}
         private void btn_refresh_Click(object sender, EventArgs e)
         {
             int tryCount = 1;
@@ -453,7 +528,7 @@ namespace MiniPwrSupply
                 {
                     //this.serialPort1 = new System.IO.Ports.SerialPort(@"COM" + this.txtbx_com.Text, Convert.ToInt32(this.txtbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
                     this.serialPort1 = new SerialPort(this.cmbx_com.Text, Convert.ToInt32(this.cmbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
-                    // "FTDIBUS" + "COMPORT" + "&" + "VID_0403" + "&" + "PID_6001"
+                    
                     serialPort1.DtrEnable = true;           // Gets or sets a value that enables the Data Terminal Ready (DTR) signal during serial communication.
                     serialPort1.RtsEnable = true;           //序列通訊期間是否啟用 Request to Send (RTS)
 
@@ -633,14 +708,56 @@ namespace MiniPwrSupply
                 cmbx_com.Enabled = true;
             }
         }
+        private string _GetComport()
+        {
+            try
+            {
+                string comport = "";
+                using (System.Management.ManagementObjectSearcher searcher = new ManagementObjectSearcher("select * from Win32_PnPEntity"))
+                {
+                    foreach (var hardInfo in searcher.Get())
+                    {
+                        if (hardInfo.Properties["Name"].Value != null && hardInfo.Properties["Name"].Value.ToString().Contains("(COM") && hardInfo.ToString().Contains("VID_0403") && hardInfo.ToString().Contains("PID_6001"))
+                        {
+                            comport = hardInfo.Properties["Name"].Value.ToString();
+                            //Console.WriteLine(comport);
+                        }
+                    }
+
+                    if (comport.Length == 0)
+                    {
+                        //throw new Exception("Not Found wuzhi Comport");
+                        return string.Empty;
+                    }
+
+                    return comport.Trim().Split('(')[1].Replace(')', ' ').Trim();
+                }
+            }
+            catch(Exception ex)
+            {
+                throw ex;
+            }
+        }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            this.richTextBox1.Clear();
-            //this._comportScanning();
-            // INIT port
+            
+            string action = ">>> Synchronize serial port: " + this.wuzhiComport;
             try
             {
+                
+                for (int i = 0; i < 20; i++)
+                {
+                    this.wuzhiComport = this._GetComport();
+                    if (this.wuzhiComport.Trim().Equals(string.Empty))
+                    {
+                        System.Threading.Thread.Sleep(500);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
                 if (cmbx_com.Text.Length == 0)
                 {
                     string[] ports = SerialPort.GetPortNames();
@@ -656,7 +773,11 @@ namespace MiniPwrSupply
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw new Exception("\r\n.....wuzhiComport sync serialport ERR......\r\n");
+            }
+            finally
+            {
+                this.richTextBox1.Clear();
             }
             // INIT baudrate
         }
