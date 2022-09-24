@@ -31,7 +31,7 @@ namespace MiniPwrSupply.DoWuzhiCmd
         private string isetting1 = string.Empty;
         private string vsetting2 = string.Empty;
         private string isetting2 = string.Empty;
-
+        private Action<string, UInt32> mLogCallback = null;
         public static WuzhiCmd Instance
         {
             get
@@ -43,7 +43,18 @@ namespace MiniPwrSupply.DoWuzhiCmd
                 return mInstance;
             }
         }
+        public void Save_LOG_data(string sTtestResult, bool isTitle = false, bool isCustom = false, bool isError = false)
+        {
+            uint type = isTitle ? RFTestTool.Util.MSG.TITLE : RFTestTool.Util.MSG.NORMAL;
+            if (type == RFTestTool.Util.MSG.TITLE)
+            {
+                sTtestResult = "*** " + sTtestResult + " ***";
+            }
+            type = isCustom ? RFTestTool.Util.MSG.CUSTOM : type;
+            type = isError ? RFTestTool.Util.MSG.ERROR : type;
 
+            this.mLogCallback(sTtestResult, type);
+        }
         private void TakeInitiatives()
         {
         }

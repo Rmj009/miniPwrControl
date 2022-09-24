@@ -62,7 +62,7 @@ namespace MiniPwrSupply
         private static Mutex mutex = new Mutex();
         private volatile bool mGet_Start;
         private StringBuilder receiveCall = new StringBuilder();
-        private Action<string, UInt32> mLogCallback = null;
+        
         private bool mIsConnectedSerialPort = false;
         public Form1 mInstatnce = null;
         private Int32 innerReceiveDataFullLength;
@@ -85,18 +85,7 @@ namespace MiniPwrSupply
             label_DataReceived.Text = totalLength.ToString();
         }
 
-        public void Save_LOG_data(string sTtestResult, bool isTitle = false, bool isCustom = false, bool isError = false)
-        {
-            uint type = isTitle ? RFTestTool.Util.MSG.TITLE : RFTestTool.Util.MSG.NORMAL;
-            if (type == RFTestTool.Util.MSG.TITLE)
-            {
-                sTtestResult = "*** " + sTtestResult + " ***";
-            }
-            type = isCustom ? RFTestTool.Util.MSG.CUSTOM : type;
-            type = isError ? RFTestTool.Util.MSG.ERROR : type;
-
-            this.mLogCallback(sTtestResult, type);
-        }
+        
 
         private void _WaitForUIThread(Action callback)
         {
@@ -432,7 +421,7 @@ namespace MiniPwrSupply
                     cmbx_com.Items.Clear();
                     cmbx_com.Items.AddRange(ports);
                     btn_open.Enabled = true;
-                    btn_connection.Enabled = true;
+                    //btn_connection.Enabled = true;
                     btn_sendcmd.Enabled = false;
                     break;
                 }
@@ -464,6 +453,7 @@ namespace MiniPwrSupply
                 {
                     //this.serialPort1 = new System.IO.Ports.SerialPort(@"COM" + this.txtbx_com.Text, Convert.ToInt32(this.txtbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
                     this.serialPort1 = new SerialPort(this.cmbx_com.Text, Convert.ToInt32(this.cmbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
+                    // "FTDIBUS" + "COMPORT" + "&" + "VID_0403" + "&" + "PID_6001"
                     serialPort1.DtrEnable = true;           // Gets or sets a value that enables the Data Terminal Ready (DTR) signal during serial communication.
                     serialPort1.RtsEnable = true;           //序列通訊期間是否啟用 Request to Send (RTS)
 
@@ -709,7 +699,7 @@ namespace MiniPwrSupply
             //https://stackoverflow.com/questions/415291/best-way-to-combine-two-or-more-byte-arrays-in-c-sharp
 
             int length = serialPort1.BytesToRead;
-            btn_connection.Enabled = true;
+            //btn_connection.Enabled = true;
             string synchroHead = this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
             string Address = this._decstringToHex(txtbx_addr.Text.Trim());
             double Vset = 0.0d;
@@ -925,15 +915,15 @@ namespace MiniPwrSupply
                     btn_connection.BackColor = Color.DarkRed;
                     btn_connection.Text = "DisConnection";
                     this._IsConnected(WuzhiConnectStatus.DisConnect);
-                    btn_sendcmd.Enabled = false;
-                    btn_open.Enabled = false;
+                    //btn_sendcmd.Enabled = false;
+                    //btn_open.Enabled = false;
                     break;
 
                 case "Connection":
                     btn_connection.BackColor = Color.DarkGreen;
                     btn_connection.Text = "Connection";
                     this._IsConnected(WuzhiConnectStatus.Connect);
-                    btn_connection.Enabled = false;
+                    //btn_connection.Enabled = false;
                     if (!btn_open.Enabled)
                     {
                         btn_sendcmd.Enabled = true;
