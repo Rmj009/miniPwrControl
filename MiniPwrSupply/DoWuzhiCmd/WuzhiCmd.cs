@@ -4,9 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using System;
-using System.Collections.Generic;
-
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
@@ -64,14 +61,19 @@ namespace MiniPwrSupply.DoWuzhiCmd
         {
         }
 
-        private string _decstringToHex(string args)
+        private string _ByteArrayToString(byte[] bytes)
         {
-            //var hexstring = string.Join("", args.Select(i => string.Format("{0:X2}", Convert.ToInt32(i))));
-            var decstring = Convert.ToInt32(args);
-            string hexstr = string.Format("{0:X}", decstring);
-            return hexstr;
+            StringBuilder hex = new StringBuilder(bytes.Length * 2);
+            foreach (byte b in bytes)
+            {
+                string hexStr = String.Format("{0:x2} ", b);
+                //hex.AppendFormat("{0:x2} ", b);
+                hex.Append(hexStr.ToUpper());
+            }
+            //Console.WriteLine("hexTostring --->" + hex.ToString());
+            //richTextBox1.AppendText("hexTostring --->" + hex.ToString());
+            return hex.ToString();
         }
-
         public Int32 _hexAddition(string[] strArray)
         {
             byte[] hexAdded = Enumerable.Range(0, strArray.Length - 2).Select(x => Convert.ToByte(strArray[x], 16)).ToArray();
@@ -113,6 +115,13 @@ namespace MiniPwrSupply.DoWuzhiCmd
             Array.Resize(ref buffer, length);
             //Display d = new Display(DisplayText);
             //this.Invoke(d, new Object[] { buffer });
+        }
+        public string _decstringToHex(string args)
+        {
+            //var hexstring = string.Join("", args.Select(i => string.Format("{0:X2}", Convert.ToInt32(i))));
+            var decstring = Convert.ToInt32(args);
+            string hexstr = string.Format("{0:X}", decstring);
+            return hexstr;
         }
 
         public string[] split_VI(double Vset, double Iset)
@@ -241,7 +250,7 @@ namespace MiniPwrSupply.DoWuzhiCmd
             return new string[] { vsetting1, vsetting2, isetting1, isetting2 };
         }
 
-        private byte[] _VIset_Cmd(string synchroHead,  string addr, string[] visetting) 
+        public byte[] _VIset_Cmd(string synchroHead,  string addr, string[] visetting) 
         {
             
             vsetting1 = visetting[0];

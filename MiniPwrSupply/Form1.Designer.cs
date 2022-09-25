@@ -40,10 +40,10 @@
             this.btn_sendcmd = new System.Windows.Forms.Button();
             this.txtbx_addr = new System.Windows.Forms.TextBox();
             this.label_com = new System.Windows.Forms.Label();
-            this.btn_open = new System.Windows.Forms.Button();
-            this.btn_refresh = new System.Windows.Forms.Button();
+            this.btn_connSerialport = new System.Windows.Forms.Button();
             this.label_Addr = new System.Windows.Forms.Label();
             this.label_Baudrate = new System.Windows.Forms.Label();
+            this.btn_refresh = new System.Windows.Forms.Button();
             this.label_OVP = new System.Windows.Forms.Label();
             this.grpBox_dashboard = new System.Windows.Forms.GroupBox();
             this.btn_Power = new System.Windows.Forms.Button();
@@ -92,7 +92,7 @@
             this.grpBox_Configuration.Controls.Add(this.btn_sendcmd);
             this.grpBox_Configuration.Controls.Add(this.txtbx_addr);
             this.grpBox_Configuration.Controls.Add(this.label_com);
-            this.grpBox_Configuration.Controls.Add(this.btn_open);
+            this.grpBox_Configuration.Controls.Add(this.btn_connSerialport);
             this.grpBox_Configuration.Controls.Add(this.label_Addr);
             this.grpBox_Configuration.Controls.Add(this.label_Baudrate);
             this.grpBox_Configuration.Dock = System.Windows.Forms.DockStyle.Left;
@@ -194,27 +194,16 @@
             this.label_com.TabIndex = 4;
             this.label_com.Text = "COM";
             // 
-            // btn_open
+            // btn_connSerialport
             // 
-            this.btn_open.Location = new System.Drawing.Point(4, 244);
-            this.btn_open.Margin = new System.Windows.Forms.Padding(2);
-            this.btn_open.Name = "btn_open";
-            this.btn_open.Size = new System.Drawing.Size(156, 50);
-            this.btn_open.TabIndex = 2;
-            this.btn_open.Text = "Connect Serialport";
-            this.btn_open.UseVisualStyleBackColor = true;
-            this.btn_open.Click += new System.EventHandler(this.btn_open_Click);
-            // 
-            // btn_refresh
-            // 
-            this.btn_refresh.Location = new System.Drawing.Point(418, 119);
-            this.btn_refresh.Margin = new System.Windows.Forms.Padding(2);
-            this.btn_refresh.Name = "btn_refresh";
-            this.btn_refresh.Size = new System.Drawing.Size(75, 23);
-            this.btn_refresh.TabIndex = 2;
-            this.btn_refresh.Text = "Reconnect";
-            this.btn_refresh.UseVisualStyleBackColor = true;
-            this.btn_refresh.Click += new System.EventHandler(this.btn_refresh_Click);
+            this.btn_connSerialport.Location = new System.Drawing.Point(4, 244);
+            this.btn_connSerialport.Margin = new System.Windows.Forms.Padding(2);
+            this.btn_connSerialport.Name = "btn_connSerialport";
+            this.btn_connSerialport.Size = new System.Drawing.Size(156, 50);
+            this.btn_connSerialport.TabIndex = 2;
+            this.btn_connSerialport.Text = "Connect Serialport";
+            this.btn_connSerialport.UseVisualStyleBackColor = true;
+            this.btn_connSerialport.Click += new System.EventHandler(this.btn_connSerialport_Click);
             // 
             // label_Addr
             // 
@@ -235,6 +224,17 @@
             this.label_Baudrate.Size = new System.Drawing.Size(57, 15);
             this.label_Baudrate.TabIndex = 4;
             this.label_Baudrate.Text = "Baudrate";
+            // 
+            // btn_refresh
+            // 
+            this.btn_refresh.Location = new System.Drawing.Point(418, 119);
+            this.btn_refresh.Margin = new System.Windows.Forms.Padding(2);
+            this.btn_refresh.Name = "btn_refresh";
+            this.btn_refresh.Size = new System.Drawing.Size(75, 23);
+            this.btn_refresh.TabIndex = 2;
+            this.btn_refresh.Text = "Reconnect";
+            this.btn_refresh.UseVisualStyleBackColor = true;
+            this.btn_refresh.Click += new System.EventHandler(this.btn_refresh_Click);
             // 
             // label_OVP
             // 
@@ -552,7 +552,7 @@
         private System.Windows.Forms.Button btn_refresh;
         private System.Windows.Forms.Label label_OVP;
         private System.Windows.Forms.Label label_com;
-        private System.Windows.Forms.Button btn_open;
+        private System.Windows.Forms.Button btn_connSerialport;
         private System.Windows.Forms.RichTextBox richTextBox1;
         private System.Windows.Forms.Button btn_sendcmd;
         private System.Windows.Forms.TextBox txtbx_Vset;

@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Management;
-
+using System.Diagnostics;
 
 namespace MiniPwrSupply
 {
@@ -52,7 +52,6 @@ namespace MiniPwrSupply
             DisConnect
         }
 
-        private SerialPort comport;
         private string wuzhiComport = string.Empty;
         private Int32 totalLength = 0;
 
@@ -108,21 +107,6 @@ namespace MiniPwrSupply
         }
 
         //private void _hexAddition<Tiida>(IList<Tiida> tiidas)      //array<T>(string, T)改用Generic方式, 捨棄 byte[] hexBytes       // checksum = all hex addition substring last 2
-        
-        private string _ByteArrayToString(byte[] bytes)
-        {
-            StringBuilder hex = new StringBuilder(bytes.Length * 2);
-            foreach (byte b in bytes)
-            {
-                string hexStr = String.Format("{0:x2} ", b);
-                //hex.AppendFormat("{0:x2} ", b);
-                hex.Append(hexStr.ToUpper());
-            }
-            //Console.WriteLine("hexTostring --->" + hex.ToString());
-            richTextBox1.AppendText("hexTostring --->" + hex.ToString());
-            return hex.ToString();
-        }
-
         private void serialport1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             WuzhiPower wuzhiPower = new WuzhiPower();
@@ -247,11 +231,7 @@ namespace MiniPwrSupply
             }
         }
 
-        private void DisplayTxt(byte[] buffer)
-        {
-        }
-
-        private void parse(List<Byte> tempList)
+        private void parse(List<Byte> tempList)     //這個方法主要是在收到結尾字元後 (因為表示已經收到一段完整資料了) 呼叫，由於我們只要顯示資料內容的部份，所以在這方法中把開頭結尾字元給去除。
         {
             MessageBox.Show(tempList[0].ToString());
             //if (tempList[0] == (Byte)S && tempList[tempList.Count - 1] == (Byte)E)
@@ -321,10 +301,23 @@ namespace MiniPwrSupply
         private void DoReceive()
         {
             List<Byte> tempList = new List<Byte>();
-
+            byte[] buffer = new byte[2048];
             while (Isreceiving)
             {
-                Int32 receivedValue = comport.ReadByte();
+                Int32 receivedValue = serialPort1.ReadByte(); //comport.ReadByte();
+                do
+                {
+                    Int32 length = serialPort1.Read(buffer, 0, buffer.Length);
+                    Array.Resize(ref buffer, length);
+                    Display d = new Display(DisplayText);
+                    this.Invoke(d, new Object[] { buffer });
+                    Array.Resize(ref buffer, 1024);
+
+                } while (serialPort1.BytesToRead < 2048);
+                
+                
+                
+                Thread.Sleep(20);
                 switch (receivedValue)
                 {
                     case 1:
@@ -346,7 +339,164 @@ namespace MiniPwrSupply
                 }
             }
         }
+        private void DoReceive2()           //限定次數
+        {
+            Boolean readingFromBuffer;
+            Int32 count = 0;
+            Byte[] buffer = new Byte[1024];
+            while (Isreceiving)
+            {
+                readingFromBuffer = true;
+                while (serialPort1.BytesToRead < buffer.Length && count < 501)
+                {
+                    Thread.Sleep(16);
+                    count++;
+                    if (count > 500)
+                    {
+                        readingFromBuffer = false;
+                    }
+                }
+                count = 0;
+                if (readingFromBuffer)
+                {
+                    Int32 length = serialPort1.Read(buffer, 0, buffer.Length);
+                    Display d = new Display(DisplayText);
+                    this.Invoke(d, new Object[] { buffer });
+                }
+                else
+                {
+                    serialPort1.DiscardInBuffer();
+                }
 
+                Thread.Sleep(16);
+            }
+        }
+
+        private void DoReceive3()           //限定時間內接收完
+        {
+            Boolean readingFromBuffer;
+            Stopwatch watch = new Stopwatch();
+            Byte[] buffer = new Byte[1024];
+            while (Isreceiving)
+            {
+                if (serialPort1.BytesToRead > 0)
+                {
+                    Thread.Sleep(312);
+                    watch.Start();
+                    readingFromBuffer = true;
+                    while (serialPort1.BytesToRead < buffer.Length && watch.ElapsedMilliseconds < 3001)
+                    {
+                        Thread.Sleep(16);
+                        if (watch.ElapsedMilliseconds > 3000)
+                        {
+                            readingFromBuffer = false;
+                        }
+                    }
+                    watch.Stop();
+                    watch.Reset();
+                    if (readingFromBuffer)
+                    {
+                        Int32 length = serialPort1.Read(buffer, 0, buffer.Length);
+                        Display d = new Display(DisplayText);
+                        this.Invoke(d, new Object[] { buffer });
+                    }
+                    else
+                    {
+                        serialPort1.DiscardInBuffer();
+                    }
+                }
+                Thread.Sleep(16);
+            }
+        }
+
+        const Int32 S = 83;
+        const Int32 E = 69;
+
+        private void DoReceive_with_postfix() //bool Isreceiving
+        {
+            List<Byte> tempList = new List<Byte>();
+
+            while (Isreceiving)
+            {
+                Int32 receivedValue = serialPort1.ReadByte();
+                switch (receivedValue)
+                {
+                    case S:
+                        tempList.Clear();
+                        tempList.Add((Byte)receivedValue);
+                        break;
+                    case E:
+                        tempList.Add((Byte)receivedValue);
+                        parse(tempList);
+                        break;
+                    case -1:
+                        break;
+                    default:
+                        tempList.Add((Byte)receivedValue);
+                        break;
+                }
+            }
+        }
+        private void DoReceive4()
+        {
+            List<Byte> tempList = new List<Byte>();
+            Byte[] buffer = new Byte[1024];
+            Int32 messageDataLength = 0;
+            while (Isreceiving)
+            {
+                Thread.Sleep(100);
+                if (serialPort1.BytesToRead > 0)
+                {
+                    Int32 receivedLength = serialPort1.Read(buffer, 0, buffer.Length);
+                    Array.Resize(ref buffer, receivedLength);
+                    tempList.AddRange(buffer);
+                    Array.Resize(ref buffer, 1024);
+                }
+                if (tempList.Count > 0)
+                {
+                    if (messageDataLength == 0)
+                    {
+                        messageDataLength = GetMessageDataLength(tempList);
+                    }
+                    else
+                    {
+                        //messageDataLength = Parse(tempList, messageDataLength);
+                    }
+                }
+            }
+        }
+        private const Byte head = 249;
+        private Int32 GetMessageDataLength(List<Byte> tempList)
+        {
+            if (tempList.Count >= 2)
+            {
+                Int32 startIndex = tempList.IndexOf(head);
+                if (startIndex >= 0 && startIndex < tempList.Count)
+                {
+                    return Convert.ToInt32(tempList[startIndex + 1]);
+                }
+                else
+                { return 0; }
+            }
+            else
+            { return 0; }
+        }
+        private Byte[] GetSendBuffer(String content)
+        {
+            Byte[] dataBytes = Encoding.UTF8.GetBytes(content);
+            if (dataBytes.Length < 256)
+            {
+                Byte[] result = new Byte[dataBytes.Length + 2];
+                result[0] = head;
+                result[1] = Convert.ToByte(dataBytes.Length);
+                Array.Copy(dataBytes, 0, result, 2, dataBytes.Length);
+                return result;
+            }
+            else
+            {
+                throw new OverflowException();
+            }
+        }
         private void _comportScanning()
         {
             string[] ports = SerialPort.GetPortNames();
@@ -456,7 +606,7 @@ namespace MiniPwrSupply
                     string[] ports = SerialPort.GetPortNames();
                     cmbx_com.Items.Clear();
                     cmbx_com.Items.AddRange(ports);
-                    btn_open.Enabled = true;
+                    btn_connSerialport.Enabled = true;
                     //btn_connection.Enabled = true;
                     btn_sendcmd.Enabled = false;
                     break;
@@ -473,11 +623,11 @@ namespace MiniPwrSupply
             } while (cmbx_com.Text.Length == 0);
         }
 
-        private void btn_open_Click(object sender, EventArgs e)
+        private void btn_connSerialport_Click(object sender, EventArgs e)
         {
             try
             {
-                btn_open.Enabled = false;
+                btn_connSerialport.Enabled = false;
                 btn_Power.Enabled = true;
                 txtbx_Iset.Enabled = true;
                 txtbx_Vset.Enabled = true;
@@ -619,13 +769,6 @@ namespace MiniPwrSupply
             serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
         }
 
-        private string _decstringToHex(string args)
-        {
-            //var hexstring = string.Join("", args.Select(i => string.Format("{0:X2}", Convert.ToInt32(i))));
-            var decstring = Convert.ToInt32(args);
-            string hexstr = string.Format("{0:X}", decstring);
-            return hexstr;
-        }
 
         private static void StartToTestRFThreadFunc(object obj)
         {
@@ -776,13 +919,9 @@ namespace MiniPwrSupply
 
             int length = serialPort1.BytesToRead;
             //btn_connection.Enabled = true;
-            string synchroHead = this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
-            string Address = this._decstringToHex(txtbx_addr.Text.Trim());
             double Vset = 0.0d;
             double Iset = 0.0d;
             string receiveData = string.Empty;
-            string vsetting = string.Empty;
-            string isetting = string.Empty;
 
             try
             {
@@ -849,6 +988,8 @@ namespace MiniPwrSupply
                 throw new Exception("_sendCmd ERR!!" + ex.Message);
             }
 
+            string synchroHead = "AA"; //this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
+            string Address = string.Format("0x{0:X}", Convert.ToInt32(txtbx_addr.Text.Trim()));     //this._decstringToHex();
             //----------------------------------------------
             string[] visetting = WuzhiCmd.Instance.split_VI(Vset, Iset);    //split iset vset into 4 bytes
             byte[] cmd = WuzhiCmd.Instance._VIset_Cmd(synchroHead, Address, visetting);
@@ -896,7 +1037,7 @@ namespace MiniPwrSupply
                     label_PowerBtn.Text.ToUpper();
                     this._IsPowerOn(WuzhiPower.PowerOff);
                     btn_sendcmd.Enabled = false;
-                    btn_open.Enabled = false;
+                    btn_connSerialport.Enabled = false;
                     break;
 
                 case "ON":
@@ -905,14 +1046,14 @@ namespace MiniPwrSupply
                     label_PowerBtn.Text = "Power On";
                     label_PowerBtn.Text.ToUpper();
                     this._IsPowerOn(WuzhiPower.PowerOn);
-                    if (!btn_open.Enabled)
+                    if (!btn_connSerialport.Enabled)
                     {
                         btn_sendcmd.Enabled = true;
                         break;
                     }
                     else
                     {
-                        btn_open.Enabled = true;
+                        btn_connSerialport.Enabled = true;
                         btn_sendcmd.Enabled = false;
                         break;
                     }
@@ -940,14 +1081,14 @@ namespace MiniPwrSupply
                     btn_connection.Text = "Connection";
                     this._IsConnected(WuzhiConnectStatus.Connect);
                     //btn_connection.Enabled = false;
-                    if (!btn_open.Enabled)
+                    if (!btn_connSerialport.Enabled)
                     {
                         btn_sendcmd.Enabled = true;
                         break;
                     }
                     else
                     {
-                        btn_open.Enabled = true;
+                        btn_connSerialport.Enabled = true;
                         btn_sendcmd.Enabled = false;
                         break;
                     }
@@ -960,7 +1101,6 @@ namespace MiniPwrSupply
         #endregion Dashboard
 
         #region DebugPage Button
-
         private void radioButton1_CheckedChanged(object sender, EventArgs e)
         {
             byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
@@ -974,14 +1114,6 @@ namespace MiniPwrSupply
 
             //string totalStr = string.Format("0x{0:X}", total);
             //richTextBox1.AppendText(string.Format("0x{0:X}", total) + "\r\n" + string.Format("{0:X}", total));
-            //this._ByteArrayToString();
-            //string.Format("0x{0:X}", cmdlst);
-
-            //if ((hex.Length % 2) != 0)
-            //{
-            //    hex = "0" + hex;
-            //}
-
         }
 
         private void btn_hexaddition_Click(object sender, EventArgs e)
