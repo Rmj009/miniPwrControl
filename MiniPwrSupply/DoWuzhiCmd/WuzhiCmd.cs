@@ -32,6 +32,11 @@ namespace MiniPwrSupply.DoWuzhiCmd
         private string vsetting2 = string.Empty;
         private string isetting2 = string.Empty;
         private Action<string, UInt32> mLogCallback = null;
+
+
+
+        private static string synchroHead = "AA"; //_decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
+
         public static WuzhiCmd Instance
         {
             get
@@ -66,6 +71,40 @@ namespace MiniPwrSupply.DoWuzhiCmd
             string hexstr = string.Format("{0:X}", decstring);
             return hexstr;
         }
+
+        public Int32 _hexAddition(string[] strArray)
+        {
+            byte[] hexAdded = Enumerable.Range(0, strArray.Length - 2).Select(x => Convert.ToByte(strArray[x], 16)).ToArray();
+            Int32 total = hexAdded.Sum(x => x);
+            //richTextBox1.AppendText("\r\n strArray _hexAddition ---> " + string.Format("0x{0:X}", total));
+            return total;
+            //if (strArray.Length == 19)
+            //{
+            //}
+            //else if (strArray.Length == 20)
+            //{
+            //    //byte[] hexAdded = Enumerable.Range(0, wuzhiCmd.Length - 2).Where(x => x % 2 == 0).Select(x => Convert.ToByte(wuzhiCmd.Substring(x, 2), 16)).ToArray();  //wuzhiCmd.Substring(x,2)
+            //    byte[] hexAdded = Enumerable.Range(0, txtbx_WuzhiCmd.Text.Split(' ').Length - 1).Select(x => Convert.ToByte(txtbx_WuzhiCmd.Text.Split(' ')[x], 16)).ToArray();
+
+            //    total = hexAdded.Sum(x => x);
+
+            //    //richTextBox1.AppendText("wuzhiCmd _hexAddition ---> " + string.Format("0x{0:X}", total));
+            //    return total;
+            //}
+            //else
+            //{
+            //    return 0;
+            //}
+            //else if (1 == 1)
+            //{
+            //    richTextBox1.AppendText("IsReadyOnly return TRUE ---> array,\r\n while FLASE ---> list \r\n" + tiidas.IsReadOnly.ToString() + "\r\n");
+            //    //foreach (Tiida item in tiidas)
+            //    //{
+            //    //    richTextBox1.AppendText(item.ToString() + " ");
+            //    //}
+            //}
+        }
+
 
         private void comport_DataReceived(Object sender, SerialDataReceivedEventArgs e)
         {
@@ -200,6 +239,72 @@ namespace MiniPwrSupply.DoWuzhiCmd
             }
 
             return new string[] { vsetting1, vsetting2, isetting1, isetting2 };
+        }
+
+        private byte[] _VIset_Cmd(string synchroHead,  string addr, string[] visetting) 
+        {
+            
+            vsetting1 = visetting[0];
+            vsetting2 = visetting[1];
+            isetting1 = visetting[2];
+            isetting2 = visetting[3];
+            string checksum = string.Empty;
+            //Thread thread = new Thread(new ParameterizedThreadStart(StartToTestRFThreadFunc));
+            //thread.Start(this);
+            //----------------------------------------------
+            string[] PowerCmd = {
+                 synchroHead,
+                    addr,
+                    "2C",
+                    "14",
+                    "50",
+                    "14",
+                    "50",
+                    vsetting1,
+                    vsetting2,
+                    isetting1,
+                    isetting2,
+                    "00",
+                    "00",
+                    "00",
+                    "42",
+                    "00",
+                    "00",
+                    "00",
+                    "00"
+            };
+            //mPowerCmd = Enumerable.Range(0, PowerCmd.Length).Select(i => this._decstringToHex(PowerCmd[i])).ToArray();
+            //  00 ---> baudrate
+            //var temp = PowerCmd;
+            //var temp2 = txtbx_WuzhiCmd.Text.Split(' ');
+            string chksum = string.Format("0x{0:X}", this._hexAddition(PowerCmd));
+            checksum = chksum.Substring(chksum.Length - 2, 2);
+            //----------------------------------------------
+            byte[] cmd = new byte[20];
+            cmd[0] = Convert.ToByte(synchroHead, 16); //0xAA
+            cmd[1] = Convert.ToByte(addr, 16);   //0x01
+            cmd[2] = 0x2C;
+            cmd[3] = 0x14;
+            cmd[4] = 0x50;
+            cmd[5] = 0x14;
+            cmd[6] = 0x50;
+            cmd[7] = Convert.ToByte(vsetting1, 16); //0x
+            cmd[8] = Convert.ToByte(vsetting2, 16); //0x
+            cmd[9] = Convert.ToByte(isetting1, 16); //0x
+            cmd[10] = Convert.ToByte(isetting2, 16); //0x
+            cmd[11] = 0x00;
+            cmd[12] = 0x00;
+            cmd[13] = 0x00;
+            cmd[14] = 0x42;
+            cmd[15] = 0x00;
+            cmd[16] = 0x00;
+            cmd[17] = 0x00;
+            cmd[18] = 0x00;
+            cmd[19] = Convert.ToByte(string.Format("0x{0:X}", checksum), 16);
+
+
+            return cmd;
+        
         }
     }
 

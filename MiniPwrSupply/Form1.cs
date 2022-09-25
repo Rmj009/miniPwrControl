@@ -108,46 +108,7 @@ namespace MiniPwrSupply
         }
 
         //private void _hexAddition<Tiida>(IList<Tiida> tiidas)      //array<T>(string, T)改用Generic方式, 捨棄 byte[] hexBytes       // checksum = all hex addition substring last 2
-        private Int32 _hexAddition(string[] strArray)
-        {
-            if (strArray.Length == 20)
-            {
-                Int32 total = 0;
-                //byte[] hexAdded = Enumerable.Range(0, wuzhiCmd.Length - 2).Where(x => x % 2 == 0).Select(x => Convert.ToByte(wuzhiCmd.Substring(x, 2), 16)).ToArray();  //wuzhiCmd.Substring(x,2)
-                byte[] hexAdded = Enumerable.Range(0, txtbx_WuzhiCmd.Text.Split(' ').Length - 1).Select(x => Convert.ToByte(txtbx_WuzhiCmd.Text.Split(' ')[x], 16)).ToArray();
-
-                total = hexAdded.Sum(x => x);
-
-                //richTextBox1.AppendText("wuzhiCmd _hexAddition ---> " + string.Format("0x{0:X}", total));
-                txtbx_TryCmd.Text += string.Format("0x{0:X}", total);
-
-                return total;
-            }
-            else if (strArray.Length == 19)
-            {
-                Int32 total = 0;
-                byte[] hexAdded = Enumerable.Range(0, strArray.Length - 2).Select(x => Convert.ToByte(strArray[x], 16)).ToArray();
-                total = hexAdded.Sum(x => x);
-
-                //richTextBox1.AppendText("\r\n strArray _hexAddition ---> " + string.Format("0x{0:X}", total));
-                txtbx_TryCmd.Text += string.Format("0x{0:X}", total);
-
-                return total;
-            }
-            else
-            {
-                return 0;
-            }
-            //else if (1 == 1)
-            //{
-            //    richTextBox1.AppendText("IsReadyOnly return TRUE ---> array,\r\n while FLASE ---> list \r\n" + tiidas.IsReadOnly.ToString() + "\r\n");
-            //    //foreach (Tiida item in tiidas)
-            //    //{
-            //    //    richTextBox1.AppendText(item.ToString() + " ");
-            //    //}
-            //}
-        }
-
+        
         private string _ByteArrayToString(byte[] bytes)
         {
             StringBuilder hex = new StringBuilder(bytes.Length * 2);
@@ -591,7 +552,7 @@ namespace MiniPwrSupply
 
         private bool Chk_Input_Content()
         {
-            if (this.txtbx_addr.Text.Trim().Length >= 4)
+            if (this.txtbx_addr.Text.Trim().Length >= 4) //或不屬於數字
             {
                 this.ShowErrMsg(@"Address format fault.");
                 return false;
@@ -788,12 +749,6 @@ namespace MiniPwrSupply
 
             if (dr == DialogResult.Yes)
             {
-                //if (this.mIC != null)
-                //{
-                //    this.mIC.Dispose(); // IC Free Resource
-                //    this.mIC.IDispose(); // Instrument Free Resource
-                //}
-
                 //try
                 //{
                 //    if (bWriteLogFlag)
@@ -828,11 +783,6 @@ namespace MiniPwrSupply
             string receiveData = string.Empty;
             string vsetting = string.Empty;
             string isetting = string.Empty;
-            string vsetting1 = string.Empty;
-            string vsetting2 = string.Empty;
-            string isetting1 = string.Empty;
-            string isetting2 = string.Empty;
-            string checksum = string.Empty;
 
             try
             {
@@ -896,68 +846,13 @@ namespace MiniPwrSupply
             }
             catch (Exception ex)
             {
-                throw new Exception("Sendcmd ERR!!" + ex.Message);
+                throw new Exception("_sendCmd ERR!!" + ex.Message);
             }
 
+            //----------------------------------------------
             string[] visetting = WuzhiCmd.Instance.split_VI(Vset, Iset);    //split iset vset into 4 bytes
-            vsetting1 = visetting[0];
-            vsetting2 = visetting[1];
-            isetting1 = visetting[2];
-            isetting2 = visetting[3];
-            //Thread thread = new Thread(new ParameterizedThreadStart(StartToTestRFThreadFunc));
-            //thread.Start(this);
-            //----------------------------------------------
-            string[] PowerCmd = {
-                 synchroHead,
-                    Address,
-                    "2C",
-                    "14",
-                    "50",
-                    "14",
-                    "50",
-                    vsetting1,
-                    vsetting2,
-                    isetting1,
-                    isetting2,
-                    "00",
-                    "00",
-                    "00",
-                    "42",
-                    "00",
-                    "00",
-                    "00",
-                    "00"
-            };
-            //mPowerCmd = Enumerable.Range(0, PowerCmd.Length).Select(i => this._decstringToHex(PowerCmd[i])).ToArray();
-            //  00 ---> baudrate
-            //var temp = PowerCmd;
-            //var temp2 = txtbx_WuzhiCmd.Text.Split(' ');
-            string chksum = string.Format("0x{0:X}", this._hexAddition(PowerCmd));
-            checksum = chksum.Substring(chksum.Length - 2, 2);
-            //----------------------------------------------
-            byte[] cmd = new byte[20];
-            cmd[0] = Convert.ToByte(synchroHead, 16); //0xAA
-            cmd[1] = Convert.ToByte(Address, 16);   //0x01
-            cmd[2] = 0x2C;
-            cmd[3] = 0x14;
-            cmd[4] = 0x50;
-            cmd[5] = 0x14;
-            cmd[6] = 0x50;
-            cmd[7] = Convert.ToByte(vsetting1, 16); //0x
-            cmd[8] = Convert.ToByte(vsetting2, 16); //0x
-            cmd[9] = Convert.ToByte(isetting1, 16); //0x
-            cmd[10] = Convert.ToByte(isetting2, 16); //0x
-            cmd[11] = 0x00;
-            cmd[12] = 0x00;
-            cmd[13] = 0x00;
-            cmd[14] = 0x42;
-            cmd[15] = 0x00;
-            cmd[16] = 0x00;
-            cmd[17] = 0x00;
-            cmd[18] = 0x00;
-            cmd[19] = Convert.ToByte(string.Format("0x{0:X}", checksum), 16);
+            byte[] cmd = WuzhiCmd.Instance._VIset_Cmd(synchroHead, Address, visetting);
 
-            //----------------------------------------------
 
             Int32 tryCount = 1;
             tryCount++;
@@ -1069,31 +964,9 @@ namespace MiniPwrSupply
         private void radioButton1_CheckedChanged(object sender, EventArgs e)
         {
             byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
-            //byte[] hexAdded = Enumerable.Range(0, txtbx_WuzhiCmd.Text.Split(' ').Length - 2).Select(x => Convert.ToByte(txtbx_WuzhiCmd.Text.Split(' ')[x], 16)).ToArray();  //wuzhiCmd.Substring(x,2)
-
-            //richTextBox1.AppendText(string.Format("{0:x}", total));
-            //richTextBox1.AppendText(wuzhiCmd.Length.ToString());
             byte[] aabyte = new byte[20];
             byte[] cmd = new byte[20];      // wuzhiCmd.Length = 20
             List<string> cmdlst = new List<string>();
-            //byte[] hexAdded = Enumerable.Range(0, wuzhiCmd.Length - 2).Where(x => x % 2 == 0).Select(x => Convert.ToByte(wuzhiCmd.Substring(x, 2), 16)).ToArray();  //wuzhiCmd.Substring(x,2)
-            //int total = hexAdded.Sum(x => x);
-            //foreach (string item in wuzhiCmd.Split(' '))
-            //{
-            //    string[] tmp = null;
-            //    cmdlst.Add(string.Concat("0x" + item) + string.Empty);
-            //    Convert.FromBase64String(string.Concat("0x" + item) + string.Empty);
-            //    //(2, wuzhiCmd.Length);
-            //    //tmp = string.Format("0x{0:X}", item);
-            //    //string.Concat("0x" + item)
-            //}
-            //var aa = "aa";
-            //for (int i = 1; i < 21; i++)
-            //{
-            //    //cmd[i] =
-            //    string.Format("0x{0:X}", aa);  //string.Format();
-            //}
-
             //Encoding utf_8 = Encoding.UTF8;
             //byte[] result = cmdlst.SelectMany(x => utf_8.GetBytes(x)).ToArray();
             //richTextBox1.AppendText(cmdlst.ToArray().ToString());
@@ -1109,16 +982,22 @@ namespace MiniPwrSupply
             //    hex = "0" + hex;
             //}
 
-            //return Enumerable.Range(0, hex.Length)
-            //                 .Where(x => x % 2 == 0)
-            //                 .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
-            //                 .ToArray();
         }
 
         private void btn_hexaddition_Click(object sender, EventArgs e)
         {
-            this.richTextBox1.Clear();
-            this._hexAddition(txtbx_WuzhiCmd.Text.Split(' '));
+             this.richTextBox1.Clear();
+            this.txtbx_TryCmd.Clear();
+            try
+            {
+                Int32 hexAdd = WuzhiCmd.Instance._hexAddition(txtbx_WuzhiCmd.Text.Split(' '));
+                txtbx_TryCmd.Text += "Hex Addition" + string.Format("0x{0:X}", hexAdd);
+            }
+            catch (Exception ex)
+            {
+
+                throw new Exception("Hex Addition ERR!! --->" + ex.Message);
+            }
         }
 
         private void btn_TryCmd_Click(object sender, EventArgs e)

@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="cmdDict.cs" />
     <Compile Include="Config\Ini.cs" />
+    <Compile Include="Config\InterfaceBase.cs" />
     <Compile Include="Config\InterfaceSystemIin.cs" />
     <Compile Include="DoWuzhiCmd\RS232.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmd.cs" />

@@ -8,8 +8,9 @@ namespace MiniPwrSupply.Config
 {
     public interface InterfaceSystemIni
     {
-        //void SetFWImagePath(string path);
+        bool IsPowerSupplyEnable();
 
+        //void SetFWImagePath(string path);
         //String GetFWImagePath();
 
         //String GetProductFWImagePath();
@@ -39,8 +40,6 @@ namespace MiniPwrSupply.Config
         //String GetRFInstrumentModel();
 
         //void SetRFInstrument_Enable(bool isEnable);
-
-        //bool IsPowerSupplyEnable();
 
         //String GetPowerSupplyModel();
 
