@@ -65,14 +65,14 @@ namespace MiniPwrSupply
         private volatile bool mGet_Start;
         private StringBuilder receiveCall = new StringBuilder();
         private static string DEVICE_ID = "FTDIBUS" + "COMPORT" + "&" + "VID_0403" + "&" + "PID_6001";
-        public static List<Byte> tempList = new List<Byte>();
+        //public static List<Byte> tempList = new List<Byte>();
 
         private bool mIsConnectedSerialPort = false;
         public Form1 mInstatnce = null;
         private Int32 innerReceiveDataFullLength;
         private static int iRetryTime = 6;
         private static Int32 checksum = 0;
-
+        private static byte[] globalBuffer = new byte[8800]; //large buffer, put globally
         private bool Chk_Input_Content()
         {
             if (this.txtbx_addr.Text.Trim().Length >= 4) //或不屬於數字
@@ -104,10 +104,50 @@ namespace MiniPwrSupply
         private void DisplayText(Byte[] buffer)
         {
             textBox1.Clear();
+            string receivedata = "";
             textBox1.Text += String.Format("{0}{1}", BitConverter.ToString(buffer), Environment.NewLine);
-            richTextBox1.AppendText(String.Format("{0}{1}", BitConverter.ToString(buffer), Environment.NewLine));
-            totalLength = totalLength + buffer.Length;
+            totalLength += buffer.Length;
             label_DataReceived.Text = totalLength.ToString();
+            try
+            {
+                //check the criteria
+                //TODO::  save LOG to document the wuzhicmd vaild or not
+                //AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D==61
+                //this.Invoke(new Action(() =>
+                //{
+                //}));
+                //this._WaitForUIThread(() =>
+                //{
+                //});
+
+                string dataString = Encoding.UTF8.GetString(buffer);
+                receivedata = BitConverter.ToString(buffer);      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
+                txtbx_TryCmd.Text += string.Format(@"0x{0:X}", receivedata);
+
+                richTextBox1.AppendText(
+                    "\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:") + 
+                    WuzhiCmd.Instance.IsbufferVaild(buffer) + " -> " + string.Format("{0}{1}{2}{3}{4}", 
+                    BitConverter.ToString(buffer), 
+                    "  receivedata: ---> " + receivedata + "\r\n",
+                    "\n" + "  dataString: ---> " + dataString + "\r\n"
+                    , Environment.NewLine));
+
+
+            }
+            catch (IndexOutOfRangeException indexOut)
+            {
+                ShowErrMsg(@"DataReceived 回傳Array index在界線之外" + indexOut.Message);
+                throw new Exception("DataReceived Crush" + indexOut.Message);
+            }
+            catch (Exception ex)
+            {
+                ShowErrMsg(@"serialport1_DataReceived Err" + ex.Message);
+                throw ex;
+            }
+            finally
+            {
+                txtbx_TryCmd.Clear();
+            }
         }
 
         private void _WaitForUIThread(Action callback)
@@ -132,80 +172,77 @@ namespace MiniPwrSupply
             int len = serialPort1.BytesToRead;        //      170-01-18-128-00-...-00-00-00-00-00-00-00 00-00-00-00-00-61
             int hexChksum = 0;
             Int32 length = 0;
+            int tryCount = 0;
             string showInfo = string.Empty;
             string itsChksum = string.Empty;
-            tempList.Clear();
+            string sResult = string.Empty;
+            List<Byte> tempList = new List<Byte>();
             //--------------------------------------
-            if (serialPort1.BytesToRead > 0)
+            bool tempBuffer_Length = false;
+            byte[] buffer1 = new byte[serialPort1.BytesToRead];
+            //Stream portStream = serialPort1.BaseStream;
+            //portStream.Read(buffer1, 0, buffer1.Length);
+            do
             {
-                bool Iswuzhicmd_valid = false;
-                bool tempBuffer_Length = false;
-                byte[] buffer1 = new byte[serialPort1.BytesToRead];
-                //Stream portStream = serialPort1.BaseStream;
-                //portStream.Read(buffer1, 0, buffer1.Length);
-                do
+                if (serialPort1.BytesToRead > 0)
                 {
                     try
                     {
-                        if (tempList.Count == 20)
-                        { break; }
                         Int32 receivedValue = serialPort1.ReadByte();
-                        switch (receivedValue)
+                        if (tempList.Count == 20)
                         {
-                            case -1:
-                                hexChksum = buffer1.Sum(i => i);
-                                string chksum = string.Format(@"0x{0:X}", hexChksum);
-                                int.TryParse(chksum.Substring(chksum.Length - 2, 2), out checksum);
-                                tempList.Add((Byte)receivedValue);
-                                itsChksum = tempList[tempList.Count - 1].ToString();
-                                Isreceiving = false;
-                                break;
-
-                            default:
-                                tempList.Add((Byte)receivedValue);
-                                continue;
+                            break;
+                        }
+                        else if (receivedValue == -1)
+                        {
+                            hexChksum = buffer1.Sum(i => i);
+                            string chksum = string.Format(@"0x{0:X}", hexChksum);
+                            int.TryParse(chksum.Substring(chksum.Length - 2, 2), out checksum);
+                            tempList.Add((Byte)receivedValue);
+                            itsChksum = tempList[tempList.Count - 1].ToString();
+                            Isreceiving = false;
+                            break;
+                        }
+                        else
+                        {
+                            tempList.Add((Byte)receivedValue);
                         }
                     }
                     catch (TimeoutException timeoutEx)
                     {
                         MessageBox.Show("Received had timeout!! --->" + timeoutEx.Message);
-                        //以下這邊請自行撰寫你想要的例外處理
                     }
                     catch (InvalidOperationException invaild)
                     {
-                        throw new Exception("invalid crash " + invaild.Message);
+                        throw new Exception("invalid Operation "+ invaild.Message);
                     }
                     catch (Exception ex)
                     {
                         MessageBox.Show(BitConverter.ToString(buffer1) + ex.Message);
                     }
-                    break;
-                } while (tempList.Count <= 20);         // (Isreceiving == true);
+                }
+                else
+                {
+                    tryCount++;
+                    continue;
+                }
+            } while (tempList.Count <= 20);         // (Isreceiving == true);
 
+            try
+            {
                 tempBuffer_Length = GetFullReceiveData(tempList);
                 length = serialPort1.Read(buffer1, 0, buffer1.Length); //(sender as SerialPort)
                 Array.Resize(ref buffer1, length);
                 Display d = new Display(DisplayText);
                 this.Invoke(d, new Object[] { buffer1 });
-                try
-                {
-                    //TODO::  save LOG to document the wuzhicmd vaild or not
-                    if (itsChksum == checksum.ToString())         //AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D==61
-                    {
-                        if (buffer1.Length >= 20)
-                        {
-                            Iswuzhicmd_valid = WuzhiCmd.Instance.IsbufferVaild(buffer1); //check the criteria
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception("DataReceived Length < 20 --> " + ex.Message);
-                }
             }
-            else
+            catch (Exception ex)
             {
-                //沒收到資料
+                throw new Exception("DataReceived Length < 20 --> " + ex.Message);
+            }
+            finally
+            {
+                tempList.Clear();
             }
 
             //--------------------------------------
@@ -215,10 +252,7 @@ namespace MiniPwrSupply
             //SerialPort serialPort1 = sender as SerialPort;
             //byte[] buff = new byte[serialPort1.BytesToRead]; //this is to provide the data buffer
 
-            //bool hasData = dataString.Split(' ').Contains("AA"); //this is to check if your data has this, if it doesn't do something
-            //You get your data from serial port as byte[]
-            //Do something on your data
-            //byte[] globalBuffer = new byte[8800]; //large buffer, put globally
+
             //buff.CopyTo(globalBuffer, 0);
             //In your data received, use Buffer.BlockCopy to copy data to your globalBuffer
             //if (globalBuffer.Length >= 20)          //Beware the index ---> 20*2+19
@@ -240,37 +274,7 @@ namespace MiniPwrSupply
 
             //}
 
-            //this.Invoke(new Action(() =>
-            //{
-            //}));
-            //this._WaitForUIThread(() =>
-            //{
-            //    string dataString = Encoding.UTF8.GetString(buff);
-            //    receivedata = BitConverter.ToString(buff);      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
-            //    txtbx_TryCmd.Text += string.Format(@"0x{0:X}", receivedata);
-
-            //    richTextBox1.AppendText(showInfo + "\r\n buffToarry --> " + Encoding.UTF8.GetString(buff)); //buff.ToArray().ToString()
-            //    richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:") + "  receivedata: ---> " + receivedata + "\r\n");
-            //    richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:") + "  dataString: ---> " + dataString + "\r\n");
-            //    txtbx_TryCmd.Clear();
-            //});
-
-            //if (receivedata.Length == 0)
-            //{
-            //    ShowErrMsg("WuZhiCmd Err!!!" + MessageBox.Show("serialport1_DataReceived crash"));
-            //    throw new Exception("Cmd Err");
-            //}
-            //}
-            //catch (IndexOutOfRangeException indexOut)
-            //{
-            //    ShowErrMsg(@"DataReceived 回傳Array index在界線之外" + indexOut.Message);
-            //    throw new Exception("DataReceived Crush" + indexOut.Message);
-            //}
-            //catch (Exception ex)
-            //{
-            //    ShowErrMsg(@"serialport1_DataReceived Err" + ex.Message);
-            //    throw ex;
-            //}
+            
         }
 
         private void parse(List<Byte> tempList)     //這個方法主要是在收到結尾字元後 (因為表示已經收到一段完整資料了) 呼叫，由於我們只要顯示資料內容的部份，所以在這方法中把開頭結尾字元給去除。
@@ -294,7 +298,7 @@ namespace MiniPwrSupply
                 Byte[] temp = new Byte[innerReceiveDataFullLength];
                 Array.Copy(tempList.ToArray(), tempList.IndexOf(Head), temp, 0, temp.Length);
                 //innerResponseFullBytes = temp;
-                InterpretReceiveData();
+                //InterpretReceiveData();
                 innerReceiveDataFullLength = 0;
                 return true;
             }

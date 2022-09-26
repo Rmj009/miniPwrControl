@@ -63,40 +63,35 @@ namespace MiniPwrSupply.DoWuzhiCmd
             this.mLogCallback(sTtestResult, type);
         }
 
-        public bool IsbufferVaild(byte[] buff)
+        public string IsbufferVaild(byte[] buff)
         {
             string showInfo = string.Empty;
             if (buff[3] == Err_checksum_is_wrong)    //0x90
             {
                 showInfo = "checksum is wrong";
-                Save_LOG_data(showInfo);
-                return false;
+                //Save_LOG_data(showInfo);
             }
             else if (buff[3] == Err_wrong_params_setting_or_params_overflow) //0xA0
             {
                 showInfo = "wrong params setting or params overflow";
-                return false;
             }
             else if (buff[3] == Err_cmd_cannot_executed) // 0xB0
             {
                 showInfo = "cmd cannot executed";
-                return false;
             }
             else if (buff[3] == Err_cmd_is_invaild) // 0xC0
             {
                 showInfo = "cmd is invaild";
-                return false;
             }
             else if (buff[3] == Err_cmd_is_unknown) // 0xD0
             {
                 showInfo = "cmd is unknown";
-                return false;
             }
             else        // buff[3] == 128 ---> 0x80
             {
                 showInfo = "WuzhiCmd succeed!!";
-                return true;
             }
+            return showInfo;
         }
 
         private void TakeInitiatives()
