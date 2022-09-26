@@ -28,9 +28,13 @@ namespace MiniPwrSupply.DoWuzhiCmd
         private string isetting1 = string.Empty;
         private string vsetting2 = string.Empty;
         private string isetting2 = string.Empty;
+        public static int Err_checksum_is_wrong = 144;
+        public static int Err_wrong_params_setting_or_params_overflow = 160;
+        public static int Err_cmd_cannot_executed = 176;
+        public static int Err_cmd_is_invaild = 192;
+        public static int Err_cmd_is_unknown = 208;
+
         private Action<string, UInt32> mLogCallback = null;
-
-
 
         private static string synchroHead = "AA"; //_decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
 
@@ -45,6 +49,7 @@ namespace MiniPwrSupply.DoWuzhiCmd
                 return mInstance;
             }
         }
+
         public void Save_LOG_data(string sTtestResult, bool isTitle = false, bool isCustom = false, bool isError = false)
         {
             uint type = isTitle ? RFTestTool.Util.MSG.TITLE : RFTestTool.Util.MSG.NORMAL;
@@ -57,6 +62,43 @@ namespace MiniPwrSupply.DoWuzhiCmd
 
             this.mLogCallback(sTtestResult, type);
         }
+
+        public bool IsbufferVaild(byte[] buff)
+        {
+            string showInfo = string.Empty;
+            if (buff[3] == Err_checksum_is_wrong)    //0x90
+            {
+                showInfo = "checksum is wrong";
+                Save_LOG_data(showInfo);
+                return false;
+            }
+            else if (buff[3] == Err_wrong_params_setting_or_params_overflow) //0xA0
+            {
+                showInfo = "wrong params setting or params overflow";
+                return false;
+            }
+            else if (buff[3] == Err_cmd_cannot_executed) // 0xB0
+            {
+                showInfo = "cmd cannot executed";
+                return false;
+            }
+            else if (buff[3] == Err_cmd_is_invaild) // 0xC0
+            {
+                showInfo = "cmd is invaild";
+                return false;
+            }
+            else if (buff[3] == Err_cmd_is_unknown) // 0xD0
+            {
+                showInfo = "cmd is unknown";
+                return false;
+            }
+            else        // buff[3] == 128 ---> 0x80
+            {
+                showInfo = "WuzhiCmd succeed!!";
+                return true;
+            }
+        }
+
         private void TakeInitiatives()
         {
         }
@@ -74,6 +116,8 @@ namespace MiniPwrSupply.DoWuzhiCmd
             //richTextBox1.AppendText("hexTostring --->" + hex.ToString());
             return hex.ToString();
         }
+
+        //private void _hexAddition<Tiida>(IList<Tiida> tiidas)      //array<T>(string, T)改用Generic方式, 捨棄 byte[] hexBytes       // checksum = all hex addition substring last 2
         public Int32 _hexAddition(string[] strArray)
         {
             byte[] hexAdded = Enumerable.Range(0, strArray.Length - 2).Select(x => Convert.ToByte(strArray[x], 16)).ToArray();
@@ -107,7 +151,6 @@ namespace MiniPwrSupply.DoWuzhiCmd
             //}
         }
 
-
         private void comport_DataReceived(Object sender, SerialDataReceivedEventArgs e)
         {
             Byte[] buffer = new Byte[1024];
@@ -116,6 +159,7 @@ namespace MiniPwrSupply.DoWuzhiCmd
             //Display d = new Display(DisplayText);
             //this.Invoke(d, new Object[] { buffer });
         }
+
         public string _decstringToHex(string args)
         {
             //var hexstring = string.Join("", args.Select(i => string.Format("{0:X2}", Convert.ToInt32(i))));
@@ -250,9 +294,8 @@ namespace MiniPwrSupply.DoWuzhiCmd
             return new string[] { vsetting1, vsetting2, isetting1, isetting2 };
         }
 
-        public byte[] _VIset_Cmd(string synchroHead,  string addr, string[] visetting) 
+        public byte[] _VIset_Cmd(string synchroHead, string addr, string[] visetting)
         {
-            
             vsetting1 = visetting[0];
             vsetting2 = visetting[1];
             isetting1 = visetting[2];
@@ -311,9 +354,7 @@ namespace MiniPwrSupply.DoWuzhiCmd
             cmd[18] = 0x00;
             cmd[19] = Convert.ToByte(string.Format("0x{0:X}", checksum), 16);
 
-
             return cmd;
-        
         }
     }
 

@@ -65,16 +65,36 @@ namespace MiniPwrSupply
         private volatile bool mGet_Start;
         private StringBuilder receiveCall = new StringBuilder();
         private static string DEVICE_ID = "FTDIBUS" + "COMPORT" + "&" + "VID_0403" + "&" + "PID_6001";
-        
+        public static List<Byte> tempList = new List<Byte>();
+
         private bool mIsConnectedSerialPort = false;
         public Form1 mInstatnce = null;
         private Int32 innerReceiveDataFullLength;
         private static int iRetryTime = 6;
-        public static int Err_checksum_is_wrong = 144;
-        public static int Err_wrong_params_setting_or_params_overflow = 160;
-        public static int Err_cmd_cannot_executed = 176;
-        public static int Err_cmd_is_invaild = 192;
-        public static int Err_cmd_is_unknown = 208;
+        private static Int32 checksum = 0;
+
+        private bool Chk_Input_Content()
+        {
+            if (this.txtbx_addr.Text.Trim().Length >= 4) //或不屬於數字
+            {
+                this.ShowErrMsg(@"Address format fault.");
+                return false;
+            }
+
+            if (this.txtbx_Vset.Text.Trim().Length == 0)
+            {
+                this.ShowErrMsg(@"尚未輸入 Vset");
+                return false;
+            }
+
+            if (this.txtbx_Iset.Text.Trim().Length == 0)
+            {
+                this.ShowErrMsg(@"尚未輸入 Iset");
+                return false;
+            }
+
+            return true;
+        }
 
         private void ShowErrMsg(string errMsg)
         {
@@ -83,12 +103,12 @@ namespace MiniPwrSupply
 
         private void DisplayText(Byte[] buffer)
         {
+            textBox1.Clear();
             textBox1.Text += String.Format("{0}{1}", BitConverter.ToString(buffer), Environment.NewLine);
+            richTextBox1.AppendText(String.Format("{0}{1}", BitConverter.ToString(buffer), Environment.NewLine));
             totalLength = totalLength + buffer.Length;
             label_DataReceived.Text = totalLength.ToString();
         }
-
-        
 
         private void _WaitForUIThread(Action callback)
         {
@@ -106,129 +126,151 @@ namespace MiniPwrSupply
             }
         }
 
-        //private void _hexAddition<Tiida>(IList<Tiida> tiidas)      //array<T>(string, T)改用Generic方式, 捨棄 byte[] hexBytes       // checksum = all hex addition substring last 2
         private void serialport1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            WuzhiPower wuzhiPower = new WuzhiPower();
-
-            string receivedata = string.Empty;      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
-            int len = serialPort1.BytesToRead;      //      170-01-18-128-00-....-00-00-00-00-00-00 00-00-00-00-00-61
+            //string receivedata = string.Empty;      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
+            int len = serialPort1.BytesToRead;        //      170-01-18-128-00-...-00-00-00-00-00-00-00 00-00-00-00-00-61
+            int hexChksum = 0;
+            Int32 length = 0;
             string showInfo = string.Empty;
-            Int32 wuzhi_ErrType = 0;
+            string itsChksum = string.Empty;
+            tempList.Clear();
             //--------------------------------------
-            //if ((sender as SerialPort).BytesToRead > 0)
+            if (serialPort1.BytesToRead > 0)
+            {
+                bool Iswuzhicmd_valid = false;
+                bool tempBuffer_Length = false;
+                byte[] buffer1 = new byte[serialPort1.BytesToRead];
+                //Stream portStream = serialPort1.BaseStream;
+                //portStream.Read(buffer1, 0, buffer1.Length);
+                do
+                {
+                    try
+                    {
+                        if (tempList.Count == 20)
+                        { break; }
+                        Int32 receivedValue = serialPort1.ReadByte();
+                        switch (receivedValue)
+                        {
+                            case -1:
+                                hexChksum = buffer1.Sum(i => i);
+                                string chksum = string.Format(@"0x{0:X}", hexChksum);
+                                int.TryParse(chksum.Substring(chksum.Length - 2, 2), out checksum);
+                                tempList.Add((Byte)receivedValue);
+                                itsChksum = tempList[tempList.Count - 1].ToString();
+                                Isreceiving = false;
+                                break;
+
+                            default:
+                                tempList.Add((Byte)receivedValue);
+                                continue;
+                        }
+                    }
+                    catch (TimeoutException timeoutEx)
+                    {
+                        MessageBox.Show("Received had timeout!! --->" + timeoutEx.Message);
+                        //以下這邊請自行撰寫你想要的例外處理
+                    }
+                    catch (InvalidOperationException invaild)
+                    {
+                        throw new Exception("invalid crash " + invaild.Message);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(BitConverter.ToString(buffer1) + ex.Message);
+                    }
+                    break;
+                } while (tempList.Count <= 20);         // (Isreceiving == true);
+
+                tempBuffer_Length = GetFullReceiveData(tempList);
+                length = serialPort1.Read(buffer1, 0, buffer1.Length); //(sender as SerialPort)
+                Array.Resize(ref buffer1, length);
+                Display d = new Display(DisplayText);
+                this.Invoke(d, new Object[] { buffer1 });
+                try
+                {
+                    //TODO::  save LOG to document the wuzhicmd vaild or not
+                    if (itsChksum == checksum.ToString())         //AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D==61
+                    {
+                        if (buffer1.Length >= 20)
+                        {
+                            Iswuzhicmd_valid = WuzhiCmd.Instance.IsbufferVaild(buffer1); //check the criteria
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("DataReceived Length < 20 --> " + ex.Message);
+                }
+            }
+            else
+            {
+                //沒收到資料
+            }
+
+            //--------------------------------------
+            //try
             //{
-            //    Byte[] buffer1 = new Byte[1024];
-            //    try
-            //    {
-            //        Int32 length = (sender as SerialPort).Read(buffer1, 0, buffer1.Length);
-            //        Array.Resize(ref buffer1, length);
-            //        Display d = new Display(DisplayText);
-            //        this.Invoke(d, new Object[] { buffer1 });
-            //    }
-            //    catch (TimeoutException timeoutEx)
-            //    {
-            //        //以下這邊請自行撰寫你想要的例外處理
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        MessageBox.Show(BitConverter.ToString(buffer1));
-            //        //以下這邊請自行撰寫你想要的例外處理
-            //    }
+            //SerialPort sp = (SerialPort)sender;
+            //SerialPort serialPort1 = sender as SerialPort;
+            //byte[] buff = new byte[serialPort1.BytesToRead]; //this is to provide the data buffer
+
+            //bool hasData = dataString.Split(' ').Contains("AA"); //this is to check if your data has this, if it doesn't do something
+            //You get your data from serial port as byte[]
+            //Do something on your data
+            //byte[] globalBuffer = new byte[8800]; //large buffer, put globally
+            //buff.CopyTo(globalBuffer, 0);
+            //In your data received, use Buffer.BlockCopy to copy data to your globalBuffer
+            //if (globalBuffer.Length >= 20)          //Beware the index ---> 20*2+19
+            //{ //less than this length, then the data is incomplete
+            //  //Do the checking if length is at least 14
             //}
 
-            //--------------------------------------
-            if (wuzhiPower == WuzhiPower.PowerOff)
-            {
-            }
-            else if (wuzhiPower == WuzhiPower.PowerOn)
-            {
-            }
-            try
-            {
-                SerialPort sp = (SerialPort)sender;
-                SerialPort serialPort1 = sender as SerialPort;
-                byte[] buff = new byte[serialPort1.BytesToRead]; //this is to provide the data buffer
-                Stream portStream = serialPort1.BaseStream;
-                portStream.Read(buff, 0, buff.Length);
-                string dataString = Encoding.UTF8.GetString(buff);
-                //bool hasData = dataString.Split(' ').Contains("AA"); //this is to check if your data has this, if it doesn't do something
-                //You get your data from serial port as byte[]
-                //Do something on your data
-                byte[] globalBuffer = new byte[8800]; //large buffer, put globally
-                buff.CopyTo(globalBuffer, 0);
-                //In your data received, use Buffer.BlockCopy to copy data to your globalBuffer
-                //if (globalBuffer.Length >= 20)          //Beware the index ---> 20*2+19
-                //{ //less than this length, then the data is incomplete
-                //  //Do the checking if length is at least 14
-                //}
+            //byte[] buff = new byte[serialPort1.BytesToRead];
+            //receivedata = Encoding.UTF8.GetString(buff);
+            //Int32 length = (sender as SerialPort).Read(buff, 0, buff.Length);   //serialPort1.BytesToRead;
+            //Array.Resize(ref buff, length);
+            //MessageBox.Show(BitConverter.ToString(buff));
+            //Displays d = new Displays(DisplayTxt);
 
-                //byte[] buff = new byte[serialPort1.BytesToRead];
-                //receivedata = Encoding.UTF8.GetString(buff);
-                //Int32 length = (sender as SerialPort).Read(buff, 0, buff.Length);   //serialPort1.BytesToRead;
-                //Array.Resize(ref buff, length);
-                //MessageBox.Show(BitConverter.ToString(buff));
-                //Displays d = new Displays(DisplayTxt);
+            //if (globalBuffer.Length >= 20)//legal       //(len != 0)
+            //{
+            //    //byte[] buff = new byte[1024]; //len
+            //    //(sender as SerialPort).Read(buff, 0, 1024); //len
 
-                if (globalBuffer.Length >= 20)//legal       //(len != 0)
-                {
-                    //byte[] buff = new byte[1024]; //len
-                    //(sender as SerialPort).Read(buff, 0, 1024); //len
+            //}
 
-                    if (buff[3] == Form1.Err_checksum_is_wrong)    //0x90
-                    {
-                        showInfo = "checksum is wrong";
-                    }
-                    else if (buff[3] == Form1.Err_wrong_params_setting_or_params_overflow) //0xA0
-                    {
-                        showInfo = "wrong params setting or params overflow";
-                    }
-                    else if (buff[3] == Form1.Err_cmd_cannot_executed) // 0xB0
-                    {
-                        showInfo = "cmd cannot executed";
-                    }
-                    else if (buff[3] == Form1.Err_cmd_is_invaild) // 0xC0
-                    {
-                        showInfo = "cmd is invaild";
-                    }
-                    else if (buff[3] == Form1.Err_cmd_is_unknown) // 0xD0
-                    {
-                        showInfo = "cmd is unknown";
-                    }
-                    else        // buff[3] == 128 ---> 0x80
-                    {
-                        showInfo = "WuzhiCmd succeed!!";
-                    }
-                }
-                //richTextBox1.AppendText(showInfo + "\r\n buffToarry -->" + Encoding.UTF8.GetString(buff)); //buff.ToArray().ToString()
+            //this.Invoke(new Action(() =>
+            //{
+            //}));
+            //this._WaitForUIThread(() =>
+            //{
+            //    string dataString = Encoding.UTF8.GetString(buff);
+            //    receivedata = BitConverter.ToString(buff);      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
+            //    txtbx_TryCmd.Text += string.Format(@"0x{0:X}", receivedata);
 
-                this.Invoke(new Action(() =>
-                {
-                    receivedata = BitConverter.ToString(buff);      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
-                    richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:f") + "receivedata: --->" + receivedata + "\r\n");//receivedata.ToArray().ToString());
-                    txtbx_TryCmd.Clear();
-                    txtbx_TryCmd.Text += string.Format(@"0x{0:X}", receivedata);
-                }));
-                //this._WaitForUIThread(() =>
-                //{
-                //});
+            //    richTextBox1.AppendText(showInfo + "\r\n buffToarry --> " + Encoding.UTF8.GetString(buff)); //buff.ToArray().ToString()
+            //    richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:") + "  receivedata: ---> " + receivedata + "\r\n");
+            //    richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:") + "  dataString: ---> " + dataString + "\r\n");
+            //    txtbx_TryCmd.Clear();
+            //});
 
-                if (receivedata.Length == 0)                //(receivedata.Contains("第三bytes為80=succeed, 90=failure otherwise"))
-                {
-                    ShowErrMsg("WuZhiCmd Err!!!" + MessageBox.Show("serialport1_DataReceived crash"));
-                    throw new Exception("Cmd Err");
-                }
-            }
-            catch (IndexOutOfRangeException indexOut)
-            {
-                ShowErrMsg(@"DataReceived 回傳Array index在界線之外" + indexOut.Message);
-                throw new Exception();
-            }
-            catch (Exception ex)
-            {
-                ShowErrMsg(@"serialport1_DataReceived Err" + ex.Message);
-                throw ex;
-            }
+            //if (receivedata.Length == 0)
+            //{
+            //    ShowErrMsg("WuZhiCmd Err!!!" + MessageBox.Show("serialport1_DataReceived crash"));
+            //    throw new Exception("Cmd Err");
+            //}
+            //}
+            //catch (IndexOutOfRangeException indexOut)
+            //{
+            //    ShowErrMsg(@"DataReceived 回傳Array index在界線之外" + indexOut.Message);
+            //    throw new Exception("DataReceived Crush" + indexOut.Message);
+            //}
+            //catch (Exception ex)
+            //{
+            //    ShowErrMsg(@"serialport1_DataReceived Err" + ex.Message);
+            //    throw ex;
+            //}
         }
 
         private void parse(List<Byte> tempList)     //這個方法主要是在收到結尾字元後 (因為表示已經收到一段完整資料了) 呼叫，由於我們只要顯示資料內容的部份，所以在這方法中把開頭結尾字元給去除。
@@ -304,7 +346,7 @@ namespace MiniPwrSupply
             byte[] buffer = new byte[2048];
             while (Isreceiving)
             {
-                Int32 receivedValue = serialPort1.ReadByte(); //comport.ReadByte();
+                Int32 receivedValue = serialPort1.ReadByte();   // at the end  of byte[] if receivedVaule = -1
                 do
                 {
                     Int32 length = serialPort1.Read(buffer, 0, buffer.Length);
@@ -312,11 +354,8 @@ namespace MiniPwrSupply
                     Display d = new Display(DisplayText);
                     this.Invoke(d, new Object[] { buffer });
                     Array.Resize(ref buffer, 1024);
-
                 } while (serialPort1.BytesToRead < 2048);
-                
-                
-                
+
                 Thread.Sleep(20);
                 switch (receivedValue)
                 {
@@ -339,6 +378,7 @@ namespace MiniPwrSupply
                 }
             }
         }
+
         private void DoReceive2()           //限定次數
         {
             Boolean readingFromBuffer;
@@ -409,8 +449,8 @@ namespace MiniPwrSupply
             }
         }
 
-        const Int32 S = 83;
-        const Int32 E = 69;
+        private const Int32 S = 83;
+        private const Int32 E = 69;
 
         private void DoReceive_with_postfix() //bool Isreceiving
         {
@@ -419,24 +459,29 @@ namespace MiniPwrSupply
             while (Isreceiving)
             {
                 Int32 receivedValue = serialPort1.ReadByte();
+
                 switch (receivedValue)
                 {
                     case S:
                         tempList.Clear();
                         tempList.Add((Byte)receivedValue);
                         break;
+
                     case E:
                         tempList.Add((Byte)receivedValue);
                         parse(tempList);
                         break;
+
                     case -1:
                         break;
+
                     default:
                         tempList.Add((Byte)receivedValue);
                         break;
                 }
             }
         }
+
         private void DoReceive4()
         {
             List<Byte> tempList = new List<Byte>();
@@ -465,7 +510,9 @@ namespace MiniPwrSupply
                 }
             }
         }
+
         private const Byte head = 249;
+
         private Int32 GetMessageDataLength(List<Byte> tempList)
         {
             if (tempList.Count >= 2)
@@ -481,6 +528,7 @@ namespace MiniPwrSupply
             else
             { return 0; }
         }
+
         private Byte[] GetSendBuffer(String content)
         {
             Byte[] dataBytes = Encoding.UTF8.GetBytes(content);
@@ -497,6 +545,7 @@ namespace MiniPwrSupply
                 throw new OverflowException();
             }
         }
+
         private void _comportScanning()
         {
             string[] ports = SerialPort.GetPortNames();
@@ -512,11 +561,7 @@ namespace MiniPwrSupply
                 //Enumerable.Range(txtbx_com.Text).Append(serialport[i].ToString());
                 //= serialport[i].ToString();
             }
-            this.Invoke(new Action(() => { this.richTextBox1.AppendText("comport scann: {x}" + serialport + "\r\n"); }));
-            //this._WaitForUIThread(() =>
-            //{
-            //    richTextBox1.AppendText("comport scann: {x}" + serialport);
-            //});
+            //this.Invoke(new Action(() => { this.richTextBox1.AppendText("comport scann: {x}" + serialport + "\r\n"); }));
             //1.Scan COM Ports
             //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
             //3.When an input has a specific phrase such as "connectAlready",
@@ -595,133 +640,6 @@ namespace MiniPwrSupply
         //    finally
         //    { strs = null; }
         //}
-        private void btn_refresh_Click(object sender, EventArgs e)
-        {
-            int tryCount = 1;
-            do
-            {
-                try
-                {
-                    tryCount++;
-                    string[] ports = SerialPort.GetPortNames();
-                    cmbx_com.Items.Clear();
-                    cmbx_com.Items.AddRange(ports);
-                    btn_connSerialport.Enabled = true;
-                    //btn_connection.Enabled = true;
-                    btn_sendcmd.Enabled = false;
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    if (tryCount < iRetryTime)
-                    {
-                        continue;
-                    }
-                    MessageBox.Show("CANNOT figure out comport literally.");
-                    throw ex;
-                }
-            } while (cmbx_com.Text.Length == 0);
-        }
-
-        private void btn_connSerialport_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                btn_connSerialport.Enabled = false;
-                btn_Power.Enabled = true;
-                txtbx_Iset.Enabled = true;
-                txtbx_Vset.Enabled = true;
-                richTextBox1.Clear();
-                string receiveData = string.Empty;
-                //this._comportScanning();
-
-                if (!mIsConnectedSerialPort)
-                {
-                    //this.serialPort1 = new System.IO.Ports.SerialPort(@"COM" + this.txtbx_com.Text, Convert.ToInt32(this.txtbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
-                    this.serialPort1 = new SerialPort(this.cmbx_com.Text, Convert.ToInt32(this.cmbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
-                    
-                    serialPort1.DtrEnable = true;           // Gets or sets a value that enables the Data Terminal Ready (DTR) signal during serial communication.
-                    serialPort1.RtsEnable = true;           //序列通訊期間是否啟用 Request to Send (RTS)
-
-                    serialPort1.ReadTimeout = 20000;        // stop received after 20000sec
-                    //serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
-                    this.mIsConnectedSerialPort = true;
-                }
-                richTextBox1.AppendText("\n\r SerialPort: --->" + this.serialPort1.PortName + "\n\r BaudRate: ---> " + this.serialPort1.BaudRate);
-                if (serialPort1.IsOpen)
-                {
-                    serialPort1.Close();
-                    serialPort1.Dispose();
-                    System.Threading.Thread.Sleep(200);
-                }
-                serialPort1.Open();
-                richTextBox1.AppendText("\n\r >>> SerialPort is opened \n\r");
-                System.Threading.Thread.Sleep(300);
-                // ---------------------------------------------------------------------------
-                // ---------------------------------------------------------------------------
-                // ---------------------------------------------------------------------------
-                //byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
-                Int32 tryCount = 1;
-                do
-                {
-                    try
-                    {
-                        tryCount++;
-                        //byte[] buff = new byte[length];
-                        //serialPort1.Read(cmd, 0, 20);
-                        //receiveData = Encoding.Default.GetString(cmd);
-                        //richTextBox1.AppendText("\n show receviveData " + receiveData);
-                        Thread.Sleep(300);
-                        //Save_LOG_data("Sending cmd ---->" + BitConverter.ToString(cmd));
-                        //serialPort1.Write(wuzhiCmd, 0, wuzhiCmd.Length);
-                        //richTextBox1.AppendText("\n show cmd ---> " + string.Format("0x{0:X}", cmd));
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        if (iRetryTime < (tryCount - 1))
-                        {
-                            System.Threading.Thread.Sleep(5);
-                            continue;
-                        }
-                        ShowErrMsg("connect serialport ERR");
-                        throw new Exception("serialPort1.Write ERR" + ex.Message);
-                    }
-                } while (receiveData == null);
-            }
-            catch (Exception ex)
-            {
-                ShowErrMsg(@"尚未選擇COMPORT");
-                throw ex;
-            }
-            finally
-            {
-                //serialPort1.Close();
-            }
-        }
-
-        private bool Chk_Input_Content()
-        {
-            if (this.txtbx_addr.Text.Trim().Length >= 4) //或不屬於數字
-            {
-                this.ShowErrMsg(@"Address format fault.");
-                return false;
-            }
-
-            if (this.txtbx_Vset.Text.Trim().Length == 0)
-            {
-                this.ShowErrMsg(@"尚未輸入 Vset");
-                return false;
-            }
-
-            if (this.txtbx_Iset.Text.Trim().Length == 0)
-            {
-                this.ShowErrMsg(@"尚未輸入 Iset");
-                return false;
-            }
-
-            return true;
-        }
 
         private void _IsPowerOn(WuzhiPower status)
         {
@@ -736,6 +654,9 @@ namespace MiniPwrSupply
             }
             byte[] pwrCmd = powerCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
             serialPort1.Write(pwrCmd, 0, pwrCmd.Length);
+            //this._WaitForUIThread(() =>
+            //{
+            //});
             serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
         }
 
@@ -757,7 +678,11 @@ namespace MiniPwrSupply
             }
             byte[] syncmd = syncCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
             serialPort1.Write(syncmd, 0, syncmd.Length);
+            //this.Invoke(new Action(() =>
+            //{
+            //}));
             serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+            //richTextBox1.AppendText(@"wuzhiCmd{0} \r\n" + @"DataReceived{1}\r\n" + syncCmd + tempList.ToString());
         }
 
         private void _unknownCmd(string wCmd)
@@ -767,29 +692,6 @@ namespace MiniPwrSupply
             byte[] xCmd = wCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
             serialPort1.Write(xCmd, 0, xCmd.Length);
             serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
-        }
-
-
-        private static void StartToTestRFThreadFunc(object obj)
-        {
-            Form1 self = obj as Form1;
-            //TestItem currentItem = TestFlowSingleton.Instance.GetNextTestItem();
-            //self.mIC.SetIsTesting(true);
-            //UtilsSingleton.Instance.SetMainForm(self);
-            // --- Show Group Status
-            self.BeginInvoke(new Action(() =>
-            {
-                //self.ShowTestGroupInformation(false, currentItem);
-            }));
-            try
-            {
-                //self.mIC.StartToTest();
-                self.mWuzhiCmd.TakeInitiatives();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
         }
 
         public string ToHexString(string str)
@@ -812,6 +714,7 @@ namespace MiniPwrSupply
                 cmbx_com.Enabled = true;
             }
         }
+
         private string _GetComport()
         {
             try
@@ -837,7 +740,7 @@ namespace MiniPwrSupply
                     return comport.Trim().Split('(')[1].Replace(')', ' ').Trim();
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 throw ex;
             }
@@ -845,45 +748,46 @@ namespace MiniPwrSupply
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            
             string action = ">>> Synchronize serial port: " + this.wuzhiComport;
-            try
+            int tryCount = 1;
+            do
             {
-                
-                for (int i = 0; i < 20; i++)
+                try
                 {
-                    this.wuzhiComport = this._GetComport();
-                    if (this.wuzhiComport.Trim().Equals(string.Empty))
+                    tryCount++;
+                    richTextBox1.Clear();
+                    string receiveData = string.Empty;
+                    //this._comportScanning();          // await to delete
+                    for (int i = 0; i < 20; i++)
                     {
-                        System.Threading.Thread.Sleep(500);
+                        this.wuzhiComport = this._GetComport();
+                        if (this.wuzhiComport.Trim().Equals(string.Empty))
+                        {
+                            System.Threading.Thread.Sleep(200);
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
-                    else
-                    {
-                        break;
-                    }
+                    //Thread.Sleep(200);
+                    //break;
                 }
-                if (cmbx_com.Text.Length == 0)
+                catch (Exception ex)
                 {
-                    string[] ports = SerialPort.GetPortNames();
-                    cmbx_com.Items.Clear();
-                    cmbx_com.Items.AddRange(ports);
+                    if (iRetryTime < (tryCount - 1))
+                    {
+                        System.Threading.Thread.Sleep(5);
+                        continue;
+                    }
+                    ShowErrMsg(@"COMPORT Search Fault!!!");
+                    throw new Exception("\r\n.....wuzhiComport sync serialport ERR......\r\n" + ex.Message);
                 }
-                //comport = new SerialPort("COM5", 9600, Parity.None, 8, StopBits.One);
-                //comport.DataReceived += new SerialDataReceivedEventHandler(comport_DataReceived);
-                //if (!comport.IsOpen)
-                //{
-                //    comport.Open();
-                //}
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("\r\n.....wuzhiComport sync serialport ERR......\r\n");
-            }
-            finally
-            {
-                this.richTextBox1.Clear();
-            }
-            // INIT baudrate
+                finally
+                {
+                    richTextBox1.Clear();
+                }
+            } while (this.wuzhiComport == null);
         }
 
         private void Form1_Closing(object sender, FormClosingEventArgs e)
@@ -912,6 +816,45 @@ namespace MiniPwrSupply
         }
 
         #region Dashboard
+
+        private void btn_refresh_Click(object sender, EventArgs e)
+        {
+            int tryCount = 1;
+            do
+            {
+                try
+                {
+                    tryCount++;
+                    string[] ports = SerialPort.GetPortNames();
+                    cmbx_com.Items.Clear();
+                    cmbx_com.Items.AddRange(ports);
+                    for (int i = 0; i < 20; i++)
+                    {
+                        this.wuzhiComport = this._GetComport();
+                        if (this.wuzhiComport.Trim().Equals(string.Empty))
+                        {
+                            System.Threading.Thread.Sleep(200);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    //btn_connection.Enabled = true;
+                    btn_sendcmd.Enabled = false;
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (tryCount < iRetryTime)
+                    {
+                        continue;
+                    }
+                    MessageBox.Show("CANNOT figure out comport literally.");
+                    throw ex;
+                }
+            } while (cmbx_com.Text.Length == 0);
+        }
 
         private void btn_sendcmd_Click(object sender, EventArgs e)
         {
@@ -994,7 +937,6 @@ namespace MiniPwrSupply
             string[] visetting = WuzhiCmd.Instance.split_VI(Vset, Iset);    //split iset vset into 4 bytes
             byte[] cmd = WuzhiCmd.Instance._VIset_Cmd(synchroHead, Address, visetting);
 
-
             Int32 tryCount = 1;
             tryCount++;
             serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
@@ -1030,77 +972,146 @@ namespace MiniPwrSupply
             Button OneShotBtn = (Button)sender;
             switch (OneShotBtn.Text)
             {
-                case "OFF":
+                case "PowerOFF":
                     btn_Power.BackColor = Color.DarkRed;
-                    btn_Power.Text = "ON";
-                    label_PowerBtn.Text = "Power Off";
-                    label_PowerBtn.Text.ToUpper();
+                    btn_Power.Text = "PowerON";
                     this._IsPowerOn(WuzhiPower.PowerOff);
                     btn_sendcmd.Enabled = false;
-                    btn_connSerialport.Enabled = false;
+                    btn_connection.Enabled = false;
                     break;
 
-                case "ON":
+                case "PowerON":
                     btn_Power.BackColor = Color.DarkGreen;
-                    btn_Power.Text = "OFF";
-                    label_PowerBtn.Text = "Power On";
-                    label_PowerBtn.Text.ToUpper();
+                    btn_Power.Text = "PowerOFF";
                     this._IsPowerOn(WuzhiPower.PowerOn);
-                    if (!btn_connSerialport.Enabled)
-                    {
-                        btn_sendcmd.Enabled = true;
-                        break;
-                    }
-                    else
-                    {
-                        btn_connSerialport.Enabled = true;
-                        btn_sendcmd.Enabled = false;
-                        break;
-                    }
+                    btn_sendcmd.Enabled = true;
+                    break;
+                //if (!btn_connection.Enabled)
+                //{
+                //    btn_sendcmd.Enabled = true;
+                //    break;
+                //}
+                //else
+                //{
+                //    btn_connection.Enabled = true;
+                //    btn_sendcmd.Enabled = false;
+                //    break;
+                //}
 
                 default:
                     break;
             }
         }
 
-        private void btn_connection_Click(object sender, EventArgs e)
+        private void StartToTestRFThreadFunc(object obj)
+        {
+            Form1 self = obj as Form1;
+            self.BeginInvoke(new Action(() =>
+            {
+                //self.ShowTestGroupInformation(false, currentItem);
+            }));
+            try
+            {
+                //self.mIC.StartToTest();
+                //self.mWuzhiCmd.TakeInitiatives();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        private void btn_connection_Click(object sender, EventArgs e)   // make a connection while
         {
             Button OneShotBtn = (Button)sender;
+            string receiveData = string.Empty;
             switch (OneShotBtn.Text)
             {
                 case "DisConnection":
                     btn_connection.BackColor = Color.DarkRed;
-                    btn_connection.Text = "DisConnection";
-                    this._IsConnected(WuzhiConnectStatus.DisConnect);
+                    btn_connection.Text = "Connection";
+                    try
+                    {
+                        this._IsConnected(WuzhiConnectStatus.DisConnect);
+                    }
+                    catch { };
+                    btn_sendcmd.Enabled = false;
                     //btn_sendcmd.Enabled = false;
                     //btn_open.Enabled = false;
                     break;
 
                 case "Connection":
+                SyncConn:
                     btn_connection.BackColor = Color.DarkGreen;
-                    btn_connection.Text = "Connection";
-                    this._IsConnected(WuzhiConnectStatus.Connect);
-                    //btn_connection.Enabled = false;
-                    if (!btn_connSerialport.Enabled)
+                    btn_connection.Text = "DisConnection";
+                    try
                     {
+                        btn_Power.Enabled = true;
                         btn_sendcmd.Enabled = true;
-                        break;
+                        txtbx_Iset.Enabled = true;
+                        txtbx_Vset.Enabled = true;
+                        if (!mIsConnectedSerialPort)
+                        {
+                            serialPort1.RtsEnable = true;           //序列通訊期間是否啟用 Request to Send (RTS)
+                            serialPort1.DtrEnable = true;           // Gets or sets a value that enables the Data Terminal Ready (DTR) signal during serial communication
+
+                            //serialPort1.ReadTimeout = 20000;        // stop received after 20000sec
+                            this.mIsConnectedSerialPort = true;
+                        }
+                        //this._WaitForUIThread(() =>
+                        //{
+                        //});
+                        if (serialPort1.IsOpen)
+                        {
+                            serialPort1.Close();
+                            serialPort1.Dispose();
+                            System.Threading.Thread.Sleep(200);
+                        }
+                        this.serialPort1 = new SerialPort(this.wuzhiComport.Trim(), Convert.ToInt32(this.cmbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
+                        serialPort1.Open();
+                        richTextBox1.AppendText("\n\r SerialPort: --->" + this.serialPort1.PortName + "\n\r BaudRate: ---> " + this.serialPort1.BaudRate + "\r\n");
+                        //richTextBox1.AppendText("\n\r >>> SerialPort is opened \n\r");
+                        System.Threading.Thread.Sleep(300);
+                        Int32 tryCount = 1;
+                        do
+                        {
+                            try
+                            {
+                                tryCount++;
+                                this._IsConnected(WuzhiConnectStatus.Connect);
+                                break;
+                            }
+                            catch (Exception ex)
+                            {
+                                if (iRetryTime < (tryCount - 1))
+                                {
+                                    System.Threading.Thread.Sleep(5);
+                                    continue;
+                                }
+                                ShowErrMsg("connect serialport ERR");
+                                throw new Exception("serialPort1.Write ERR" + ex.Message);
+                            }
+                        } while (receiveData == null);
+                        //Thread thread = new Thread(new ParameterizedThreadStart(StartToTestRFThreadFunc));
+                        //thread.Start(this);
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        btn_connSerialport.Enabled = true;
-                        btn_sendcmd.Enabled = false;
-                        break;
+                        ShowErrMsg(@"尚未選擇COMPORT");
+                        throw ex;
                     }
+                    break;
 
                 default:
-                    break;
+                    goto SyncConn;
+                    //break;
             }
         }
 
         #endregion Dashboard
 
         #region DebugPage Button
+
         private void radioButton1_CheckedChanged(object sender, EventArgs e)
         {
             byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
@@ -1118,7 +1129,7 @@ namespace MiniPwrSupply
 
         private void btn_hexaddition_Click(object sender, EventArgs e)
         {
-             this.richTextBox1.Clear();
+            this.richTextBox1.Clear();
             this.txtbx_TryCmd.Clear();
             try
             {
@@ -1127,7 +1138,6 @@ namespace MiniPwrSupply
             }
             catch (Exception ex)
             {
-
                 throw new Exception("Hex Addition ERR!! --->" + ex.Message);
             }
         }
