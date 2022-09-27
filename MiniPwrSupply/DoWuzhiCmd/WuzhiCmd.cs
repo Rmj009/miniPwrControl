@@ -166,7 +166,7 @@ namespace MiniPwrSupply.DoWuzhiCmd
         public string[] split_VI(double Vset, double Iset)
         {
             try
-            {
+            {   //double -> int -> string -> Hex
                 string VsetStr = Convert.ToString((int)(Vset * 100));
                 string IsetStr = Convert.ToString((int)(Iset * 1000));
                 vsetting = this._decstringToHex(VsetStr); //(Int32)Vset * 100
