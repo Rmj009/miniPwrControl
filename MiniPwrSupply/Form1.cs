@@ -65,11 +65,10 @@ namespace MiniPwrSupply
         private volatile bool mGet_Start;
         private StringBuilder receiveCall = new StringBuilder();
         private static string DEVICE_ID = "FTDIBUS" + "COMPORT" + "&" + "VID_0403" + "&" + "PID_6001";
-        //public static List<Byte> tempList = new List<Byte>();
 
         private bool mIsConnectedSerialPort = false;
         public Form1 mInstatnce = null;
-        private Int32 innerReceiveDataFullLength;
+        private const Int32 innerReceiveDataFullLength = 20;
         private static int iRetryTime = 6;
         private static Int32 checksum = 0;
         private static string CksumResult = null;
@@ -124,7 +123,7 @@ namespace MiniPwrSupply
                 //});
 
                 string dataString = Encoding.UTF8.GetString(buffer);
-                receivedata = BitConverter.ToString(globalBuffer);      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
+                receivedata = BitConverter.ToString(buffer);      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
                 txtbx_TryCmd.Text += string.Format(@"0x{0:X}", receivedata);
 
                 richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:"));
@@ -168,8 +167,9 @@ namespace MiniPwrSupply
         private void serialport1_DataReceived(object sender, SerialDataReceivedEventArgs e)     //確認Checksum合法, 確認每次buffer接收到完整data, 最後Clone接收Bytes到globalbuffer
         {
             //string receivedata = string.Empty;      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
-            int tryCount = 0;                         //      170-01-18-128-00-...-00-00-00-00-00-00-00 00-00-00-00-00-61
-            int itsChksum = 1;
+            int offset = 0;                           //      170-01-18-128-00-...-00-00-00-00-00-00-00 00-00-00-00-00-61
+            int tryCount = 0;
+            int itsChksum = -1;
             string showInfo = string.Empty;
             //--------------------------------------
             byte[] buffer = new byte[serialPort1.BytesToRead];
@@ -182,31 +182,31 @@ namespace MiniPwrSupply
                     return;  //if the port has already been closed which prevents IO Err from being half way through receiving data when the port is closed.
                 }
                 try
-                {
+                { //stackoverflow.com/questions/41865560/c-sharp-serialport-receive-doesnt-get-all-data-at-once
                     if (serialPort1.BytesToRead > 0)
                     {
-                        int bufferlength = serialPort1.Read(buffer, 0, serialPort1.BytesToRead);
-                        checksum = buffer[buffer.Length - 1];
-                        int cksums = Enumerable.Range(0, buffer.Length - 2).ToArray().Sum(i => buffer[i]);
-                        string chksum = string.Format(@"0x{0:X}", cksums);
-                        itsChksum = Convert.ToInt32(chksum.Substring(chksum.Length - 2, 2), 16);
-                        //Stream portStream = serialPort1.BaseStream;
-                        //receivedata = Encoding.UTF8.GetString(buffer);
-                        //portStream.Read(buffer, 0, buffer1.Length);
-                        if (bufferlength == 20)
+                        //int bufferlength = serialPort1.Read(buffer, offset, innerReceiveDataFullLength - serialPort1.BytesToRead);
+                        offset += serialPort1.Read(buffer, offset, innerReceiveDataFullLength - serialPort1.BytesToRead);
+                        if (offset == innerReceiveDataFullLength)
                         {
-                            buffer.CopyTo(globalBuffer, 0);
-                            //tempBuffer_Length = GetFullReceiveData(tempList);
-                            //length = serialPort1.Read(buffer, 0, buffer.Length); //(sender as SerialPort)
-                            Array.Resize(ref buffer, 20);
-                            Display d = new Display(DisplayText);
-                            this.Invoke(d, new Object[] { buffer });
+                            checksum = buffer[buffer.Length - 1];
+                            int cksums = Enumerable.Range(0, buffer.Length - 2).ToArray().Sum(i => buffer[i]);
+                            string chksum = string.Format(@"0x{0:X}", cksums);
+                            itsChksum = Convert.ToInt32(chksum.Substring(chksum.Length - 2, 2), 16);
+                            //Stream portStream = serialPort1.BaseStream;
+                            //receivedata = Encoding.UTF8.GetString(buffer);
+                            //portStream.Read(buffer, 0, buffer1.Length);
                         }
                         else
                         {
                             MessageBox.Show(@"Incomplete Bytes Received");
                             return;
                         }
+                    }
+                    else
+                    {
+                        MessageBox.Show("BytesToRead收不到, 接收bytes組小於20");
+                        return;
                     }
 
                     if (itsChksum == checksum)
@@ -221,8 +221,6 @@ namespace MiniPwrSupply
                         CksumResult = IsCheckSum_Legal ? @"Checksum is legal" : @"Checksum is illegal";
                         break;
                     }
-                    //CksumResult = IsCheckSum_Legal ? @"Checksum is legal" : @"Checksum is illegal";//"Checksum is legal";
-                    //break;
 
                     //-----------------------------------------------------------------------------
                     //-----------------------------------------------------------------------------
@@ -275,7 +273,9 @@ namespace MiniPwrSupply
                     tryCount++;
                     if (tryCount < iRetryTime)
                     {
-                        MessageBox.Show(BitConverter.ToString(buffer) + ex.Message);
+                        serialPort1.DiscardInBuffer();
+                        serialPort1.DiscardOutBuffer();
+                        MessageBox.Show(ex.Message + "\r\n Buffer內位元組: \r\n" + BitConverter.ToString(buffer) + "\r\n 請重新連線");
                         continue;
                     }
                 }
@@ -297,7 +297,15 @@ namespace MiniPwrSupply
                     }
                 }
             } while (CksumResult == null);         // (Isreceiving == true); || tempList.Count <= 20
-
+            if (buffer.Length == 20)
+            {
+                buffer.CopyTo(globalBuffer, 0);
+                //tempBuffer_Length = GetFullReceiveData(tempList);
+                //length = serialPort1.Read(buffer, 0, buffer.Length); //(sender as SerialPort)
+                Array.Resize(ref buffer, 20);
+                Display d = new Display(DisplayText);
+                this.Invoke(d, new Object[] { buffer });
+            }
             //--------------------------------------
             //try
             //{
@@ -309,17 +317,6 @@ namespace MiniPwrSupply
             //if (globalBuffer.Length >= 20)          //Beware the index ---> 20*2+19
             //{ //less than this length, then the data is incomplete
             //  //Do the checking if length is at least 14
-            //}
-
-            //Int32 length = (sender as SerialPort).Read(buff, 0, buff.Length);   //serialPort1.BytesToRead;
-            //Array.Resize(ref buff, length);
-            //MessageBox.Show(BitConverter.ToString(buff));
-            //Displays d = new Displays(DisplayTxt);
-
-            //if (globalBuffer.Length >= 20)//legal       //(len != 0)
-            //{
-            //    //byte[] buff = new byte[1024]; //len
-            //    //(sender as SerialPort).Read(buff, 0, 1024); //len
             //}
         }
 
@@ -344,8 +341,8 @@ namespace MiniPwrSupply
                 Byte[] temp = new Byte[innerReceiveDataFullLength];
                 Array.Copy(tempList.ToArray(), tempList.IndexOf(Head), temp, 0, temp.Length);
                 //innerResponseFullBytes = temp;
-                //InterpretReceiveData();
-                innerReceiveDataFullLength = 0;
+                InterpretReceiveData();
+                //innerReceiveDataFullLength = 0;
                 return true;
             }
             else
@@ -385,7 +382,7 @@ namespace MiniPwrSupply
                 Int32 startIndex = tempList.IndexOf(Head);
                 if (startIndex >= 0 && startIndex < tempList.Count - 1)
                 {
-                    innerReceiveDataFullLength = Convert.ToInt32(tempList[startIndex + 1]) + 2;
+                    //innerReceiveDataFullLength = Convert.ToInt32(tempList[startIndex + 1]) + 2;
                 }
             }
         }
@@ -777,7 +774,6 @@ namespace MiniPwrSupply
                         if (hardInfo.Properties["Name"].Value != null && hardInfo.Properties["Name"].Value.ToString().Contains("(COM") && hardInfo.ToString().Contains("VID_0403") && hardInfo.ToString().Contains("PID_6001"))
                         {
                             comport = hardInfo.Properties["Name"].Value.ToString();
-                            //Console.WriteLine(comport);
                         }
                     }
 
@@ -1145,7 +1141,7 @@ namespace MiniPwrSupply
                         }
                         this.serialPort1 = new SerialPort(this.wuzhiComport.Trim(), Convert.ToInt32(this.cmbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
                         serialPort1.Open();
-                        richTextBox1.AppendText("\n\r SerialPort: --->" + this.serialPort1.PortName + "\n\r BaudRate: ---> " + this.serialPort1.BaudRate + "\r\n");
+                        richTextBox1.AppendText("\n\r SerialPort: ---> " + this.serialPort1.PortName + "\n\r BaudRate: ---> " + this.serialPort1.BaudRate + "\r\n");
                         //richTextBox1.AppendText("\n\r >>> SerialPort is opened \n\r");
                         System.Threading.Thread.Sleep(300);
                         Int32 tryCount = 1;
