@@ -14,6 +14,7 @@ using System.Management;
 using System.Diagnostics;
 using MiniPwrSupply.Config;
 using static MiniPwrSupply.Config.wuzhiConfig;
+using System.Collections;
 
 namespace MiniPwrSupply
 {
@@ -64,7 +65,7 @@ namespace MiniPwrSupply
 
         private bool mIsConnectedSerialPort = false;
         public Form1 mInstatnce = null;
-        private const Int32 innerReceiveDataFullLength = 20;
+        private const Int32 FrameLen = 20;
         private static int iRetryTime = 6;
         private const Int32 A = 170;
         private static Int32 checksum = 0;
@@ -164,28 +165,30 @@ namespace MiniPwrSupply
         private void serialport1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {   //確認Checksum合法, 確認每次buffer接收到完整data, 最後Clone接收Bytes到globalbuffer
             int offset = 0;
+            int dataBuffLent = 0;
             int tryCount = 0;
             int itsChksum = -1;
-            string showInfo = string.Empty;
             //--------------------------------------
-            byte[] buffer = new byte[serialPort1.BytesToRead];
             do
             {
-                if (!this.serialPort1.IsOpen)
+                int buff_len = serialPort1.BytesToRead;     // get bytes in buffer with receive manner
+                byte[] buffer = new byte[buff_len];
+                if (buff_len > 0)
                 {
-                    serialPort1.DiscardInBuffer();
-                    serialPort1.DiscardOutBuffer();
-                    return;  //if the port has already been closed which prevents IO Err from being half way through receiving data when the port is closed.
-                }
-                try
-                { //stackoverflow.com/questions/41865560/c-sharp-serialport-receive-doesnt-get-all-data-at-once
-                    var getbuffersize = serialPort1.ReadBufferSize;
-                    if (serialPort1.BytesToRead > 0)
+                    if (!this.serialPort1.IsOpen)
                     {
-                        offset += serialPort1.Read(buffer, offset, innerReceiveDataFullLength - serialPort1.BytesToRead);
-                        string readInBytes = serialPort1.ReadExisting();
-                        //int bufferlength = serialPort1.Read(buffer, offset, innerReceiveDataFullLength - serialPort1.BytesToRead);
-                        if (offset == innerReceiveDataFullLength)
+                        serialPort1.DiscardInBuffer();
+                        serialPort1.DiscardOutBuffer();
+                        return;  //if the port has already been closed which prevents IO Err from being half way through receiving data when the port is closed.
+                    }
+
+                    try
+                    { //stackoverflow.com/questions/41865560/c-sharp-serialport-receive-doesnt-get-all-data-at-once
+                        var getbuffersize = serialPort1.ReadBufferSize;
+                        offset += serialPort1.Read(buffer, offset, buff_len);
+                        dataBuffLent += buff_len;
+                        //int bufferlength = serialPort1.Read(buffer, offset, FrameLen - serialPort1.BytesToRead);
+                        if (offset == FrameLen)
                         {
                             checksum = buffer[buffer.Length - 1];
                             int cksums = Enumerable.Range(0, buffer.Length - 2).ToArray().Sum(i => buffer[i]);
@@ -198,126 +201,128 @@ namespace MiniPwrSupply
                             {
                                 IsCheckSum_Legal = true;
                                 CksumResult = IsCheckSum_Legal ? @"Checksum is legal" : @"Checksum is illegal";
+                                Array.Resize(ref buffer, 20);
+                                Display d = new Display(DisplayText);
+                                this.Invoke(d, new Object[] { buffer });
                                 break;
                             }
                             else
                             {
                                 IsCheckSum_Legal = false;
                                 CksumResult = IsCheckSum_Legal ? @"Checksum is legal" : @"Checksum is illegal";
+                                Array.Resize(ref buffer, 20);
+                                Display d = new Display(DisplayText);
+                                this.Invoke(d, new Object[] { buffer });
                                 break;
                             }
                         }
-                        else if (offset <= 20)
+                        else if (buffer[0] == 170)  // 170 = AA
                         {
-                            MessageBox.Show(@"Incomplete Bytes Received");
-                            break;
+                            Queue[] q = null;
                         }
-                    }
-                    else
-                    {
-                        MessageBox.Show("BytesToRead收不到, 接收bytes組小於20");
-                        break;
-                    }
+                        //else if (offset <= 20)
+                        //{
+                        //    MessageBox.Show(@"Incomplete Bytes Received");
+                        //    break;
+                        //}
+                        //else
+                        //{
+                        //    MessageBox.Show("BytesToRead收不到, 接收bytes組小於20");
+                        //    continue;
+                        //}
 
-                    //-----------------------------------------------------------------------------
-                    //-----------------------------------------------------------------------------
-                    //-----------------------------------------------------------------------------
-                    //-----------------------------------------------------------------------------
+                        //-----------------------------------------------------------------------------
+                        //-----------------------------------------------------------------------------
+                        //-----------------------------------------------------------------------------
+                        //-----------------------------------------------------------------------------
 
-                    //Int32 receivedValue = serialPort1.ReadByte();
-                    //if (tempList.Count == 19)
-                    //{
-                    //    //hexChksum = buffer.Sum(i => i);
+                        //Int32 receivedValue = serialPort1.ReadByte();         //第二種讀法, read byte by byte一個一個讀
+                        //if (tempList.Count == 19)
+                        //{
+                        //    //hexChksum = buffer.Sum(i => i);
 
-                    //    //tempList.Add((Byte)receivedValue);
-                    //    int cksums = Enumerable.Range(0, tempList.Count).Sum(i => tempList[i]);   //Select(i => tempList[i])
-                    //    string chksum = string.Format(@"0x{0:X}", cksums);
-                    //    itsChksum = Convert.ToInt32(chksum.Substring(chksum.Length - 2, 2), 16);
-                    //    if (itsChksum == receivedValue)
-                    //    {
-                    //        IsCheckSum_Legal = true;
-                    //        CksumResult = IsCheckSum_Legal ? @"Checksum is legal" : @"Checksum isNot legal";//"Checksum is legal";
-                    //    }
-                    //    break;
-                    //}
-                    //else if (tempList.Count == 20 || receivedValue == 61) //AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
-                    //{
-                    //    break;
-                    //}
-                    //else
-                    //{
-                    //    tempList.Add((Byte)receivedValue);
-                    //}
-                    //-----------------------------------------------------------------------------
-                    //-----------------------------------------------------------------------------
-                    //-----------------------------------------------------------------------------
-                    //-----------------------------------------------------------------------------
-                }
-                catch (TimeoutException timeoutEx)
-                {
-                    serialPort1.Close();
-                    serialPort1.Dispose();
-                    MessageBox.Show("Received had timeout!! --->" + timeoutEx.Message);
-                }
-                catch (InvalidOperationException invaild)
-                {
-                    serialPort1.Close();
-                    serialPort1.Dispose();
-                    throw new Exception("invalid Operation " + invaild.Message);
-                }
-                catch (IOException IOex)
-                {
-                    serialPort1.Close();
-                    serialPort1.Dispose();
-                    throw new Exception("IO Exception Err!! --> " + IOex.Message);
-                }
-                catch (Exception ex)
-                {
-                    tryCount++;
-                    if (tryCount < iRetryTime)
-                    {
-                        serialPort1.DiscardInBuffer();
-                        serialPort1.DiscardOutBuffer();
-                        MessageBox.Show(ex.Message + "\r\n Buffer內位元組: \r\n" + BitConverter.ToString(buffer) + "\r\n 請重新連線");
-                        continue;
+                        //    //tempList.Add((Byte)receivedValue);
+                        //    int cksums = Enumerable.Range(0, tempList.Count).Sum(i => tempList[i]);   //Select(i => tempList[i])
+                        //    string chksum = string.Format(@"0x{0:X}", cksums);
+                        //    itsChksum = Convert.ToInt32(chksum.Substring(chksum.Length - 2, 2), 16);
+                        //    if (itsChksum == receivedValue)
+                        //    {
+                        //        IsCheckSum_Legal = true;
+                        //        CksumResult = IsCheckSum_Legal ? @"Checksum is legal" : @"Checksum isNot legal";//"Checksum is legal";
+                        //    }
+                        //    break;
+                        //}
+                        //else if (tempList.Count == 20 || receivedValue == 61) //AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
+                        //{
+                        //    break;
+                        //}
+                        //else
+                        //{
+                        //    tempList.Add((Byte)receivedValue);
+                        //}
+                        //-----------------------------------------------------------------------------
+                        //-----------------------------------------------------------------------------
+                        //-----------------------------------------------------------------------------
+                        //-----------------------------------------------------------------------------
                     }
-                }
-                finally
-                {
-                    try
+                    catch (TimeoutException timeoutEx)
                     {
-                        //serialPort1.DiscardInBuffer();
-                        //serialPort1.DiscardOutBuffer();
-                        //var buffersk7 = buffer.ToString();
+                        serialPort1.Close();
+                        serialPort1.Dispose();
+                        MessageBox.Show("Received had timeout!! --->" + timeoutEx.Message);
+                    }
+                    catch (InvalidOperationException invaild)
+                    {
+                        serialPort1.Close();
+                        serialPort1.Dispose();
+                        throw new Exception("invalid Operation " + invaild.Message);
                     }
                     catch (IOException IOex)
                     {
-                        throw new Exception(IOex.Message);
+                        serialPort1.Close();
+                        serialPort1.Dispose();
+                        throw new Exception("IO Exception Err!! --> " + IOex.Message);
                     }
-                    catch (InvalidOperationException Invalidex)
+                    catch (Exception ex)
                     {
-                        throw new Exception(Invalidex.Message);
+                        tryCount++;
+                        if (tryCount < iRetryTime)
+                        {
+                            //serialPort1.DiscardInBuffer();
+                            //serialPort1.DiscardOutBuffer();
+                            MessageBox.Show(ex.Message + "\r\n Buffer內位元組: \r\n" + BitConverter.ToString(buffer) + "\r\n 請重新連線");
+                            continue;
+                        }
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            //serialPort1.DiscardInBuffer();
+                            //serialPort1.DiscardOutBuffer();
+                            //var buffersk7 = buffer.ToString();
+                        }
+                        catch (IOException IOex)
+                        {
+                            throw new Exception(IOex.Message);
+                        }
+                        catch (InvalidOperationException Invalidex)
+                        {
+                            throw new Exception(Invalidex.Message);
+                        }
                     }
                 }
             } while (CksumResult == null);         // (Isreceiving == true); || tempList.Count <= 20
-            if (buffer.Length == 20)
-            {
-                buffer.CopyTo(globalBuffer, 0);
-                //tempBuffer_Length = GetFullReceiveData(tempList);
-                //length = serialPort1.Read(buffer, 0, buffer.Length); //(sender as SerialPort)
-                Array.Resize(ref buffer, 20);
-                Display d = new Display(DisplayText);
-                this.Invoke(d, new Object[] { buffer });
-            }
             //--------------------------------------
-            //try
-            //{
-            //SerialPort sp = (SerialPort)sender;
-            //SerialPort serialPort1 = sender as SerialPort;
-            //byte[] buff = new byte[serialPort1.BytesToRead]; //this is to provide the data buffer
+            //buffer.CopyTo(globalBuffer, 0);
+            //tempBuffer_Length = GetFullReceiveData(tempList);
+            //length = serialPort1.Read(buffer, 0, buffer.Length); //(sender as SerialPort)
+            //Array.Resize(ref buffer, 20);
+            //Display d = new Display(DisplayText);
+            //this.Invoke(d, new Object[] { buffer });
 
             //In your data received, use Buffer.BlockCopy to copy data to your globalBuffer
-            //if (globalBuffer.Length >= 20)          //Beware the index ---> 20*2+19
+            //if (globalBuffer.Length >= 20)
             //{ //less than this length, then the data is incomplete
             //  //Do the checking if length is at least 14
             //}
@@ -339,13 +344,13 @@ namespace MiniPwrSupply
         private Boolean GetFullReceiveData(List<Byte> tempList)
         {
             byte Head = 2;
-            if (innerReceiveDataFullLength > 0 && tempList.Count >= tempList.IndexOf(Head) + innerReceiveDataFullLength)
+            if (FrameLen > 0 && tempList.Count >= tempList.IndexOf(Head) + FrameLen)
             {
-                Byte[] temp = new Byte[innerReceiveDataFullLength];
+                Byte[] temp = new Byte[FrameLen];
                 Array.Copy(tempList.ToArray(), tempList.IndexOf(Head), temp, 0, temp.Length);
                 //innerResponseFullBytes = temp;
                 InterpretReceiveData();
-                //innerReceiveDataFullLength = 0;
+                //FrameLen = 0;
                 return true;
             }
             else
@@ -380,12 +385,12 @@ namespace MiniPwrSupply
         private void GetReceiveDataFullLength(List<Byte> tempList)
         {
             byte Head = 2;
-            if (tempList.Count >= 2 && innerReceiveDataFullLength == 0)
+            if (tempList.Count >= 2 && FrameLen == 0)
             {
                 Int32 startIndex = tempList.IndexOf(Head);
                 if (startIndex >= 0 && startIndex < tempList.Count - 1)
                 {
-                    //innerReceiveDataFullLength = Convert.ToInt32(tempList[startIndex + 1]) + 2;
+                    //FrameLen = Convert.ToInt32(tempList[startIndex + 1]) + 2;
                 }
             }
         }
@@ -762,6 +767,7 @@ namespace MiniPwrSupply
                             break;
                         }
                     }
+
                     //Thread.Sleep(200);
                     //break;
                 }
@@ -1043,7 +1049,10 @@ namespace MiniPwrSupply
                     try
                     {
                         //this._IsConnected(WuzhiConnectStatus.DisConnect);
+                        serialPort1.ReceivedBytesThreshold = 1;
                         wuzhicmd = WuzhiCmd.Instance._IsConnected(WuzhiCmd.WuzhiConnectStatus.DisConnect);
+                        serialPort1.ReceivedBytesThreshold = 2;
+                        serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
                         serialPort1.Write(wuzhicmd, 0, wuzhicmd.Length);
                     }
                     catch (Exception ex) { ShowErrMsg(@"COMPORT already occupied" + ex.Message); }
@@ -1090,9 +1099,6 @@ namespace MiniPwrSupply
                             serialPort1.Dispose();
                             System.Threading.Thread.Sleep(200);
                         }
-                        this.serialPort1 = new SerialPort(this.wuzhiComport.Trim(), Convert.ToInt32(this.cmbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
-                        serialPort1.Open();
-                        serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
 
                         richTextBox1.AppendText("\n\r SerialPort: ---> " + this.serialPort1.PortName + "\n\r BaudRate: ---> " + this.serialPort1.BaudRate + "\r\n");
                         System.Threading.Thread.Sleep(300);
@@ -1103,8 +1109,15 @@ namespace MiniPwrSupply
                             {
                                 tryCount++;
                                 //this._IsConnected(WuzhiConnectStatus.Connect);
+                                serialPort1.ReceivedBytesThreshold = 1;
+                                this.serialPort1 = new SerialPort(this.wuzhiComport.Trim(), Convert.ToInt32(this.cmbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
+                                serialPort1.Open();
+                                //this.Invoke(new Action(() =>
+                                //{
+                                //}));
                                 wuzhicmd = WuzhiCmd.Instance._IsConnected(WuzhiCmd.WuzhiConnectStatus.Connect);
                                 serialPort1.Write(wuzhicmd, 0, wuzhicmd.Length);
+                                serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
                                 break;
                             }
                             catch (Exception ex)

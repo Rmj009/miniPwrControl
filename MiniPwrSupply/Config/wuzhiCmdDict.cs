@@ -45,9 +45,9 @@ namespace MiniPwrSupply.Config
     public static class wuzhiCmdDict
     {
         public const string
+            ListenState = "aa 01 29 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 d4", // listen dataReceived
             Connect = "aa 01 20 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cc",
             DisConnect = "aa 01 20 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cb",
-            ListenState = "aa 01 29 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 d4", // syncmd2 has no dataReceived
             PowerOn = "aa 01 22 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ce",
             PowerOff = "aa 01 22 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cd";
     }
