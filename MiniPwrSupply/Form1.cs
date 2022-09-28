@@ -168,6 +168,7 @@ namespace MiniPwrSupply
             int dataBuffLent = 0;
             int tryCount = 0;
             int itsChksum = -1;
+            Queue<byte> queue = new Queue<byte>();
             //--------------------------------------
             do
             {
@@ -218,7 +219,10 @@ namespace MiniPwrSupply
                         }
                         else if (buffer[0] == 170)  // 170 = AA
                         {
-                            Queue[] q = null;
+                            foreach (byte item in buffer)
+                            {
+                                queue.Enqueue(item);
+                            }
                         }
                         //else if (offset <= 20)
                         //{
