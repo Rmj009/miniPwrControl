@@ -14,6 +14,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.IO.Ports;
 using MiniPwrSupply.Properties;
+using MiniPwrSupply.Config;
 
 //namespace SimpleReceiveEventCS
 //{
@@ -48,6 +49,18 @@ namespace MiniPwrSupply.DoWuzhiCmd
                 }
                 return mInstance;
             }
+        }
+
+        public enum WuzhiPower
+        {
+            PowerOn,
+            PowerOff
+        }
+
+        public enum WuzhiConnectStatus
+        {
+            Connect,
+            DisConnect
         }
 
         public void Save_LOG_data(string sTtestResult, bool isTitle = false, bool isCustom = false, bool isError = false)
@@ -96,6 +109,60 @@ namespace MiniPwrSupply.DoWuzhiCmd
 
         private void TakeInitiatives()
         {
+        }
+
+        public byte[] _IsPowerOn(WuzhiPower status)
+        {
+            string powerCmd = string.Empty;
+            if (status == WuzhiPower.PowerOn)
+            {
+                powerCmd = wuzhiCmdDict.PowerOn;
+            }
+            else if (status == WuzhiPower.PowerOff)
+            {
+                powerCmd = wuzhiCmdDict.PowerOff;
+            }
+            return powerCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+            //serialPort1.Write(pwrCmd, 0, pwrCmd.Length);
+            //serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+        }
+
+        public byte[] _IsConnected(WuzhiConnectStatus status)
+        {
+            string syncCmd = string.Empty;
+            if (status == WuzhiConnectStatus.Connect)
+            {
+                syncCmd = wuzhiCmdDict.Connect;
+            }
+            else if (status == WuzhiConnectStatus.DisConnect)
+            {
+                syncCmd = wuzhiCmdDict.DisConnect;
+                // syncmd2 has no dataReceived
+            }
+            return syncCmd.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+            //serialPort1.Write(cmd, 0, cmd.Length);
+            //serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+        }
+
+        private byte[] _listenState()
+        {
+            string listening = wuzhiCmdDict.ListenState;
+            return listening.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
+            //serialPort1.Write(cmd, 0, cmd.Length);
+            //serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+        }
+
+        public string ToHexString(string str)
+        {
+            var sb = new StringBuilder();
+
+            var bytes = Encoding.Unicode.GetBytes(str);
+            foreach (var t in bytes)
+            {
+                sb.Append(t.ToString("X2"));
+            }
+
+            return sb.ToString(); // returns: "48656C6C6F20776F726C64" for "Hello world"
         }
 
         private string _ByteArrayToString(byte[] bytes)
@@ -351,12 +418,5 @@ namespace MiniPwrSupply.DoWuzhiCmd
 
             return cmd;
         }
-    }
-
-    public partial class Form1 : Form
-    {
-        //private SerialPort comport;
-        //private Int32 totalLength = 0;
-        //delegate void Display(Byte[] buffer);
     }
 }
