@@ -791,6 +791,10 @@ namespace MiniPwrSupply
                 throw ex;
             }
         }
+        private void LogSASP8_Show_Error(string errMsg)
+        {
+            LogSingleton.Instance.WriteLog(errMsg);
+        }
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -802,6 +806,13 @@ namespace MiniPwrSupply
                 {
                     tryCount++;
                     richTextBox1.Clear();
+
+                    if (!LogSingleton.Instance.ReCreateLogDir(DateTime.UtcNow.AddHours(8).ToString(@"yy\MM\dd mm:ss")))
+                    {
+                        LogSASP8_Show_Error("Create Log Folder in vain");
+                        return;
+                    }
+
                     for (int i = 0; i < 20; i++)
                     {
                         this.wuzhiComport = this._GetComport();
