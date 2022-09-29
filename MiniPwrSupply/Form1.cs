@@ -15,6 +15,7 @@ using System.Diagnostics;
 using MiniPwrSupply.Config;
 using static MiniPwrSupply.Config.wuzhiConfig;
 using System.Collections;
+using RFTestTool.Singleton;
 
 namespace MiniPwrSupply
 {
@@ -262,7 +263,7 @@ namespace MiniPwrSupply
                             buffer.CopyTo(globalBuffer, 0); // Cp to globalbuffer from index 0
                             Array.Resize(ref globalBuffer, buff_len);
                             Isbuffer_copied = true;
-                        }
+                        }   
                         //else if (offset <= 20)
                         //{
                         //    MessageBox.Show(@"Incomplete Bytes Received");
@@ -358,6 +359,7 @@ namespace MiniPwrSupply
                 else
                 {
                     CksumResult = "NoBytesReceived";
+                    LogSingleton.Instance.WriteLog("Serialport DataReceived ERR: " + CksumResult );
                 }
             } while (CksumResult == null);         // (Isreceiving == true); || tempList.Count <= 20
             //--------------------------------------
@@ -800,8 +802,6 @@ namespace MiniPwrSupply
                 {
                     tryCount++;
                     richTextBox1.Clear();
-                    string receiveData = string.Empty;
-                    //this._comportScanning();          // await to delete
                     for (int i = 0; i < 20; i++)
                     {
                         this.wuzhiComport = this._GetComport();
@@ -811,6 +811,7 @@ namespace MiniPwrSupply
                         }
                         else
                         {
+                            LogSingleton.Instance.WriteLog("Sucessfully link to" + wuzhiComport );
                             break;
                         }
                     }
