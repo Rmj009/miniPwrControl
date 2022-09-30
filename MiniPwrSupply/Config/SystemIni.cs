@@ -35,7 +35,7 @@ namespace MiniPwrSupply.Config
 
         internal string LogPath()
         {
-            throw new NotImplementedException();
+            return this.SysIniReadValue("Log", @"LogDir").Trim();
         }
     }
 }

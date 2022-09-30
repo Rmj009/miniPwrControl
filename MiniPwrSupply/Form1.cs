@@ -15,7 +15,7 @@ using System.Diagnostics;
 using MiniPwrSupply.Config;
 using static MiniPwrSupply.Config.wuzhiConfig;
 using System.Collections;
-using RFTestTool.Singleton;
+using MiniPwrSupply.Singleton;
 
 namespace MiniPwrSupply
 {
@@ -175,7 +175,7 @@ namespace MiniPwrSupply
 
             if (itsChksum == checksum)
             {
-                return IsCheckSum_Legal ? true : false;
+                return !IsCheckSum_Legal;
             }
             else
             {
@@ -263,7 +263,7 @@ namespace MiniPwrSupply
                             buffer.CopyTo(globalBuffer, 0); // Cp to globalbuffer from index 0
                             Array.Resize(ref globalBuffer, buff_len);
                             Isbuffer_copied = true;
-                        }   
+                        }
                         //else if (offset <= 20)
                         //{
                         //    MessageBox.Show(@"Incomplete Bytes Received");
@@ -359,7 +359,7 @@ namespace MiniPwrSupply
                 else
                 {
                     CksumResult = "NoBytesReceived";
-                    LogSingleton.Instance.WriteLog("Serialport DataReceived ERR: " + CksumResult );
+                    LogSingleton.Instance.WriteLog("Serialport DataReceived ERR: " + CksumResult);
                 }
             } while (CksumResult == null);         // (Isreceiving == true); || tempList.Count <= 20
             //--------------------------------------
@@ -791,6 +791,7 @@ namespace MiniPwrSupply
                 throw ex;
             }
         }
+
         private void LogSASP8_Show_Error(string errMsg)
         {
             LogSingleton.Instance.WriteLog(errMsg);
@@ -807,12 +808,6 @@ namespace MiniPwrSupply
                     tryCount++;
                     richTextBox1.Clear();
 
-                    if (!LogSingleton.Instance.ReCreateLogDir(DateTime.UtcNow.AddHours(8).ToString(@"yy\MM\dd mm:ss")))
-                    {
-                        LogSASP8_Show_Error("Create Log Folder in vain");
-                        return;
-                    }
-
                     for (int i = 0; i < 20; i++)
                     {
                         this.wuzhiComport = this._GetComport();
@@ -822,7 +817,6 @@ namespace MiniPwrSupply
                         }
                         else
                         {
-                            LogSingleton.Instance.WriteLog("Sucessfully link to" + wuzhiComport );
                             break;
                         }
                     }
@@ -932,65 +926,36 @@ namespace MiniPwrSupply
 
             int length = serialPort1.BytesToRead;
             //btn_connection.Enabled = true;
-            double Vset = 0.0d;
-            double Iset = 0.0d;
-            string receiveData = string.Empty;
+            //double Vset = 0.0d;
+            //double Iset = 0.0d;
+            Int32 tryCount = 1;
+            bool IsSending = false;
+            string strVset = txtbx_Vset.Text;
+            string strIset = txtbx_Iset.Text;
+            string[] visetting = null;
+            string synchroHead = "AA"; //this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
+            string Address = string.Format("0x{0:X}", Convert.ToInt32(txtbx_addr.Text.Trim()));     //this._decstringToHex();
+            //----------------------------------------------
 
             try
             {
-                if (txtbx_Iset.Text.Length > 4)
-                {   // confirm whether belong to double
-                    //double isetting = Convert.ToDouble(txtbx_Iset.Text.Trim().Substring(0, 4));
-                    if (Double.TryParse(txtbx_Iset.Text.Trim().Substring(0, txtbx_Iset.TextLength), out Iset))
-                    {
-                        if (Iset > 5.1)
-                        {
-                            this.ShowErrMsg("Over Maximum Amp");
-                        }
-                        else if (Iset <= 0)
-                        {
-                            this.ShowErrMsg("Under Minimum Amp");
-                        }
-                    }
-                    else
-                    {
-                        this.ShowErrMsg("Mistaken Current type***");
-                    }
-                }
-                else if (txtbx_Vset.Text.Length > 4)       // coz the protocol wuzhi define merely suit in two bytes hexadecimal
+                if (!LogSingleton.Instance.ReCreateLogDir("wuzhi"))
                 {
-                    //double vsetting = Convert.ToDouble(txtbx_Vset.Text.Trim().Substring(0, txtbx_Vset.TextLength));
-                    if (double.TryParse(txtbx_Vset.Text.Trim().Substring(0, txtbx_Vset.TextLength), out Vset))
-                    {
-                        if (Vset > 55)
-                        {
-                            this.ShowErrMsg("Over Maximum Voltage");
-                        }
-                        else if (Vset <= 0)
-                        {
-                            this.ShowErrMsg("Under Minimum Voltage");
-                        }
-                    }
-                    else
-                    {
-                        this.ShowErrMsg("Mistaken Voltage type***");
-                    }
+                    LogSASP8_Show_Error("Create Log Folder in vain");
+                    //return;
+                }
+                if (!this.Chk_Input_Content())
+                {
+                    this.ShowErrMsg("Value Missing~~~!");
                 }
                 else
                 {
-                    if (!this.Chk_Input_Content())
-                    {
-                        this.ShowErrMsg("Value Missing~~~!");
-                    }
-                    else
-                    {
-                        double.TryParse(txtbx_Vset.Text.Trim(), out Vset);
-                        double.TryParse(txtbx_Iset.Text.Trim(), out Iset);
-                    }
-                    //byte[] bytes = BitConverter.GetBytes(Vset * 100).Concat(BitConverter.GetBytes(Iset * 100)) as byte[];
-                    //Buffer.BlockCopy();
-                    //string tmp = (string)txtbx_Vset.Text.Trim().Concat(txtbx_Iset.Text.Trim());
+                    double[] VIset = WuzhiCmd.Instance.chkVIset(strVset, strIset);
+                    double Iset = VIset[0];
+                    double Vset = VIset[1];
+                    visetting = WuzhiCmd.Instance.split_VI(Vset, Iset);    //split iset vset into 4 bytes
                 }
+                //Buffer.BlockCopy();
             }
             catch (ArgumentOutOfRangeException argex)
             {
@@ -1001,28 +966,18 @@ namespace MiniPwrSupply
                 throw new Exception("_sendCmd ERR!!" + ex.Message);
             }
 
-            string synchroHead = "AA"; //this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
-            string Address = string.Format("0x{0:X}", Convert.ToInt32(txtbx_addr.Text.Trim()));     //this._decstringToHex();
-            //----------------------------------------------
-            string[] visetting = WuzhiCmd.Instance.split_VI(Vset, Iset);    //split iset vset into 4 bytes
-            byte[] cmd = WuzhiCmd.Instance._VIset_Cmd(synchroHead, Address, visetting);
-
-            Int32 tryCount = 1;
-            tryCount++;
-            //serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
             do
             {
                 try
                 {
-                    //byte[] buff = new byte[length];
-                    //serialPort1.Read(cmd, 0, 20);
-                    //receiveData = Encoding.Default.GetString(cmd);
-                    //richTextBox1.AppendText("\n show receviveData " + receiveData);
+                    tryCount++;
+                    byte[] cmd = WuzhiCmd.Instance._VIset_Cmd(synchroHead, Address, visetting);
+
+                    LogSingleton.Instance.WriteLog(@"Sendcmd ---> " + BitConverter.ToString(cmd), LogSingleton.wzSEND_COMMAND);
                     Thread.Sleep(300);
-                    //Save_LOG_data("Sending cmd ---->" + BitConverter.ToString(cmd));
                     serialPort1.Write(cmd, 0, cmd.Length);
+                    IsSending = true;
                     serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
-                    //richTextBox1.AppendText("\n show cmd ---> " + string.Format("0x{0:X}", cmd));
                     break;
                 }
                 catch (Exception ex)
@@ -1035,7 +990,7 @@ namespace MiniPwrSupply
                     ShowErrMsg("connect serialport ERR");
                     throw new Exception("serialPort1.Write ERR" + ex.Message);
                 }
-            } while (receiveData == null);
+            } while (!IsSending);
         }
 
         private void btn_Power_Click(object sender, EventArgs e)

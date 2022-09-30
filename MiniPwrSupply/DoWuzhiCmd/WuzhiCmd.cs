@@ -22,6 +22,8 @@ namespace MiniPwrSupply.DoWuzhiCmd
 {
     public class WuzhiCmd
     {
+        public static double Vset = 0.0d;
+        public static double Iset = 0.0d;
         private static WuzhiCmd mInstance = null;
         private string vsetting = string.Empty;
         private string isetting = string.Empty;
@@ -109,6 +111,11 @@ namespace MiniPwrSupply.DoWuzhiCmd
 
         private void TakeInitiatives()
         {
+        }
+
+        private void ShowErrMsg(string errMsg)
+        {
+            MessageBox.Show(errMsg, @"Error Occur", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         public byte[] _IsPowerOn(WuzhiPower status)
@@ -228,6 +235,96 @@ namespace MiniPwrSupply.DoWuzhiCmd
             var decstring = Convert.ToInt32(args);
             string hexstr = string.Format("{0:X}", decstring);
             return hexstr;
+        }
+
+        public double[] chkVIset(string strVset, string strIset)
+        {
+            //if (strVset.Length > 4 || strIset.Length > 4)
+            //{
+            //    this.ShowErrMsg("超過界定值設定");
+            //    return;
+            //}
+            if (strIset.Length > 4)
+            {   // confirm whether belong to double
+                //double isetting = Convert.ToDouble(txtbx_Iset.Text.Trim().Substring(0, 4));
+                if (Double.TryParse(strIset.Trim().Substring(0, strIset.Length), out Iset))
+                {
+                    if (Iset > 5.1)
+                    {
+                        this.ShowErrMsg("Over Maximum Amp");
+                    }
+                    else if (Iset <= 0)
+                    {
+                        this.ShowErrMsg("Under Minimum Amp");
+                    }
+                }
+                else
+                {
+                    this.ShowErrMsg("Mistaken Current type***");
+                }
+            }
+            else if (strVset.Length > 4)       // coz the protocol wuzhi define merely suit in two bytes hexadecimal
+            {
+                //double vsetting = Convert.ToDouble(txtbx_Vset.Text.Trim().Substring(0, txtbx_Vset.TextLength));
+                if (double.TryParse(strVset.Trim().Substring(0, strVset.Length), out Vset))
+                {
+                    if (Vset > 55)
+                    {
+                        this.ShowErrMsg("Over Maximum Voltage");
+                    }
+                    else if (Vset <= 0)
+                    {
+                        this.ShowErrMsg("Under Minimum Voltage");
+                    }
+                }
+                else
+                {
+                    this.ShowErrMsg("Mistaken Voltage type***");
+                }
+            }
+            else if (strVset.Length > 4 && strIset.Length > 4)
+            {
+                if (double.TryParse(strVset.Trim().Substring(0, strVset.Length), out Vset))
+                {
+                    if (Vset > 55)
+                    {
+                        this.ShowErrMsg("Over Maximum Voltage");
+                    }
+                    else if (Vset <= 0)
+                    {
+                        this.ShowErrMsg("Under Minimum Voltage");
+                    }
+                }
+                else
+                {
+                    this.ShowErrMsg("Mistaken Voltage type***");
+                }
+
+                if (Double.TryParse(strIset.Trim().Substring(0, strIset.Length), out Iset))
+                {
+                    if (Iset > 5.1)
+                    {
+                        this.ShowErrMsg("Over Maximum Amp");
+                    }
+                    else if (Iset <= 0)
+                    {
+                        this.ShowErrMsg("Under Minimum Amp");
+                    }
+                }
+                else
+                {
+                    this.ShowErrMsg("Mistaken Current type***");
+                }
+            }
+            else
+            {
+                double.TryParse(strVset.Trim(), out Vset);
+                double.TryParse(strIset.Trim(), out Iset);
+                //byte[] bytes = BitConverter.GetBytes(Vset * 100).Concat(BitConverter.GetBytes(Iset * 100)) as byte[];
+                //Buffer.BlockCopy();
+                //string tmp = (string)txtbx_Vset.Text.Trim().Concat(txtbx_Iset.Text.Trim());
+            }
+            return new double[] { Iset, Vset };
         }
 
         public string[] split_VI(double Vset, double Iset)
