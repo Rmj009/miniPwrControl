@@ -78,7 +78,7 @@ namespace MiniPwrSupply.DoWuzhiCmd
             this.mLogCallback(sTtestResult, type);
         }
 
-        public string IsbufferVaild(byte[] buff)
+        public string IsbufferValid(byte[] buff)
         {
             string showInfo = string.Empty;
             if (buff[3] == Err_checksum_is_wrong)    //0x90

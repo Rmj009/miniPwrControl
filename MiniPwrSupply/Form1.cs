@@ -44,6 +44,8 @@ namespace MiniPwrSupply
             }
         }
 
+        public bool IsCheckSum_Legal { get; set; }
+
         public enum WuzhiConnectStatus
         {
             Connect,
@@ -71,7 +73,6 @@ namespace MiniPwrSupply
         private const Int32 A = 170;
         private static Int32 checksum = 0;
         private static byte[] globalBuffer = new byte[20]; //large buffer, put globally
-        private bool IsCheckSum_Legal = false;
 
         private bool Chk_Input_Content()
         {
@@ -110,24 +111,24 @@ namespace MiniPwrSupply
             label_DataReceived.Text = totalLength.ToString();
             try
             {
-                //check the criteria
-                //TODO::  save LOG to document the wuzhicmd vaild or not
-                //AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D==61
                 //this.Invoke(new Action(() =>
                 //{
                 //}));
                 //this._WaitForUIThread(() =>
                 //{
                 //});
-
-                //string dataString = Encoding.UTF8.GetString(buffer);
                 receivedata = BitConverter.ToString(buffer);      //      AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
                 txtbx_TryCmd.Text += string.Format(@"0x{0:X}", receivedata);
-                string CksumResult = IsCheckSum_Legal ? @"Checksum is legal" : @"Checksum isNot legal";
+                string CksumResult = this._IsCheckValid(buffer) ? @" YES " : @" NO ";
+                string buffValidity = WuzhiCmd.Instance.IsbufferValid(buffer);
+
+                LogSingleton.Instance.WriteLog(@"Display ReceiveData ---> " + BitConverter.ToString(buffer), LogSingleton.wzMEASURE_VALUE);
+                LogSingleton.Instance.WriteLog(@"Checksum ---> " + CksumResult, LogSingleton.wzMEASURE_VALUE);
+                LogSingleton.Instance.WriteLog(@"Is buffer Valid ---> " + buffValidity, LogSingleton.wzMEASURE_VALUE);
 
                 richTextBox1.AppendText("\n---------------------------------------------------------------------------------------\n");
-                richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:") + " " + WuzhiCmd.Instance.IsbufferVaild(buffer) + "\r\n");
-                richTextBox1.AppendText("\r\n" + " Receive Bytes --->  " + string.Format("{0}{1}", receivedata, Environment.NewLine));
+                richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:") + " " + buffValidity + "\r\n");
+                richTextBox1.AppendText("\r\n" + " Receive Bytes ---> " + string.Format("{0}{1}", receivedata, Environment.NewLine));
                 richTextBox1.AppendText("\r\n" + " Is CheckSum Legal: ---> " + CksumResult + "\r\n");
             }
             catch (IndexOutOfRangeException indexOut)
@@ -172,15 +173,7 @@ namespace MiniPwrSupply
             //Stream portStream = serialPort1.BaseStream;
             //receivedata = Encoding.UTF8.GetString(buffer);
             //portStream.Read(buffer, 0, buffer1.Length);
-
-            if (itsChksum == checksum)
-            {
-                return !IsCheckSum_Legal;
-            }
-            else
-            {
-                return IsCheckSum_Legal;
-            }
+            return itsChksum == checksum ? !IsCheckSum_Legal : IsCheckSum_Legal;
         }
 
         private void serialport1_DataReceived(object sender, SerialDataReceivedEventArgs e)
@@ -190,6 +183,7 @@ namespace MiniPwrSupply
             int tryCount = 0;
             string CksumResult = null;
             bool Isbuffer_copied = false;
+            //Buffer.BlockCopy();
             Queue<byte> queue = new Queue<byte>(); //AA - 01 - 12 - 80 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 00 - 00 - 00 - 00 - 00 - 3D
             List<byte> bufflst = new List<byte>();
             //--------------------------------------
@@ -210,13 +204,12 @@ namespace MiniPwrSupply
                     { //stackoverflow.com/questions/41865560/c-sharp-serialport-receive-doesnt-get-all-data-at-once
                         var getbuffersize = serialPort1.ReadBufferSize;
                         offset += serialPort1.Read(buffer, offset, buff_len - offset);
+                        LogSingleton.Instance.WriteLog(@"Buffer Read ---> " + BitConverter.ToString(buffer), LogSingleton.wzRECEIVE_COMMAND);
                         dataBuffLen += buff_len;
 
                         //int bufferlength = serialPort1.Read(buffer, offset, FrameLen - serialPort1.BytesToRead);
                         if (offset == FrameLen || dataBuffLen == 20) // 最完整收到
                         {
-                            IsCheckSum_Legal = this._IsCheckValid(buffer);
-                            //TODO save_log
                             Array.Resize(ref buffer, 20);
                             Display d = new Display(DisplayText);
                             this.Invoke(d, new Object[] { buffer });
@@ -225,14 +218,14 @@ namespace MiniPwrSupply
                         }
                         else if (globalBuffer.All(i => i == 170))  // 170 = AA  收到的位元組不完整開頭是170 或 不是, 開始collect所有位元組
                         {
-                            foreach (byte item in buffer)
-                            {
-                                queue.Enqueue(item);
-                            }
-                            foreach (byte item in buffer)
-                            {
-                                bufflst.Add(item);
-                            }
+                            //foreach (byte item in buffer)
+                            //{
+                            //    queue.Enqueue(item);
+                            //}
+                            //foreach (byte item in buffer)
+                            //{
+                            //    bufflst.Add(item);
+                            //}
                             try
                             {
                                 globalBuffer = globalBuffer.Concat(buffer).ToArray();
@@ -248,7 +241,7 @@ namespace MiniPwrSupply
                             }
                             catch { }
                         }
-                        else if (buff_len < 20)
+                        else if (offset < 20)
                         {
                             //if (globalBuffer.All(i => i == 170))
                             //{
@@ -264,16 +257,6 @@ namespace MiniPwrSupply
                             Array.Resize(ref globalBuffer, buff_len);
                             Isbuffer_copied = true;
                         }
-                        //else if (offset <= 20)
-                        //{
-                        //    MessageBox.Show(@"Incomplete Bytes Received");
-                        //    break;
-                        //}
-                        //else
-                        //{
-                        //    MessageBox.Show("BytesToRead收不到, 接收bytes組小於20");
-                        //    continue;
-                        //}
 
                         //-----------------------------------------------------------------------------
                         //-----------------------------------------------------------------------------
@@ -344,7 +327,6 @@ namespace MiniPwrSupply
                         {
                             //serialPort1.DiscardInBuffer();
                             //serialPort1.DiscardOutBuffer();
-                            //var buffersk7 = buffer.ToString();
                         }
                         catch (IOException IOex)
                         {
@@ -360,6 +342,7 @@ namespace MiniPwrSupply
                 {
                     CksumResult = "NoBytesReceived";
                     LogSingleton.Instance.WriteLog("Serialport DataReceived ERR: " + CksumResult);
+                    //MessageBox.Show("BytesToRead收不到, 接收bytes組小於20");
                 }
             } while (CksumResult == null);         // (Isreceiving == true); || tempList.Count <= 20
             //--------------------------------------
@@ -889,6 +872,7 @@ namespace MiniPwrSupply
                         }
                         else
                         {
+                            btn_connection.Enabled = true;
                             break;
                         }
                     }
@@ -948,14 +932,18 @@ namespace MiniPwrSupply
                 {
                     this.ShowErrMsg("Value Missing~~~!");
                 }
-                else
+                if (btn_Power.Text == "PowerOFF")            // because Btn_Power tradeoff WuzhiCmd.WuzhiPower.PowerOn
                 {
                     double[] VIset = WuzhiCmd.Instance.chkVIset(strVset, strIset);
                     double Iset = VIset[0];
                     double Vset = VIset[1];
                     visetting = WuzhiCmd.Instance.split_VI(Vset, Iset);    //split iset vset into 4 bytes
                 }
-                //Buffer.BlockCopy();
+                else
+                {
+                    this.ShowErrMsg("Power DO NOT turn on!!");
+                    return;
+                }
             }
             catch (ArgumentOutOfRangeException argex)
             {
@@ -1005,30 +993,21 @@ namespace MiniPwrSupply
 
                     wzCmdBytes = WuzhiCmd.Instance._IsPowerOn(WuzhiCmd.WuzhiPower.PowerOff);
                     btn_sendcmd.Enabled = false;
-                    btn_connection.Enabled = false;
+                    //btn_connection.Enabled = false;
                     serialPort1.Write(wzCmdBytes, 0, wzCmdBytes.Length);
+                    LogSingleton.Instance.WriteLog(@"PowerOn ---> " + BitConverter.ToString(wzCmdBytes), LogSingleton.wzSEND_COMMAND);
                     break;
 
                 case "PowerON":
                     btn_Power.BackColor = Color.DarkGreen;
                     btn_Power.Text = "PowerOFF";
                     wzCmdBytes = WuzhiCmd.Instance._IsPowerOn(WuzhiCmd.WuzhiPower.PowerOn);
-                    btn_sendcmd.Enabled = true;
+                    LogSingleton.Instance.WriteLog(@"PowerOff ---> " + BitConverter.ToString(wzCmdBytes), LogSingleton.wzSEND_COMMAND);
+                    if (btn_connection.Enabled)
+                    {
+                        btn_sendcmd.Enabled = true;
+                    }
                     serialPort1.Write(wzCmdBytes, 0, wzCmdBytes.Length);
-                    break;
-                //if (!btn_connection.Enabled)
-                //{
-                //    btn_sendcmd.Enabled = true;
-                //    break;
-                //}
-                //else
-                //{
-                //    btn_connection.Enabled = true;
-                //    btn_sendcmd.Enabled = false;
-                //    break;
-                //}
-
-                default:
                     break;
             }
         }
@@ -1055,6 +1034,7 @@ namespace MiniPwrSupply
         {
             Button OneShotBtn = (Button)sender;
             string receiveData = string.Empty;
+            string wzBaudrate = this.cmbx_baudrate.Text.Trim();
             byte[] wuzhicmd = null;
             switch (OneShotBtn.Text)
             {
@@ -1076,8 +1056,8 @@ namespace MiniPwrSupply
                     {
                         try
                         {
-                            serialPort1.DiscardInBuffer();
-                            serialPort1.DiscardOutBuffer();
+                            //serialPort1.DiscardInBuffer();
+                            //serialPort1.DiscardOutBuffer();
                             //serialPort1.Dispose();
                         }
                         catch { }
@@ -1112,7 +1092,7 @@ namespace MiniPwrSupply
                             System.Threading.Thread.Sleep(200);
                         }
 
-                        richTextBox1.AppendText("\n\r SerialPort: ---> " + this.serialPort1.PortName + "\n\r BaudRate: ---> " + this.serialPort1.BaudRate + "\r\n");
+                        richTextBox1.AppendText("\n\r SerialPort: ---> " + this.wuzhiComport.Trim() + "\n\r BaudRate: ---> " + this.serialPort1.BaudRate + "\r\n");
                         System.Threading.Thread.Sleep(300);
                         Int32 tryCount = 1;
                         do
@@ -1120,9 +1100,8 @@ namespace MiniPwrSupply
                             try
                             {
                                 tryCount++;
-                                //this._IsConnected(WuzhiConnectStatus.Connect);
                                 serialPort1.ReceivedBytesThreshold = 1;
-                                this.serialPort1 = new SerialPort(this.wuzhiComport.Trim(), Convert.ToInt32(this.cmbx_baudrate.Text.Trim()), Parity.None, 8, StopBits.One);
+                                this.serialPort1 = new SerialPort(this.wuzhiComport.Trim(), Convert.ToInt32(wzBaudrate), Parity.None, 8, StopBits.One);
                                 serialPort1.Open();
                                 //this.Invoke(new Action(() =>
                                 //{
