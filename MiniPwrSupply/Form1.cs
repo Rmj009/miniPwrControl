@@ -52,6 +52,7 @@ namespace MiniPwrSupply
             DisConnect
         }
 
+        string title = string.Empty;
         private string wuzhiComport = string.Empty;
         private Int32 totalLength = 0;
 
@@ -126,8 +127,8 @@ namespace MiniPwrSupply
                 LogSingleton.Instance.WriteLog(@"Checksum ---> " + CksumResult, LogSingleton.wzMEASURE_VALUE);
                 LogSingleton.Instance.WriteLog(@"Is buffer Valid ---> " + buffValidity, LogSingleton.wzMEASURE_VALUE);
 
-                richTextBox1.AppendText("\n---------------------------------------------------------------------------------------\n");
-                richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss:") + " " + buffValidity + "\r\n");
+                richTextBox1.AppendText("\n-----------------------------------" + title + "-----------------------------------\n");
+                richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MMddhh:mm:ss") + " " + buffValidity + "\r\n");
                 richTextBox1.AppendText("\r\n" + " Receive Bytes ---> " + string.Format("{0}{1}", receivedata, Environment.NewLine));
                 richTextBox1.AppendText("\r\n" + " Is CheckSum Legal: ---> " + CksumResult + "\r\n");
             }
@@ -139,10 +140,11 @@ namespace MiniPwrSupply
             catch (Exception ex)
             {
                 ShowErrMsg(@"DisplayText Err" + ex.Message);
-                throw ex;
+                throw new Exception("DisplayText Err!! ---> " + ex.Message);
             }
             finally
             {
+                title = string.Empty;
                 txtbx_TryCmd.Clear();
             }
         }
@@ -853,7 +855,7 @@ namespace MiniPwrSupply
             byte[] cmd = null;
             string synchroHead = "AA"; //this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
             string Address = string.Format("0x{0:X}", Convert.ToInt32(txtbx_addr.Text.Trim()));     //this._decstringToHex();
-            //----------------------------------------------
+            title = "----- Setup current voltage -----";
 
             try
             {
@@ -922,6 +924,7 @@ namespace MiniPwrSupply
         {
             Button OneShotBtn = (Button)sender;
             byte[] wzCmdBytes = null;
+            title = "----- Set Power -----";
             switch (OneShotBtn.Text)
             {
                 case "PowerOFF":
@@ -973,6 +976,7 @@ namespace MiniPwrSupply
             string receiveData = string.Empty;
             string wzBaudrate = this.cmbx_baudrate.Text.Trim();
             byte[] wuzhicmd = null;
+            title = "----- Make Connection -----";
             switch (OneShotBtn.Text)
             {
                 case "DisConnection":
@@ -1115,9 +1119,6 @@ namespace MiniPwrSupply
             {
                 if (serialPort1.IsOpen)
                 {
-                    //serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
-                    //byte[] wuzhiCmd = txtbx_WuzhiCmd.Text.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
-                    //serialPort1.Write(wuzhiCmd, 0, wuzhiCmd.Length);
                     this._unknownCmd(txtbx_WuzhiCmd.Text.Trim());
                 }
             }
@@ -1132,5 +1133,6 @@ namespace MiniPwrSupply
         }
 
         #endregion DebugPage Button
+
     }
 }

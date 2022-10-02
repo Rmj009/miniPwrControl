@@ -95,7 +95,7 @@
             this.grpBox_Configuration.Margin = new System.Windows.Forms.Padding(2);
             this.grpBox_Configuration.Name = "grpBox_Configuration";
             this.grpBox_Configuration.Padding = new System.Windows.Forms.Padding(2);
-            this.grpBox_Configuration.Size = new System.Drawing.Size(160, 628);
+            this.grpBox_Configuration.Size = new System.Drawing.Size(160, 625);
             this.grpBox_Configuration.TabIndex = 0;
             this.grpBox_Configuration.TabStop = false;
             this.grpBox_Configuration.Text = "Configuration";
@@ -115,7 +115,7 @@
             this.label_DataReceived.AutoSize = true;
             this.label_DataReceived.Location = new System.Drawing.Point(76, 216);
             this.label_DataReceived.Name = "label_DataReceived";
-            this.label_DataReceived.Size = new System.Drawing.Size(33, 12);
+            this.label_DataReceived.Size = new System.Drawing.Size(41, 15);
             this.label_DataReceived.TabIndex = 4;
             this.label_DataReceived.Text = "label1";
             // 
@@ -124,7 +124,7 @@
             this.label_ByteReceived.AutoSize = true;
             this.label_ByteReceived.Location = new System.Drawing.Point(8, 182);
             this.label_ByteReceived.Name = "label_ByteReceived";
-            this.label_ByteReceived.Size = new System.Drawing.Size(73, 12);
+            this.label_ByteReceived.Size = new System.Drawing.Size(88, 15);
             this.label_ByteReceived.TabIndex = 4;
             this.label_ByteReceived.Text = "Byte Received";
             // 
@@ -136,7 +136,7 @@
             "115200"});
             this.cmbx_baudrate.Location = new System.Drawing.Point(79, 24);
             this.cmbx_baudrate.Name = "cmbx_baudrate";
-            this.cmbx_baudrate.Size = new System.Drawing.Size(76, 20);
+            this.cmbx_baudrate.Size = new System.Drawing.Size(76, 23);
             this.cmbx_baudrate.TabIndex = 7;
             this.cmbx_baudrate.Text = "9600";
             // 
@@ -145,7 +145,7 @@
             this.txtbx_addr.Location = new System.Drawing.Point(102, 90);
             this.txtbx_addr.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_addr.Name = "txtbx_addr";
-            this.txtbx_addr.Size = new System.Drawing.Size(50, 22);
+            this.txtbx_addr.Size = new System.Drawing.Size(50, 25);
             this.txtbx_addr.TabIndex = 0;
             this.txtbx_addr.Text = "1";
             // 
@@ -155,7 +155,7 @@
             this.label_Addr.Location = new System.Drawing.Point(10, 92);
             this.label_Addr.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Addr.Name = "label_Addr";
-            this.label_Addr.Size = new System.Drawing.Size(70, 12);
+            this.label_Addr.Size = new System.Drawing.Size(86, 15);
             this.label_Addr.TabIndex = 4;
             this.label_Addr.Text = "Addr (0~255)";
             // 
@@ -176,7 +176,7 @@
             this.label_Baudrate.Location = new System.Drawing.Point(11, 24);
             this.label_Baudrate.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Baudrate.Name = "label_Baudrate";
-            this.label_Baudrate.Size = new System.Drawing.Size(47, 12);
+            this.label_Baudrate.Size = new System.Drawing.Size(57, 15);
             this.label_Baudrate.TabIndex = 4;
             this.label_Baudrate.Text = "Baudrate";
             // 
@@ -195,7 +195,7 @@
             // 
             this.textBox1.Location = new System.Drawing.Point(18, 417);
             this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(504, 22);
+            this.textBox1.Size = new System.Drawing.Size(504, 25);
             this.textBox1.TabIndex = 2;
             // 
             // btn_sendcmd
@@ -217,7 +217,7 @@
             "COM1"});
             this.cmbx_com.Location = new System.Drawing.Point(92, 80);
             this.cmbx_com.Name = "cmbx_com";
-            this.cmbx_com.Size = new System.Drawing.Size(82, 20);
+            this.cmbx_com.Size = new System.Drawing.Size(82, 23);
             this.cmbx_com.TabIndex = 6;
             this.cmbx_com.SelectedIndexChanged += new System.EventHandler(this.cmbx_com_SelectedIndexChanged);
             // 
@@ -227,7 +227,7 @@
             this.label_com.Location = new System.Drawing.Point(56, 83);
             this.label_com.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_com.Name = "label_com";
-            this.label_com.Size = new System.Drawing.Size(31, 12);
+            this.label_com.Size = new System.Drawing.Size(39, 15);
             this.label_com.TabIndex = 4;
             this.label_com.Text = "COM";
             // 
@@ -237,7 +237,7 @@
             this.label_OVP.Location = new System.Drawing.Point(42, 28);
             this.label_OVP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_OVP.Name = "label_OVP";
-            this.label_OVP.Size = new System.Drawing.Size(27, 12);
+            this.label_OVP.Size = new System.Drawing.Size(35, 15);
             this.label_OVP.TabIndex = 4;
             this.label_OVP.Text = "OVP";
             // 
@@ -272,7 +272,7 @@
             this.txtbx_Iset.Location = new System.Drawing.Point(258, 84);
             this.txtbx_Iset.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Iset.Name = "txtbx_Iset";
-            this.txtbx_Iset.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_Iset.Size = new System.Drawing.Size(72, 25);
             this.txtbx_Iset.TabIndex = 0;
             this.txtbx_Iset.Text = "1";
             // 
@@ -282,7 +282,7 @@
             this.txtbx_Vset.Location = new System.Drawing.Point(98, 81);
             this.txtbx_Vset.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Vset.Name = "txtbx_Vset";
-            this.txtbx_Vset.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_Vset.Size = new System.Drawing.Size(72, 25);
             this.txtbx_Vset.TabIndex = 0;
             this.txtbx_Vset.Text = "1.38";
             // 
@@ -300,7 +300,7 @@
             this.txtbx_Vin.Location = new System.Drawing.Point(418, 25);
             this.txtbx_Vin.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_Vin.Name = "txtbx_Vin";
-            this.txtbx_Vin.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_Vin.Size = new System.Drawing.Size(72, 25);
             this.txtbx_Vin.TabIndex = 0;
             // 
             // label_Vin
@@ -309,7 +309,7 @@
             this.label_Vin.Location = new System.Drawing.Point(358, 28);
             this.label_Vin.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Vin.Name = "label_Vin";
-            this.label_Vin.Size = new System.Drawing.Size(22, 12);
+            this.label_Vin.Size = new System.Drawing.Size(28, 15);
             this.label_Vin.TabIndex = 4;
             this.label_Vin.Text = "Vin";
             // 
@@ -318,7 +318,7 @@
             this.txtbx_ocp.Location = new System.Drawing.Point(258, 25);
             this.txtbx_ocp.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_ocp.Name = "txtbx_ocp";
-            this.txtbx_ocp.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_ocp.Size = new System.Drawing.Size(72, 25);
             this.txtbx_ocp.TabIndex = 0;
             // 
             // label_OCP
@@ -327,7 +327,7 @@
             this.label_OCP.Location = new System.Drawing.Point(200, 28);
             this.label_OCP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_OCP.Name = "label_OCP";
-            this.label_OCP.Size = new System.Drawing.Size(27, 12);
+            this.label_OCP.Size = new System.Drawing.Size(34, 15);
             this.label_OCP.TabIndex = 4;
             this.label_OCP.Text = "OCP";
             // 
@@ -336,7 +336,7 @@
             this.txtbx_ovp.Location = new System.Drawing.Point(98, 25);
             this.txtbx_ovp.Margin = new System.Windows.Forms.Padding(2);
             this.txtbx_ovp.Name = "txtbx_ovp";
-            this.txtbx_ovp.Size = new System.Drawing.Size(72, 22);
+            this.txtbx_ovp.Size = new System.Drawing.Size(72, 25);
             this.txtbx_ovp.TabIndex = 0;
             // 
             // label_Iset
@@ -345,7 +345,7 @@
             this.label_Iset.Location = new System.Drawing.Point(188, 91);
             this.label_Iset.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Iset.Name = "label_Iset";
-            this.label_Iset.Size = new System.Drawing.Size(52, 12);
+            this.label_Iset.Size = new System.Drawing.Size(66, 15);
             this.label_Iset.TabIndex = 4;
             this.label_Iset.Text = "Iset (~5A)";
             // 
@@ -355,7 +355,7 @@
             this.label_Vset.Location = new System.Drawing.Point(16, 89);
             this.label_Vset.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label_Vset.Name = "label_Vset";
-            this.label_Vset.Size = new System.Drawing.Size(66, 12);
+            this.label_Vset.Size = new System.Drawing.Size(82, 15);
             this.label_Vset.TabIndex = 4;
             this.label_Vset.Text = "Vset (6~55v)";
             // 
@@ -364,7 +364,7 @@
             this.label_WuzhiCmd.AutoSize = true;
             this.label_WuzhiCmd.Location = new System.Drawing.Point(56, 21);
             this.label_WuzhiCmd.Name = "label_WuzhiCmd";
-            this.label_WuzhiCmd.Size = new System.Drawing.Size(59, 12);
+            this.label_WuzhiCmd.Size = new System.Drawing.Size(71, 15);
             this.label_WuzhiCmd.TabIndex = 6;
             this.label_WuzhiCmd.Text = "WuzhiCmd";
             // 
@@ -372,7 +372,7 @@
             // 
             this.txtbx_WuzhiCmd.Location = new System.Drawing.Point(58, 49);
             this.txtbx_WuzhiCmd.Name = "txtbx_WuzhiCmd";
-            this.txtbx_WuzhiCmd.Size = new System.Drawing.Size(388, 22);
+            this.txtbx_WuzhiCmd.Size = new System.Drawing.Size(388, 25);
             this.txtbx_WuzhiCmd.TabIndex = 5;
             this.txtbx_WuzhiCmd.Text = "aa 01 22 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ce";
             // 
@@ -381,7 +381,7 @@
             this.radiobtn_hexadded.AutoSize = true;
             this.radiobtn_hexadded.Location = new System.Drawing.Point(462, 50);
             this.radiobtn_hexadded.Name = "radiobtn_hexadded";
-            this.radiobtn_hexadded.Size = new System.Drawing.Size(83, 16);
+            this.radiobtn_hexadded.Size = new System.Drawing.Size(101, 19);
             this.radiobtn_hexadded.TabIndex = 7;
             this.radiobtn_hexadded.TabStop = true;
             this.radiobtn_hexadded.Text = "HexAddition";
@@ -403,10 +403,10 @@
             // 
             this.tabCtrl1.Controls.Add(this.grpBox_Configuration);
             this.tabCtrl1.Controls.Add(this.grpBox_dashboard);
-            this.tabCtrl1.Location = new System.Drawing.Point(4, 22);
+            this.tabCtrl1.Location = new System.Drawing.Point(4, 25);
             this.tabCtrl1.Name = "tabCtrl1";
             this.tabCtrl1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCtrl1.Size = new System.Drawing.Size(751, 634);
+            this.tabCtrl1.Size = new System.Drawing.Size(751, 631);
             this.tabCtrl1.TabIndex = 0;
             this.tabCtrl1.Text = "Dashboard";
             this.tabCtrl1.UseVisualStyleBackColor = true;
@@ -415,10 +415,10 @@
             // 
             this.tabCtrl2.Controls.Add(this.groupBox2);
             this.tabCtrl2.Controls.Add(this.groupBox1);
-            this.tabCtrl2.Location = new System.Drawing.Point(4, 22);
+            this.tabCtrl2.Location = new System.Drawing.Point(4, 25);
             this.tabCtrl2.Name = "tabCtrl2";
             this.tabCtrl2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCtrl2.Size = new System.Drawing.Size(751, 634);
+            this.tabCtrl2.Size = new System.Drawing.Size(751, 631);
             this.tabCtrl2.TabIndex = 1;
             this.tabCtrl2.Text = "DebugPage";
             this.tabCtrl2.UseVisualStyleBackColor = true;
@@ -451,7 +451,7 @@
             // 
             this.txtbx_TryCmd.Location = new System.Drawing.Point(58, 51);
             this.txtbx_TryCmd.Name = "txtbx_TryCmd";
-            this.txtbx_TryCmd.Size = new System.Drawing.Size(451, 22);
+            this.txtbx_TryCmd.Size = new System.Drawing.Size(451, 25);
             this.txtbx_TryCmd.TabIndex = 8;
             // 
             // label_serial1DataReceived
@@ -459,7 +459,7 @@
             this.label_serial1DataReceived.AutoSize = true;
             this.label_serial1DataReceived.Location = new System.Drawing.Point(56, 18);
             this.label_serial1DataReceived.Name = "label_serial1DataReceived";
-            this.label_serial1DataReceived.Size = new System.Drawing.Size(178, 12);
+            this.label_serial1DataReceived.Size = new System.Drawing.Size(218, 15);
             this.label_serial1DataReceived.TabIndex = 6;
             this.label_serial1DataReceived.Text = "serial1DataReceived or Hex Addition";
             // 
