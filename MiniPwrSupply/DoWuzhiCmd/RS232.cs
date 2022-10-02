@@ -11,9 +11,11 @@ namespace MiniPwrSupply.WuizhiCmd
     {
         bool IsTesting();
         void SetIsTesting(bool isTesting);
-        void TakeInitiatives(); //object testItem
+        void TakeInitiatives();
+        //void StartToTest(object testItem);
         void Dispose();
         void IDispose();
+        void DoReceive();
 
         //void CreateInstrumentObject();
 
@@ -37,7 +39,6 @@ namespace MiniPwrSupply.WuizhiCmd
 
         //void SetThermalDetectPowerSupplyInstrument(IPowerSupplyInstrument thermalInstrument);
 
-        //void StartToTest(object testItem);
         //void StartToTestFromMacServer(object testItem);
 
         //void FailEraseFlash();

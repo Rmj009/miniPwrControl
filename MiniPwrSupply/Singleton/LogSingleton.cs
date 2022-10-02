@@ -182,6 +182,10 @@ namespace MiniPwrSupply.Singleton
             {
                 seampore = @" >>> SASP8 Terminate Testing";
             }
+            else if (type == LogSingleton.ERROR)
+            {
+                seampore = @"Err";
+            }
             else
             {
                 seampore = @"_ Unexpected Result";

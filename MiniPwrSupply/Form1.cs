@@ -189,6 +189,7 @@ namespace MiniPwrSupply
             //--------------------------------------
             do
             {
+                ;//serialPort1.ReadTimeout = 20000;        // stop received after 20000sec
                 int buff_len = serialPort1.BytesToRead;     // get bytes in buffer with receive manner
                 byte[] buffer = new byte[buff_len];
                 if (buff_len > 0)
@@ -375,13 +376,13 @@ namespace MiniPwrSupply
 
         private Boolean GetFullReceiveData(List<Byte> tempList)
         {
-            byte Head = 2;
+            byte Head = 0xAA; //170
             if (FrameLen > 0 && tempList.Count >= tempList.IndexOf(Head) + FrameLen)
             {
                 Byte[] temp = new Byte[FrameLen];
                 Array.Copy(tempList.ToArray(), tempList.IndexOf(Head), temp, 0, temp.Length);
                 //innerResponseFullBytes = temp;
-                InterpretReceiveData();
+                //InterpretReceiveData();
                 //FrameLen = 0;
                 return true;
             }
@@ -389,35 +390,10 @@ namespace MiniPwrSupply
             { return false; }
         }
 
-        private void InterpretReceiveData()
-        {
-            //if (CheckData())
-            //{
-            //    innerResponseCommand = (CommandCode)innerResponseFullBytes[3];
-            //    switch (innerResponseCommand)
-            //    {
-            //        case CommandCode.ReadBlock:
-            //            InterpretReadBlock();
-            //            break;
-            //        case CommandCode.WriteBlock:
-            //            ReceiveActionResult(Convert.ToBoolean(innerResponseFullBytes[4]), innerResponseCommand);
-            //            break;
-            //        case CommandCode.LightControl:
-            //            ReceiveActionResult(Convert.ToBoolean(innerResponseFullBytes[4]), innerResponseCommand);
-            //            break;
-            //        case CommandCode.DataError:
-            //            ReceiveErrorData();
-            //            break;
-            //        default:
-            //            throw new ArgumentOutOfRangeException();
-            //    }
-            //}
-        }
-
         private void GetReceiveDataFullLength(List<Byte> tempList)
         {
-            byte Head = 2;
-            if (tempList.Count >= 2 && FrameLen == 0)
+            byte Head = 0xAA;    //AA
+            if (tempList.Count >= 2 && FrameLen == 20)
             {
                 Int32 startIndex = tempList.IndexOf(Head);
                 if (startIndex >= 0 && startIndex < tempList.Count - 1)
@@ -427,45 +403,7 @@ namespace MiniPwrSupply
             }
         }
 
-        private void DoReceive()
-        {
-            List<Byte> tempList = new List<Byte>();
-            byte[] buffer = new byte[2048];
-            while (Isreceiving)
-            {
-                Int32 receivedValue = serialPort1.ReadByte();   // at the end  of byte[] if receivedVaule = -1
-                do
-                {
-                    Int32 length = serialPort1.Read(buffer, 0, buffer.Length);
-                    Array.Resize(ref buffer, length);
-                    Display d = new Display(DisplayText);
-                    this.Invoke(d, new Object[] { buffer });
-                    Array.Resize(ref buffer, 1024);
-                } while (serialPort1.BytesToRead < 2048);
-
-                Thread.Sleep(20);
-                switch (receivedValue)
-                {
-                    case 1:
-                        tempList.Clear();
-                        tempList.Add((Byte)receivedValue);
-                        break;
-
-                    case 2:
-                        tempList.Add((Byte)receivedValue);
-                        this.parse(tempList);
-                        break;
-
-                    case -1:
-                        break;
-
-                    default:
-                        tempList.Add((Byte)receivedValue);
-                        break;
-                }
-            }
-        }
-
+        
         private void DoReceive2()           //限定次數
         {
             Boolean readingFromBuffer;
@@ -775,11 +713,6 @@ namespace MiniPwrSupply
             }
         }
 
-        private void LogSASP8_Show_Error(string errMsg)
-        {
-            LogSingleton.Instance.WriteLog(errMsg);
-        }
-
         private void Form1_Load(object sender, EventArgs e)
         {
             string action = ">>> Synchronize serial port: " + this.wuzhiComport + "\r\n";
@@ -917,6 +850,7 @@ namespace MiniPwrSupply
             string strVset = txtbx_Vset.Text;
             string strIset = txtbx_Iset.Text;
             string[] visetting = null;
+            byte[] cmd = null;
             string synchroHead = "AA"; //this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
             string Address = string.Format("0x{0:X}", Convert.ToInt32(txtbx_addr.Text.Trim()));     //this._decstringToHex();
             //----------------------------------------------
@@ -925,7 +859,7 @@ namespace MiniPwrSupply
             {
                 if (!LogSingleton.Instance.ReCreateLogDir("wuzhi"))
                 {
-                    LogSASP8_Show_Error("Create Log Folder in vain");
+                    LogSingleton.Instance.WriteLog("Create Log Folder in vain", LogSingleton.ERROR);
                     //return;
                 }
                 if (!this.Chk_Input_Content())
@@ -959,20 +893,23 @@ namespace MiniPwrSupply
                 try
                 {
                     tryCount++;
-                    byte[] cmd = WuzhiCmd.Instance._VIset_Cmd(synchroHead, Address, visetting);
-
-                    LogSingleton.Instance.WriteLog(@"Sendcmd ---> " + BitConverter.ToString(cmd), LogSingleton.wzSEND_COMMAND);
-                    Thread.Sleep(300);
+                    cmd = WuzhiCmd.Instance._VIset_Cmd(synchroHead, Address, visetting);
                     serialPort1.Write(cmd, 0, cmd.Length);
+                    Thread.Sleep(200);
                     IsSending = true;
                     serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
-                    break;
+                    if (IsSending == true)
+                    {
+                        LogSingleton.Instance.WriteLog(@"Sendcmd ---> " + BitConverter.ToString(cmd), LogSingleton.wzSEND_COMMAND);
+                        break;
+                    }
                 }
                 catch (Exception ex)
                 {
                     if (iRetryTime < (tryCount - 1))
                     {
                         System.Threading.Thread.Sleep(5);
+                        LogSingleton.Instance.WriteLog(@"Sendcmd ---> " + BitConverter.ToString(cmd), LogSingleton.wzSEND_COMMAND);
                         continue;
                     }
                     ShowErrMsg("connect serialport ERR");
@@ -994,19 +931,19 @@ namespace MiniPwrSupply
                     wzCmdBytes = WuzhiCmd.Instance._IsPowerOn(WuzhiCmd.WuzhiPower.PowerOff);
                     btn_sendcmd.Enabled = false;
                     //btn_connection.Enabled = false;
-                    serialPort1.Write(wzCmdBytes, 0, wzCmdBytes.Length);
                     LogSingleton.Instance.WriteLog(@"PowerOn ---> " + BitConverter.ToString(wzCmdBytes), LogSingleton.wzSEND_COMMAND);
+                    serialPort1.Write(wzCmdBytes, 0, wzCmdBytes.Length);
                     break;
 
                 case "PowerON":
                     btn_Power.BackColor = Color.DarkGreen;
                     btn_Power.Text = "PowerOFF";
                     wzCmdBytes = WuzhiCmd.Instance._IsPowerOn(WuzhiCmd.WuzhiPower.PowerOn);
-                    LogSingleton.Instance.WriteLog(@"PowerOff ---> " + BitConverter.ToString(wzCmdBytes), LogSingleton.wzSEND_COMMAND);
                     if (btn_connection.Enabled)
                     {
                         btn_sendcmd.Enabled = true;
                     }
+                    LogSingleton.Instance.WriteLog(@"PowerOff ---> " + BitConverter.ToString(wzCmdBytes), LogSingleton.wzSEND_COMMAND);
                     serialPort1.Write(wzCmdBytes, 0, wzCmdBytes.Length);
                     break;
             }
@@ -1082,7 +1019,7 @@ namespace MiniPwrSupply
                             serialPort1.RtsEnable = true;           //序列通訊期間是否啟用 Request to Send (RTS)
                             serialPort1.DtrEnable = true;           // Gets or sets a value that enables the Data Terminal Ready (DTR) signal during serial communication
 
-                            //serialPort1.ReadTimeout = 20000;        // stop received after 20000sec
+                            
                             this.mIsConnectedSerialPort = true;
                         }
                         if (serialPort1.IsOpen)

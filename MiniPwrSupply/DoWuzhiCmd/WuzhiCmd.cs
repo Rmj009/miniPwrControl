@@ -15,6 +15,7 @@ using System.Windows.Forms;
 using System.IO.Ports;
 using MiniPwrSupply.Properties;
 using MiniPwrSupply.Config;
+using System.Threading;
 
 //namespace SimpleReceiveEventCS
 //{
@@ -219,6 +220,47 @@ namespace MiniPwrSupply.DoWuzhiCmd
             //    //}
             //}
         }
+
+        private void DoReceive()
+        {
+            bool Isreceiving = true;
+            List<Byte> tempList = new List<Byte>();
+            byte[] buffer = new byte[2048];
+            while (Isreceiving)
+            {
+                //Int32 receivedValue = serialPort1.ReadByte();   // at the end  of byte[] if receivedVaule = -1
+                //do
+                //{
+                //    Int32 length = serialPort1.Read(buffer, 0, buffer.Length);
+                //    Array.Resize(ref buffer, length);
+                //    Display d = new Display(DisplayText);
+                //    this.Invoke(d, new Object[] { buffer });
+                //    Array.Resize(ref buffer, 1024);
+                //} while (serialPort1.BytesToRead < 2048);
+
+                //Thread.Sleep(20);
+                //switch (receivedValue)
+                //{
+                //    case 1:
+                //        tempList.Clear();
+                //        tempList.Add((Byte)receivedValue);
+                //        break;
+
+                //    case 2:
+                //        tempList.Add((Byte)receivedValue);
+                //        this.parse(tempList);
+                //        break;
+
+                //    case -1:
+                //        break;
+
+                //    default:
+                //        tempList.Add((Byte)receivedValue);
+                //        break;
+                //}
+            }
+        }
+
 
         private void comport_DataReceived(Object sender, SerialDataReceivedEventArgs e)
         {
