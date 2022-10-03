@@ -45,7 +45,8 @@ namespace MiniPwrSupply.Config
     public static class wuzhiCmdDict
     {
         public const string
-            ListenState = "aa 01 29 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 d4", // listen dataReceived
+            Listen_Vtate = "aa 01 29 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 d4", // listen dataReceived, only response Voltage state
+                                                                                          //Listen_Istate = "01 29 03 06 00 88 00 00 00 00 00 00 00 00 00 00 00 00 65", //  only response Current state
             Connect = "aa 01 20 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cc",
             DisConnect = "aa 01 20 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 cb",
             PowerOn = "aa 01 22 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ce",

@@ -52,7 +52,7 @@ namespace MiniPwrSupply
             DisConnect
         }
 
-        string title = string.Empty;
+        private string title = string.Empty;
         private string wuzhiComport = string.Empty;
         private Int32 totalLength = 0;
 
@@ -74,6 +74,7 @@ namespace MiniPwrSupply
         private const Int32 A = 170;
         private static Int32 checksum = 0;
         private static byte[] globalBuffer = new byte[20]; //large buffer, put globally
+        public byte[] wzTx = null;
 
         private bool Chk_Input_Content()
         {
@@ -128,7 +129,7 @@ namespace MiniPwrSupply
                 LogSingleton.Instance.WriteLog(@"Is buffer Valid ---> " + buffValidity, LogSingleton.wzMEASURE_VALUE);
 
                 richTextBox1.AppendText("\n-----------------------------------" + title + "-----------------------------------\n");
-                richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MMddhh:mm:ss") + " " + buffValidity + "\r\n");
+                richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss") + " " + buffValidity + "\r\n");
                 richTextBox1.AppendText("\r\n" + " Receive Bytes ---> " + string.Format("{0}{1}", receivedata, Environment.NewLine));
                 richTextBox1.AppendText("\r\n" + " Is CheckSum Legal: ---> " + CksumResult + "\r\n");
             }
@@ -405,7 +406,6 @@ namespace MiniPwrSupply
             }
         }
 
-        
         private void DoReceive2()           //限定次數
         {
             Boolean readingFromBuffer;
@@ -852,9 +852,11 @@ namespace MiniPwrSupply
             string strVset = txtbx_Vset.Text;
             string strIset = txtbx_Iset.Text;
             string[] visetting = null;
-            byte[] cmd = null;
+            //byte[] cmd = null;
             string synchroHead = "AA"; //this._decstringToHex("170"); // string.Format(@"0x{0:X}", this.decstringToHex("170"));   //AA
             string Address = string.Format("0x{0:X}", Convert.ToInt32(txtbx_addr.Text.Trim()));     //this._decstringToHex();
+            byte[] wzListenCmd = WuzhiCmd.Instance._listenState();
+
             title = "----- Setup current voltage -----";
 
             try
@@ -895,14 +897,16 @@ namespace MiniPwrSupply
                 try
                 {
                     tryCount++;
-                    cmd = WuzhiCmd.Instance._VIset_Cmd(synchroHead, Address, visetting);
-                    serialPort1.Write(cmd, 0, cmd.Length);
+                    wzTx = WuzhiCmd.Instance._VIset_Cmd(synchroHead, Address, visetting);
+                    serialPort1.Write(wzTx, 0, wzTx.Length);
                     Thread.Sleep(200);
                     IsSending = true;
                     serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
                     if (IsSending == true)
                     {
-                        LogSingleton.Instance.WriteLog(@"Sendcmd ---> " + BitConverter.ToString(cmd), LogSingleton.wzSEND_COMMAND);
+                        LogSingleton.Instance.WriteLog(@"Sendcmd ---> " + BitConverter.ToString(wzTx), LogSingleton.wzSEND_COMMAND);
+                        serialPort1.Write(wzListenCmd, 0, wzListenCmd.Length);
+                        LogSingleton.Instance.WriteLog(@"Listening ---> " + BitConverter.ToString(wzListenCmd), LogSingleton.wzSEND_COMMAND);
                         break;
                     }
                 }
@@ -911,7 +915,7 @@ namespace MiniPwrSupply
                     if (iRetryTime < (tryCount - 1))
                     {
                         System.Threading.Thread.Sleep(5);
-                        LogSingleton.Instance.WriteLog(@"Sendcmd ---> " + BitConverter.ToString(cmd), LogSingleton.wzSEND_COMMAND);
+                        LogSingleton.Instance.WriteLog(@"Sendcmd ---> " + BitConverter.ToString(wzTx), LogSingleton.wzSEND_COMMAND);
                         continue;
                     }
                     ShowErrMsg("connect serialport ERR");
@@ -1023,7 +1027,6 @@ namespace MiniPwrSupply
                             serialPort1.RtsEnable = true;           //序列通訊期間是否啟用 Request to Send (RTS)
                             serialPort1.DtrEnable = true;           // Gets or sets a value that enables the Data Terminal Ready (DTR) signal during serial communication
 
-                            
                             this.mIsConnectedSerialPort = true;
                         }
                         if (serialPort1.IsOpen)
@@ -1133,6 +1136,5 @@ namespace MiniPwrSupply
         }
 
         #endregion DebugPage Button
-
     }
 }

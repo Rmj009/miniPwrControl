@@ -152,9 +152,9 @@ namespace MiniPwrSupply.DoWuzhiCmd
             //serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
         }
 
-        private byte[] _listenState()
+        public byte[] _listenState()
         {
-            string listening = wuzhiCmdDict.ListenState;
+            string listening = wuzhiCmdDict.Listen_Vtate;
             return listening.Split(' ').Select(i => Convert.ToByte(i, 16)).ToArray();
             //serialPort1.Write(cmd, 0, cmd.Length);
             //serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
@@ -260,7 +260,6 @@ namespace MiniPwrSupply.DoWuzhiCmd
                 //}
             }
         }
-
 
         private void comport_DataReceived(Object sender, SerialDataReceivedEventArgs e)
         {
