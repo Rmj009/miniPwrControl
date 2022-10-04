@@ -27,7 +27,7 @@ namespace MiniPwrSupply.Singleton
         private string m_logDirPath = System.Windows.Forms.Application.StartupPath + @"\Log\" + DateTime.Now.ToString("yyyyMMdd");
 
         private static readonly object mLock = new object();
-        private static string TMP_FILE = "SASP8_tmp.log";
+        private static string TMP_FILE = "tmp.log";
         private static LogSingleton mInstance = null;
         private string mRootFlowPath = "";
         private string mRootPath = "";
@@ -180,7 +180,7 @@ namespace MiniPwrSupply.Singleton
             }
             else if (type == LogSingleton.wzEND_TESTING)
             {
-                seampore = @" >>> SASP8 Terminate Testing";
+                seampore = @" >>> Terminate Testing";
             }
             else if (type == LogSingleton.ERROR)
             {
