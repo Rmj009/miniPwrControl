@@ -73,7 +73,8 @@ namespace MiniPwrSupply
         private static int iRetryTime = 6;
         private const Int32 A = 170;
         private static Int32 checksum = 0;
-        private static byte[] globalBuffer = new byte[20]; //large buffer, put globally
+        public Int32 ListenVoltage = -1;                    //impossible to be negative
+        private static byte[] globalBuffer = new byte[20];  //large buffer, put globally
         public byte[] wzTx = null;
 
         private bool Chk_Input_Content()
@@ -186,6 +187,9 @@ namespace MiniPwrSupply
             int tryCount = 0;
             string CksumResult = null;
             bool Isbuffer_copied = false;
+            byte Head = 0xAA; //170
+            string strVset = txtbx_Vset.Text;
+            string strIset = txtbx_Iset.Text;
             //Buffer.BlockCopy();
             Queue<byte> queue = new Queue<byte>(); //AA - 01 - 12 - 80 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 00 - 00 - 00 - 00 - 00 - 3D
             List<byte> bufflst = new List<byte>();
@@ -211,6 +215,10 @@ namespace MiniPwrSupply
                         LogSingleton.Instance.WriteLog(@"Buffer Read ---> " + BitConverter.ToString(buffer), LogSingleton.wzRECEIVE_COMMAND);
                         dataBuffLen += buff_len;
 
+                        if (buffer[2] == 0x29)      //ListenState_V回傳狀態下, 確認輸出Voltage是否指令輸入有誤差
+                        {
+                            ListenVoltage = buffer[5] + buffer[6];   // LISTEN實際輸出Voltage
+                        }
                         //int bufferlength = serialPort1.Read(buffer, offset, FrameLen - serialPort1.BytesToRead);
                         if (offset == FrameLen || dataBuffLen == 20) // 最完整收到
                         {
@@ -922,6 +930,7 @@ namespace MiniPwrSupply
                     throw new Exception("serialPort1.Write ERR" + ex.Message);
                 }
             } while (!IsSending);
+            //LogSingleton.Instance.WriteLog("\r\n" + " Voltage Gap Between wzcmd & listen: ---> " + Convert.ToDouble(ListenVoltage - Convert.ToDouble(txtbx_Vset.Text) * 100) + "\r\n");
         }
 
         private void btn_Power_Click(object sender, EventArgs e)
