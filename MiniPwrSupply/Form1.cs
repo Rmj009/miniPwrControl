@@ -583,7 +583,22 @@ namespace MiniPwrSupply
                 //Enumerable.Range(txtbx_com.Text).Append(serialport[i].ToString());
                 //= serialport[i].ToString();
             }
-
+            //this.Invoke(new Action(() => { this.richTextBox1.AppendText("comport scann: {x}" + serialport + "\r\n"); }));
+            //1.Scan COM Ports
+            //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
+            //3.When an input has a specific phrase such as "connectAlready",
+            //4.Close all ports and create a new one on the port that received the phrase.
+            //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
+            //1.Scan COM Ports
+            //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
+            //3.When an input has a specific phrase such as "connectAlready",
+            //4.Close all ports and create a new one on the port that received the phrase.
+            //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
+            //1.Scan COM Ports
+            //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
+            //3.When an input has a specific phrase such as "connectAlready",
+            //4.Close all ports and create a new one on the port that received the phrase.
+            //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
         }
 
         //-------------------------------------------------------------------------------------------------
