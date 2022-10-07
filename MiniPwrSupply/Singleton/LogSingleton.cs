@@ -16,7 +16,7 @@ namespace MiniPwrSupply.Singleton
         private static System.Threading.Mutex ms_threadMutex = new System.Threading.Mutex();
         private static string temp_logFileName = "";
 
-        public static int ERROR = 0;
+        public static int wzERROR = 0;
         public static int wzDate_Time_Start = 1;
         public static int wzEND_TESTING = 2;
         public static int wzSEND_COMMAND = 3;
@@ -182,7 +182,7 @@ namespace MiniPwrSupply.Singleton
             {
                 seampore = @" >>> Terminate Testing";
             }
-            else if (type == LogSingleton.ERROR)
+            else if (type == LogSingleton.wzERROR)
             {
                 seampore = @"Err";
             }
