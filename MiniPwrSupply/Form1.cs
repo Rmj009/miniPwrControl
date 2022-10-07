@@ -71,11 +71,15 @@ namespace MiniPwrSupply
         public Form1 mInstatnce = null;
         private const Int32 FrameLen = 20;
         private static int iRetryTime = 6;
-        private const Int32 A = 170;
+
+        //private const Int32 A = 170;
         private static Int32 checksum = 0;
-        public Int32 ListenVoltage = -1;                    //impossible to be negative
-        private static byte[] globalBuffer = new byte[20];  //large buffer, put globally
+
+        public double ListenVoltage = -1;                    //impossible to be negative
+        private double vGap = 0.0d;
+        public byte[] globalBuffer = new byte[20];  //large buffer, put globally
         public byte[] wzTx = null;
+        private Queue<byte> queue = new Queue<byte>(); //AA - 01 - 12 - 80 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 00 - 00 - 00 - 00 - 00 - 3D
 
         private bool Chk_Input_Content()
         {
@@ -103,6 +107,14 @@ namespace MiniPwrSupply
         private void ShowErrMsg(string errMsg)
         {
             MessageBox.Show(errMsg, @"Error Occur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        public enum wzCodeName : byte                   // Reference from wz5005 official document
+        {
+            syncHead = 0xAA,
+            read_Input_Volt = 0x29,
+            read_Now_Volt = 0x2A,
+            set_Read_Volt = 0x2C
         }
 
         private void DisplayText(Byte[] buffer)
@@ -133,6 +145,7 @@ namespace MiniPwrSupply
                 richTextBox1.AppendText("\n" + DateTime.UtcNow.AddHours(8).ToString(@"MM/dd hh:mm:ss") + " " + buffValidity + "\r\n");
                 richTextBox1.AppendText("\r\n" + " Receive Bytes ---> " + string.Format("{0}{1}", receivedata, Environment.NewLine));
                 richTextBox1.AppendText("\r\n" + " Is CheckSum Legal: ---> " + CksumResult + "\r\n");
+                richTextBox1.AppendText("\r\n" + " Voltage Gap Between wzcmd & listen: ---> " + vGap.ToString() + "\r\n");
             }
             catch (IndexOutOfRangeException indexOut)
             {
@@ -146,6 +159,10 @@ namespace MiniPwrSupply
             }
             finally
             {
+                ///
+                serialPort1.DiscardInBuffer();
+                //serialPort1.DiscardOutBuffer();
+                ///
                 title = string.Empty;
                 txtbx_TryCmd.Clear();
             }
@@ -187,11 +204,13 @@ namespace MiniPwrSupply
             int tryCount = 0;
             string CksumResult = null;
             bool Isbuffer_copied = false;
-            byte Head = 0xAA; //170
             string strVset = txtbx_Vset.Text;
             string strIset = txtbx_Iset.Text;
+            string receivedata = string.Empty;
+            string receiveListen = string.Empty;
+            string tempReceive = string.Empty;
             //Buffer.BlockCopy();
-            Queue<byte> queue = new Queue<byte>(); //AA - 01 - 12 - 80 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 - 00 00 - 00 - 00 - 00 - 00 - 3D
+
             List<byte> bufflst = new List<byte>();
             //--------------------------------------
             do
@@ -210,82 +229,160 @@ namespace MiniPwrSupply
                     Thread.Sleep(100);
                     try
                     { //stackoverflow.com/questions/41865560/c-sharp-serialport-receive-doesnt-get-all-data-at-once
-                        var getbuffersize = serialPort1.ReadBufferSize;
-                        offset += serialPort1.Read(buffer, offset, buff_len - offset);
-                        LogSingleton.Instance.WriteLog(@"Buffer Read ---> " + BitConverter.ToString(buffer), LogSingleton.wzRECEIVE_COMMAND);
-                        dataBuffLen += buff_len;
+                        offset += serialPort1.Read(buffer, offset, buff_len);                   // - offset);
+                        receivedata = BitConverter.ToString(buffer);
+                        LogSingleton.Instance.WriteLog(@"Buffer Read ---> " + receivedata, LogSingleton.wzRECEIVE_COMMAND);
 
-                        if (buffer[2] == 0x29)      //ListenState_V回傳狀態下, 確認輸出Voltage是否指令輸入有誤差
+                        switch (receivedata)
                         {
-                            ListenVoltage = buffer[5] + buffer[6];   // LISTEN實際輸出Voltage
-                        }
-                        if (offset == FrameLen || dataBuffLen == 20) // 最完整收到
-                        {
-                            Array.Resize(ref buffer, 20);
-                            Display d = new Display(DisplayText);
-                            this.Invoke(d, new Object[] { buffer });
-                            CksumResult = "YES";
-                            break;
-                        }
-                        else if (globalBuffer.All(i => i == 170))  // 170 = AA  收到的位元組不完整開頭是170 或 不是, 開始collect所有位元組
-                        {
-                            try
-                            {
-                                globalBuffer = globalBuffer.Concat(buffer).ToArray();
-                                int byteGreaterZero = Enumerable.Range(0, globalBuffer.Length).Select(x => x > 0).Count();
-                                if (byteGreaterZero > 4)
+                            case string a when a.Contains("AA"):
+                                receiveCall.Clear();
+
+                                if (buff_len < 20)
                                 {
-                                    Array.Resize(ref globalBuffer, 20);
-                                    IsCheckSum_Legal = true;
-                                    Display d = new Display(DisplayText);
-                                    this.Invoke(d, new Object[] { globalBuffer });
+                                    if (receivedata[0] == 0)            // 開頭為零
+                                    {
+                                        tempReceive = receivedata;
+                                    }
+                                    else if (tempReceive != string.Empty)
+                                    {
+                                        receiveCall.Append(receivedata);
+                                        receiveCall.Append(tempReceive);
+                                        //--------------------------
+                                        globalBuffer = globalBuffer.Concat(buffer).ToArray();
+                                        Array.Resize(ref globalBuffer, buff_len);
+                                        receiveCall.Append(BitConverter.ToString(globalBuffer));
+                                        //--------------------------
+                                        Array.Resize(ref globalBuffer, 20);
+                                        Display d = new Display(DisplayText);
+                                        this.Invoke(d, new Object[] { globalBuffer });
+                                        break;
+                                    }
+                                    continue;
+                                }
+                                else if (buff_len == 20)
+                                {
+                                    if (buffer[2] == 0x29)
+                                    {
+                                        ListenVoltage = buffer[5] + buffer[6];   // LISTEN實際輸出Voltage
+                                        double cmdVoltage = Convert.ToDouble(txtbx_Vset.Text) * 100;
+                                        vGap = cmdVoltage - ListenVoltage;
+                                        LogSingleton.Instance.WriteLog("\r\n" + " Voltage Gap Between wzcmd & listen: ---> " + vGap.ToString() + "\r\n", LogSingleton.wzMEASURE_VALUE);
+                                    }
+
+                                    if (this._IsCheckValid(buffer))
+                                    {
+                                        CksumResult = "ReceivedSucceed";
+
+                                        Array.Resize(ref buffer, 20);
+                                        Display d = new Display(DisplayText);
+                                        this.Invoke(d, new Object[] { buffer });
+                                        break;
+                                    }
                                     break;
                                 }
-                            }
-                            catch { }
-                        }
-                        else if (offset < 20)
-                        {
-                            if (Isbuffer_copied == true)
-                            {
-                                globalBuffer = globalBuffer.Concat(buffer).ToArray();
+                                else
+                                {
+                                    continue;
+                                }
+
+                            //if (offset == FrameLen || dataBuffLen == 20) // 最完整收到
+                            //{
+                            //    globalBuffer = globalBuffer.Concat(buffer).ToArray();
+
+                            //    CksumResult = "YES";
+                            //    break;
+                            //}
+
+                            //if (receivedata.IndexOf("29") == 3)
+                            //{
+                            //    ListenVoltage = buffer[5] + buffer[6];   // LISTEN實際輸出Voltage
+                            //    double cmdVoltage = Convert.ToDouble(txtbx_Vset.Text) * 100;
+                            //    vGap = cmdVoltage - ListenVoltage;
+                            //    LogSingleton.Instance.WriteLog("\r\n" + " Voltage Gap Between wzcmd & listen: ---> " + vGap.ToString() + "\r\n", LogSingleton.wzMEASURE_VALUE);
+                            //    continue;
+                            //}
+                            //else
+                            //{
+                            //    break;
+                            //}
+
+                            case string a when a.StartsWith("00"):
+                                tempReceive = receivedata;
+
+                                if (receivedata.StartsWith("00"))       // 開頭為零
+                                {
+                                    tempReceive = receivedata;
+                                }
+                                break;
+
+                            default:
+                                if (receivedata.StartsWith("00"))       // 開頭為零
+                                {
+                                    tempReceive = receivedata;
+                                }
+                                buffer.CopyTo(globalBuffer, 0); // Cp to globalbuffer from index 0
                                 Array.Resize(ref globalBuffer, buff_len);
+                                Isbuffer_copied = true;
                                 continue;
-                            }
-                            buffer.CopyTo(globalBuffer, 0); // Cp to globalbuffer from index 0
-                            Array.Resize(ref globalBuffer, buff_len);
-                            Isbuffer_copied = true;
                         }
 
-                        //-----------------------------------------------------------------------------
-                        //-----------------------------------------------------------------------------
-
-                        //Int32 receivedValue = serialPort1.ReadByte();         //第二種讀法, read byte by byte一個一個讀
-                        //if (tempList.Count == 19)
+                        dataBuffLen += buff_len;
+                        //DoReceive_with_postfix();
+                        //if (buffer[2] == 0x29)      //ListenState_V回傳狀態下, 確認輸出Voltage是否指令輸入有誤差
                         //{
-                        //    //hexChksum = buffer.Sum(i => i);
-
-                        //    //tempList.Add((Byte)receivedValue);
-                        //    int cksums = Enumerable.Range(0, tempList.Count).Sum(i => tempList[i]);   //Select(i => tempList[i])
-                        //    string chksum = string.Format(@"0x{0:X}", cksums);
-                        //    itsChksum = Convert.ToInt32(chksum.Substring(chksum.Length - 2, 2), 16);
-                        //    if (itsChksum == receivedValue)
+                        //    ListenVoltage = buffer[5] + buffer[6];   // LISTEN實際輸出Voltage
+                        //    double cmdVoltage = Convert.ToDouble(txtbx_Vset.Text) * 100;
+                        //    vGap = cmdVoltage - ListenVoltage;
+                        //    LogSingleton.Instance.WriteLog("\r\n" + " Voltage Gap Between wzcmd & listen: ---> " + vGap.ToString() + "\r\n", LogSingleton.wzMEASURE_VALUE);
+                        //}
+                        //if (offset == FrameLen || dataBuffLen == 20) // 最完整收到
+                        //{
+                        //    globalBuffer = globalBuffer.Concat(buffer).ToArray();
+                        //    Array.Resize(ref globalBuffer, 20);
+                        //    Display d = new Display(DisplayText);
+                        //    this.Invoke(d, new Object[] { globalBuffer });
+                        //    CksumResult = "YES";
+                        //    break;
+                        //}
+                        //else if (receiveCall.ToString().Contains("AA") && receiveCall.ToString().Contains("29"))
+                        //{
+                        //    ListenVoltage = buffer[5] + buffer[6];   // LISTEN實際輸出Voltage
+                        //    double cmdVoltage = Convert.ToDouble(txtbx_Vset.Text) * 100;
+                        //    vGap = cmdVoltage - ListenVoltage;
+                        //    LogSingleton.Instance.WriteLog("\r\n" + " Voltage Gap Between wzcmd & listen: ---> " + vGap.ToString() + "\r\n", LogSingleton.wzMEASURE_VALUE);
+                        //}
+                        //else if (globalBuffer.All(i => globalBuffer[i].Equals(170)))  // 170 = AA  收到的位元組不完整開頭是170 或 不是, 開始collect所有位元組
+                        //{
+                        //    try
                         //    {
-                        //        IsCheckSum_Legal = true;
-                        //        CksumResult = IsCheckSum_Legal ? @"Checksum is legal" : @"Checksum isNot legal";//"Checksum is legal";
+                        //        globalBuffer = globalBuffer.Concat(buffer).ToArray();
+                        //        int byteGreaterZero = Enumerable.Range(0, globalBuffer.Length).Select(x => x > 0).Count();
+                        //        if (byteGreaterZero > 4)
+                        //        {
+                        //            Array.Resize(ref globalBuffer, 20);
+                        //            IsCheckSum_Legal = true;
+                        //            Display d = new Display(DisplayText);
+                        //            this.Invoke(d, new Object[] { globalBuffer });
+                        //            break;
+                        //        }
                         //    }
-                        //    break;
+                        //    catch { }
                         //}
-                        //else if (tempList.Count == 20 || receivedValue == 61) //AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
+                        //else if (offset < 20)
                         //{
-                        //    break;
+                        //    if (Isbuffer_copied == true)
+                        //    {
+                        //        receiveCall.Append(receivedata);
+                        //        globalBuffer = globalBuffer.Concat(buffer).ToArray();
+                        //        Array.Resize(ref globalBuffer, buff_len);
+                        //        receiveCall.Append(BitConverter.ToString(globalBuffer));
+                        //        continue;
+                        //    }
+                        //    buffer.CopyTo(globalBuffer, 0); // Cp to globalbuffer from index 0
+                        //    Array.Resize(ref globalBuffer, buff_len);
+                        //    Isbuffer_copied = true;
                         //}
-                        //else
-                        //{
-                        //    tempList.Add((Byte)receivedValue);
-                        //}
-                        //-----------------------------------------------------------------------------
-                        //-----------------------------------------------------------------------------
                     }
                     catch (TimeoutException timeoutEx)
                     {
@@ -316,7 +413,8 @@ namespace MiniPwrSupply
                         {
                             serialPort1.DiscardInBuffer();
                             serialPort1.DiscardOutBuffer();
-                            MessageBox.Show(ex.Message + "\r\n Buffer內位元組: \r\n" + BitConverter.ToString(buffer) + "\r\n 請重新連線");
+                            //MessageBox.Show(ex.Message + "\r\n Buffer內位元組: \r\n" + BitConverter.ToString(buffer) + "\r\n 請重新連線");
+                            LogSingleton.Instance.WriteLog(ex.Message + "\r\n Buffer內位元組: \r\n" + BitConverter.ToString(buffer) + "\r\n 請重新連線", LogSingleton.wzERROR);
                             continue;
                         }
                     }
@@ -471,9 +569,6 @@ namespace MiniPwrSupply
             }
         }
 
-        private const Int32 S = 83;
-        private const Int32 E = 69;
-
         private void DoReceive_with_postfix() //bool Isreceiving
         {
             List<Byte> tempList = new List<Byte>();
@@ -484,12 +579,12 @@ namespace MiniPwrSupply
 
                 switch (receivedValue)
                 {
-                    case S:
+                    case (int)wzCodeName.syncHead: //(int)wzCodeName.read_Input_Volt:           // if read start byte
                         tempList.Clear();
                         tempList.Add((Byte)receivedValue);
-                        break;
+                        continue;
 
-                    case E:
+                    case (int)wzCodeName.read_Now_Volt:             // if read end byte, i.e. checksum
                         tempList.Add((Byte)receivedValue);
                         parse(tempList);
                         break;
@@ -502,6 +597,30 @@ namespace MiniPwrSupply
                         break;
                 }
             }
+            //Int32 receivedValue = serialPort1.ReadByte();         //第二種讀法, read byte by byte一個一個讀
+            //if (tempList.Count == 19)
+            //{
+            //    //hexChksum = buffer.Sum(i => i);
+
+            //    //tempList.Add((Byte)receivedValue);
+            //    int cksums = Enumerable.Range(0, tempList.Count).Sum(i => tempList[i]);   //Select(i => tempList[i])
+            //    string chksum = string.Format(@"0x{0:X}", cksums);
+            //    itsChksum = Convert.ToInt32(chksum.Substring(chksum.Length - 2, 2), 16);
+            //    if (itsChksum == receivedValue)
+            //    {
+            //        IsCheckSum_Legal = true;
+            //        CksumResult = IsCheckSum_Legal ? @"Checksum is legal" : @"Checksum isNot legal";//"Checksum is legal";
+            //    }
+            //    break;
+            //}
+            //else if (tempList.Count == 20 || receivedValue == 61) //AA-01-12-80-00-00-00-00-00-00-00-00-00-00 00-00-00-00-00-3D
+            //{
+            //    break;
+            //}
+            //else
+            //{
+            //    tempList.Add((Byte)receivedValue);
+            //}
         }
 
         private void DoReceive4()
@@ -583,22 +702,7 @@ namespace MiniPwrSupply
                 //Enumerable.Range(txtbx_com.Text).Append(serialport[i].ToString());
                 //= serialport[i].ToString();
             }
-            //this.Invoke(new Action(() => { this.richTextBox1.AppendText("comport scann: {x}" + serialport + "\r\n"); }));
-            //1.Scan COM Ports
-            //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
-            //3.When an input has a specific phrase such as "connectAlready",
-            //4.Close all ports and create a new one on the port that received the phrase.
-            //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
-            //1.Scan COM Ports
-            //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
-            //3.When an input has a specific phrase such as "connectAlready",
-            //4.Close all ports and create a new one on the port that received the phrase.
-            //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
-            //1.Scan COM Ports
-            //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
-            //3.When an input has a specific phrase such as "connectAlready",
-            //4.Close all ports and create a new one on the port that received the phrase.
-            //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
+
         }
 
         //-------------------------------------------------------------------------------------------------
@@ -873,7 +977,7 @@ namespace MiniPwrSupply
             {
                 if (!LogSingleton.Instance.ReCreateLogDir("wuzhi"))
                 {
-                    LogSingleton.Instance.WriteLog("Create Log Folder in vain", LogSingleton.ERROR);
+                    LogSingleton.Instance.WriteLog("Create Log Folder in vain", LogSingleton.wzERROR);
                     //return;
                 }
                 if (!this.Chk_Input_Content())
@@ -916,6 +1020,7 @@ namespace MiniPwrSupply
                     {
                         LogSingleton.Instance.WriteLog(@"Sendcmd ---> " + BitConverter.ToString(wzTx), LogSingleton.wzSEND_COMMAND);
                         serialPort1.Write(wzListenCmd, 0, wzListenCmd.Length);
+                        serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
                         LogSingleton.Instance.WriteLog(@"Listening ---> " + BitConverter.ToString(wzListenCmd), LogSingleton.wzSEND_COMMAND);
                         break;
                     }
@@ -932,7 +1037,6 @@ namespace MiniPwrSupply
                     throw new Exception("serialPort1.Write ERR" + ex.Message);
                 }
             } while (!IsSending);
-            //LogSingleton.Instance.WriteLog("\r\n" + " Voltage Gap Between wzcmd & listen: ---> " + Convert.ToDouble(ListenVoltage - Convert.ToDouble(txtbx_Vset.Text) * 100) + "\r\n");
         }
 
         private void btn_Power_Click(object sender, EventArgs e)
