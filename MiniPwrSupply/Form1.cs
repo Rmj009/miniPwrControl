@@ -219,7 +219,6 @@ namespace MiniPwrSupply
                         {
                             ListenVoltage = buffer[5] + buffer[6];   // LISTEN實際輸出Voltage
                         }
-                        //int bufferlength = serialPort1.Read(buffer, offset, FrameLen - serialPort1.BytesToRead);
                         if (offset == FrameLen || dataBuffLen == 20) // 最完整收到
                         {
                             Array.Resize(ref buffer, 20);
@@ -230,14 +229,6 @@ namespace MiniPwrSupply
                         }
                         else if (globalBuffer.All(i => i == 170))  // 170 = AA  收到的位元組不完整開頭是170 或 不是, 開始collect所有位元組
                         {
-                            //foreach (byte item in buffer)
-                            //{
-                            //    queue.Enqueue(item);
-                            //}
-                            //foreach (byte item in buffer)
-                            //{
-                            //    bufflst.Add(item);
-                            //}
                             try
                             {
                                 globalBuffer = globalBuffer.Concat(buffer).ToArray();
@@ -255,10 +246,6 @@ namespace MiniPwrSupply
                         }
                         else if (offset < 20)
                         {
-                            //if (globalBuffer.All(i => i == 170))
-                            //{
-                            //    globalBuffer = globalBuffer.Concat(buffer).ToArray();
-                            //}
                             if (Isbuffer_copied == true)
                             {
                                 globalBuffer = globalBuffer.Concat(buffer).ToArray();
@@ -596,12 +583,7 @@ namespace MiniPwrSupply
                 //Enumerable.Range(txtbx_com.Text).Append(serialport[i].ToString());
                 //= serialport[i].ToString();
             }
-            //this.Invoke(new Action(() => { this.richTextBox1.AppendText("comport scann: {x}" + serialport + "\r\n"); }));
-            //1.Scan COM Ports
-            //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
-            //3.When an input has a specific phrase such as "connectAlready",
-            //4.Close all ports and create a new one on the port that received the phrase.
-            //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
+
         }
 
         //-------------------------------------------------------------------------------------------------
@@ -710,7 +692,6 @@ namespace MiniPwrSupply
 
                     if (comport.Length == 0)
                     {
-                        //throw new Exception("Not Found wuzhi Comport");
                         return string.Empty;
                     }
 
@@ -725,6 +706,11 @@ namespace MiniPwrSupply
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            //1.Scan COM Ports
+            //2.Receive inputs from the devices ---> Event handler for DataReceived for your serial port
+            //3.When an input has a specific phrase such as "connectAlready",
+            //4.Close all ports and create a new one on the port that received the phrase.
+            //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
             string action = ">>> Synchronize serial port: " + this.wuzhiComport + "\r\n";
             int tryCount = 1;
             do
@@ -774,16 +760,17 @@ namespace MiniPwrSupply
 
             if (dr == DialogResult.Yes)
             {
-                //try
-                //{
-                //    if (bWriteLogFlag)
-                //    {
-                //        this.WriteTotalCountData();
-                //    }
-                //    ResultCsvSingleton.Instance.DeleteEmptyTestResultCsv();
-                //    ResultCsvItSingleton.Instance.DeleteEmptyTestResultCsv();
-                //}
-                //catch { }
+                try
+                {
+                    LogSingleton.Instance.WriteLog("Close Form");
+                    //if (bWriteLogFlag)
+                    //{
+                    //    this.WriteTotalCountData();
+                    //}
+                    //ResultCsvSingleton.Instance.DeleteEmptyTestResultCsv();
+                    //ResultCsvItSingleton.Instance.DeleteEmptyTestResultCsv();
+                }
+                catch { }
 
                 e.Cancel = false;
             }
