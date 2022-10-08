@@ -180,7 +180,7 @@ namespace MiniPwrSupply.Singleton
             }
             else if (type == LogSingleton.wzEND_TESTING)
             {
-                seampore = @" >>> Terminate Testing";
+                seampore = @"  Terminate Testing";
             }
             else if (type == LogSingleton.wzERROR)
             {
