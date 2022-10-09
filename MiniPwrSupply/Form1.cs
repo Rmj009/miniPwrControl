@@ -687,96 +687,6 @@ namespace MiniPwrSupply
             }
         }
 
-        private void _comportScanning()
-        {
-            string[] ports = SerialPort.GetPortNames();
-            SerialPort[] serialport = new SerialPort[ports.Length];
-            foreach (string p in ports)
-            {
-                int i = Array.IndexOf(ports, p);
-                serialport[i] = new SerialPort(); //note this line, otherwise you have no serial port declared, only array reference which can contains real SerialPort object
-                serialport[i].PortName = p;
-                serialport[i].BaudRate = 9600;
-                //serialport[i].Open();
-                //Scan inputs for "connectAlready"
-                //Enumerable.Range(txtbx_com.Text).Append(serialport[i].ToString());
-                //= serialport[i].ToString();
-            }
-
-        }
-
-        //-------------------------------------------------------------------------------------------------
-        //-------------------------------------------------------------------------------------------------
-        //----------------------------------User Input-----------------------------------------------------
-        //--------------------------------------UI---------------------------------------------------------
-        //-------------------------------------------------------------------------------------------------
-        //-------------------------------------------------------------------------------------------------
-        //private string getAvailablePorts()
-        //{
-        //    string[] ss = MulGetHardwareInfo(HardwareEnum.Win32_PnPEntity, "Name");    //Get PC hardware information
-        //    System.Collections.ArrayList portArray = new System.Collections.ArrayList();
-        //    try
-        //    {
-        //        for (var i = 0; i < ss.Length; i++)
-        //        {
-        //            if (ss[i].IndexOf("(") > -1 && ss[i].IndexOf(")") > -1)
-        //            {
-        //                portArray.Add(ss[i].Substring(ss[i].IndexOf("(") + 1, ss[i].IndexOf(")") - ss[i].IndexOf("(") - 1));
-        //            }
-        //        }
-
-        //        if (portArray.Count <= 0)
-        //            return "";
-        //        else
-        //            return portArray[0].ToString();
-        //    }
-        //    catch
-        //    {
-        //        MessageBox.Show("Get serial ports error!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        //        return "";
-        //    }
-
-        //    //if (portArray.Count > 0)
-        //    //{
-        //    //    //cmbPortName.Items.AddRange(portArray.ToArray());
-        //    //    //cmbPortName.SelectedIndex = 0;
-        //    //    //return portArray[0].ToString ();
-        //    //}
-        //}
-
-        ///// <summary>
-        ///// Get PC hardware information
-        ///// </summary>
-        ///// <param name="hardType"></param>
-        ///// <param name="propKey"></param>
-        ///// <returns></returns>
-        //public static string[] MulGetHardwareInfo(HardwareEnum hardType, string propKey)
-        //{
-        //    List<string> strs = new List<string>();
-        //    try
-        //    {
-        //        using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("select * from " + hardType))
-        //        {
-        //            var hardInfos = searcher.Get();
-        //            foreach (var hardInfo in hardInfos)
-        //            {
-        //                if (hardInfo["PNPDeviceID"].ToString().Contains(TWE_LITE_ID))
-        //                {
-        //                    strs.Add(hardInfo.Properties[propKey].Value.ToString());
-        //                }
-        //            }
-        //            searcher.Dispose();
-        //        }
-        //        return strs.ToArray();
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //    finally
-        //    { strs = null; }
-        //}
-
         private void _unknownCmd(string wCmd)
         {
             string unknownCmd = string.Empty;
@@ -881,13 +791,21 @@ namespace MiniPwrSupply
             {
                 try
                 {
+                    string[] ports = SerialPort.GetPortNames();
+                    SerialPort[] serialport = new SerialPort[ports.Length];
+                    foreach (string p in ports)
+                    {
+                        int i = Array.IndexOf(ports, p);
+                        serialport[i] = new SerialPort(); //note this line, otherwise you have no serial port declared, only array reference which can contains real SerialPort object
+                        serialport[i].PortName = p;
+                        serialport[i].BaudRate = 9600;
+                        //serialport[i].Open();
+                        //Scan inputs for "connectAlready"
+                        //Enumerable.Range(txtbx_com.Text).Append(serialport[i].ToString());
+                        //= serialport[i].ToString();
+                    }
                     LogSingleton.Instance.WriteLog("Close Form");
-                    //if (bWriteLogFlag)
-                    //{
-                    //    this.WriteTotalCountData();
-                    //}
-                    //ResultCsvSingleton.Instance.DeleteEmptyTestResultCsv();
-                    //ResultCsvItSingleton.Instance.DeleteEmptyTestResultCsv();
+
                 }
                 catch { }
 

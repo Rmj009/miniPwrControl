@@ -503,6 +503,7 @@
             this.Name = "Form1";
             this.Text = "Form1";
             this.Load += new System.EventHandler(this.Form1_Load);
+            this.Form1_Closing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_Closing);
             this.grpBox_Configuration.ResumeLayout(false);
             this.grpBox_Configuration.PerformLayout();
             this.grpBox_dashboard.ResumeLayout(false);
