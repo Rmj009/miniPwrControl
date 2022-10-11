@@ -120,9 +120,9 @@ namespace MiniPwrSupply
         private void DisplayText(Byte[] buffer)
         {
             textBox1.Clear();
-            string receivedata = "";
+            string receivedata = string.Empty;
             textBox1.Text += String.Format("{0}{1}", BitConverter.ToString(buffer), Environment.NewLine);
-            totalLength += buffer.Length;
+            totalLength = buffer.Length;
             label_DataReceived.Text = totalLength.ToString();
             try
             {
@@ -404,7 +404,7 @@ namespace MiniPwrSupply
                     }
                     catch (FormatException Formatex)
                     {
-                        throw Formatex;
+                        MessageBox.Show("Format Err!" + Formatex.Message); //throw Formatex;
                     }
                     catch (Exception ex)
                     {
@@ -687,96 +687,6 @@ namespace MiniPwrSupply
             }
         }
 
-        private void _comportScanning()
-        {
-            string[] ports = SerialPort.GetPortNames();
-            SerialPort[] serialport = new SerialPort[ports.Length];
-            foreach (string p in ports)
-            {
-                int i = Array.IndexOf(ports, p);
-                serialport[i] = new SerialPort(); //note this line, otherwise you have no serial port declared, only array reference which can contains real SerialPort object
-                serialport[i].PortName = p;
-                serialport[i].BaudRate = 9600;
-                //serialport[i].Open();
-                //Scan inputs for "connectAlready"
-                //Enumerable.Range(txtbx_com.Text).Append(serialport[i].ToString());
-                //= serialport[i].ToString();
-            }
-
-        }
-
-        //-------------------------------------------------------------------------------------------------
-        //-------------------------------------------------------------------------------------------------
-        //----------------------------------User Input-----------------------------------------------------
-        //--------------------------------------UI---------------------------------------------------------
-        //-------------------------------------------------------------------------------------------------
-        //-------------------------------------------------------------------------------------------------
-        //private string getAvailablePorts()
-        //{
-        //    string[] ss = MulGetHardwareInfo(HardwareEnum.Win32_PnPEntity, "Name");    //Get PC hardware information
-        //    System.Collections.ArrayList portArray = new System.Collections.ArrayList();
-        //    try
-        //    {
-        //        for (var i = 0; i < ss.Length; i++)
-        //        {
-        //            if (ss[i].IndexOf("(") > -1 && ss[i].IndexOf(")") > -1)
-        //            {
-        //                portArray.Add(ss[i].Substring(ss[i].IndexOf("(") + 1, ss[i].IndexOf(")") - ss[i].IndexOf("(") - 1));
-        //            }
-        //        }
-
-        //        if (portArray.Count <= 0)
-        //            return "";
-        //        else
-        //            return portArray[0].ToString();
-        //    }
-        //    catch
-        //    {
-        //        MessageBox.Show("Get serial ports error!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        //        return "";
-        //    }
-
-        //    //if (portArray.Count > 0)
-        //    //{
-        //    //    //cmbPortName.Items.AddRange(portArray.ToArray());
-        //    //    //cmbPortName.SelectedIndex = 0;
-        //    //    //return portArray[0].ToString ();
-        //    //}
-        //}
-
-        ///// <summary>
-        ///// Get PC hardware information
-        ///// </summary>
-        ///// <param name="hardType"></param>
-        ///// <param name="propKey"></param>
-        ///// <returns></returns>
-        //public static string[] MulGetHardwareInfo(HardwareEnum hardType, string propKey)
-        //{
-        //    List<string> strs = new List<string>();
-        //    try
-        //    {
-        //        using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("select * from " + hardType))
-        //        {
-        //            var hardInfos = searcher.Get();
-        //            foreach (var hardInfo in hardInfos)
-        //            {
-        //                if (hardInfo["PNPDeviceID"].ToString().Contains(TWE_LITE_ID))
-        //                {
-        //                    strs.Add(hardInfo.Properties[propKey].Value.ToString());
-        //                }
-        //            }
-        //            searcher.Dispose();
-        //        }
-        //        return strs.ToArray();
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //    finally
-        //    { strs = null; }
-        //}
-
         private void _unknownCmd(string wCmd)
         {
             string unknownCmd = string.Empty;
@@ -819,7 +729,7 @@ namespace MiniPwrSupply
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw new Exception("_GetComport err" + ex.Message);
             }
         }
 
@@ -830,7 +740,7 @@ namespace MiniPwrSupply
             //3.When an input has a specific phrase such as "connectAlready",
             //4.Close all ports and create a new one on the port that received the phrase.
             //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
-            string action = ">>> Synchronize serial port: " + this.wuzhiComport + "\r\n";
+            string title = ">>> Synchronize serial port: " + this.wuzhiComport + "\r\n";
             int tryCount = 1;
             do
             {
@@ -867,7 +777,7 @@ namespace MiniPwrSupply
                 }
                 finally
                 {
-                    richTextBox1.AppendText(action);
+                    richTextBox1.AppendText(title);
                     richTextBox1.Clear();
                 }
             } while (this.wuzhiComport == null);
@@ -881,7 +791,16 @@ namespace MiniPwrSupply
             {
                 try
                 {
-                    LogSingleton.Instance.WriteLog("Close Form");
+                    string[] ports = SerialPort.GetPortNames();
+                    SerialPort[] serialport = new SerialPort[ports.Length];
+                    foreach (string p in ports)
+                    {
+                        int i = Array.IndexOf(ports, p);
+                        serialport[i] = new SerialPort(); //note this line, otherwise you have no serial port declared, only array reference which can contains real SerialPort object
+                        serialport[i].PortName = p;
+                        serialport[i].BaudRate = 9600;
+                    }
+                    LogSingleton.Instance.WriteLog("------------------ Close Form ------------------" + @"with serialport{0}" + serialport[0], LogSingleton.wzEND_TESTING);
                     //if (bWriteLogFlag)
                     //{
                     //    this.WriteTotalCountData();
@@ -982,7 +901,8 @@ namespace MiniPwrSupply
                 }
                 if (!this.Chk_Input_Content())
                 {
-                    this.ShowErrMsg("Value Missing~~~!");
+                    this.ShowErrMsg("Vset or Iset Missing~~~!");
+                    return;
                 }
                 if (btn_Power.Text == "PowerOFF")            // because Btn_Power tradeoff WuzhiCmd.WuzhiPower.PowerOn
                 {
