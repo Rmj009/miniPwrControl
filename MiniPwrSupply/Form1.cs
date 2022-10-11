@@ -830,7 +830,7 @@ namespace MiniPwrSupply
             //3.When an input has a specific phrase such as "connectAlready",
             //4.Close all ports and create a new one on the port that received the phrase.
             //5.Now that the program knows what COM port the Arduino is on, it can carry on its tasks and send it commands through SerialPorts.
-            string action = ">>> Synchronize serial port: " + this.wuzhiComport + "\r\n";
+            string title = ">>> Synchronize serial port: " + this.wuzhiComport + "\r\n";
             int tryCount = 1;
             do
             {
@@ -867,7 +867,7 @@ namespace MiniPwrSupply
                 }
                 finally
                 {
-                    richTextBox1.AppendText(action);
+                    richTextBox1.AppendText(title);
                     richTextBox1.Clear();
                 }
             } while (this.wuzhiComport == null);
