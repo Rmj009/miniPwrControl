@@ -457,6 +457,17 @@ namespace MiniPwrSupply
             //}
         }
 
+        private void _loopListening(bool IsHeard)
+        {
+            byte[] wzListenCmd = WuzhiCmd.Instance._listenState();
+            do
+            {
+                serialPort1.Write(wzListenCmd, 0, wzListenCmd.Length);
+                serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+                LogSingleton.Instance.WriteLog(@"Listening ---> " + BitConverter.ToString(wzListenCmd), LogSingleton.wzSEND_COMMAND);
+            } while (IsHeard);
+        }
+
         private void parse(List<Byte> tempList)     //這個方法主要是在收到結尾字元後 (因為表示已經收到一段完整資料了) 呼叫，由於我們只要顯示資料內容的部份，所以在這方法中把開頭結尾字元給去除。
         {
             MessageBox.Show(tempList[0].ToString());
@@ -994,9 +1005,11 @@ namespace MiniPwrSupply
         private void StartToTestRFThreadFunc(object obj)
         {
             Form1 self = obj as Form1;
+            bool IsHeard = true;
             self.BeginInvoke(new Action(() =>
             {
                 //self.ShowTestGroupInformation(false, currentItem);
+                this._loopListening(IsHeard);
             }));
             try
             {
@@ -1088,6 +1101,9 @@ namespace MiniPwrSupply
                                 wuzhicmd = WuzhiCmd.Instance._IsConnected(WuzhiCmd.WuzhiConnectStatus.Connect);
                                 serialPort1.Write(wuzhicmd, 0, wuzhicmd.Length);
                                 serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+
+                                //-------------------------
+
                                 break;
                             }
                             catch (Exception ex)
@@ -1101,8 +1117,8 @@ namespace MiniPwrSupply
                                 throw new Exception("serialPort1.Write ERR" + ex.Message);
                             }
                         } while (receiveData == null);
-                        //Thread thread = new Thread(new ParameterizedThreadStart(StartToTestRFThreadFunc));
-                        //thread.Start(this);
+                        Thread thread = new Thread(new ParameterizedThreadStart(StartToTestRFThreadFunc));
+                        thread.Start(this);
                     }
                     catch (Exception ex)
                     {

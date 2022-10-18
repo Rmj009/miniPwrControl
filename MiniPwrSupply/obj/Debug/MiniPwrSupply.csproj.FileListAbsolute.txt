@@ -1,0 +1,11 @@
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\bin\Debug\MiniPwrSupply.exe.config
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\bin\Debug\MiniPwrSupply.exe
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\bin\Debug\MiniPwrSupply.pdb
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.csproj.AssemblyReference.cache
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.csproj.SuggestedBindingRedirects.cache
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.Form1.resources
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.Properties.Resources.resources
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.csproj.GenerateResource.cache
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.csproj.CoreCompileInputs.cache
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.exe
+C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.pdb
