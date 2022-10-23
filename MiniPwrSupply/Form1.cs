@@ -783,7 +783,7 @@ namespace MiniPwrSupply
             } while (this.wuzhiComport == null);
         }
 
-        private void Form1_Closing(object sender, FormClosingEventArgs e)
+        public void Form1_Closing(object sender, FormClosingEventArgs e)
         {
             DialogResult dr = MessageBox.Show(this, "Be sure to Eixt？", "Window Closing Notice", MessageBoxButtons.YesNo, MessageBoxIcon.Stop);
 
