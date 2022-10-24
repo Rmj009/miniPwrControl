@@ -120,9 +120,9 @@ namespace MiniPwrSupply
         private void DisplayText(Byte[] buffer)
         {
             textBox1.Clear();
-            string receivedata = "";
+            string receivedata = string.Empty;
             textBox1.Text += String.Format("{0}{1}", BitConverter.ToString(buffer), Environment.NewLine);
-            totalLength += buffer.Length;
+            totalLength = buffer.Length;
             label_DataReceived.Text = totalLength.ToString();
             try
             {
@@ -404,7 +404,7 @@ namespace MiniPwrSupply
                     }
                     catch (FormatException Formatex)
                     {
-                        throw Formatex;
+                        MessageBox.Show("Format Err!" + Formatex.Message); //throw Formatex;
                     }
                     catch (Exception ex)
                     {
@@ -455,6 +455,17 @@ namespace MiniPwrSupply
             //{ //less than this length, then the data is incomplete
             //  //Do the checking if length is at least 14
             //}
+        }
+
+        private void _loopListening(bool IsHeard)
+        {
+            byte[] wzListenCmd = WuzhiCmd.Instance._listenState();
+            do
+            {
+                serialPort1.Write(wzListenCmd, 0, wzListenCmd.Length);
+                serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+                LogSingleton.Instance.WriteLog(@"Listening ---> " + BitConverter.ToString(wzListenCmd), LogSingleton.wzSEND_COMMAND);
+            } while (IsHeard);
         }
 
         private void parse(List<Byte> tempList)     //這個方法主要是在收到結尾字元後 (因為表示已經收到一段完整資料了) 呼叫，由於我們只要顯示資料內容的部份，所以在這方法中把開頭結尾字元給去除。
@@ -729,7 +740,7 @@ namespace MiniPwrSupply
             }
             catch (Exception ex)
             {
-                throw ex;
+                throw new Exception("_GetComport err" + ex.Message);
             }
         }
 
@@ -799,6 +810,7 @@ namespace MiniPwrSupply
                         serialport[i] = new SerialPort(); //note this line, otherwise you have no serial port declared, only array reference which can contains real SerialPort object
                         serialport[i].PortName = p;
                         serialport[i].BaudRate = 9600;
+<<<<<<< HEAD
                         //serialport[i].Open();
                         //Scan inputs for "connectAlready"
                         //Enumerable.Range(txtbx_com.Text).Append(serialport[i].ToString());
@@ -806,6 +818,16 @@ namespace MiniPwrSupply
                     }
                     LogSingleton.Instance.WriteLog("Close Form");
 
+=======
+                    }
+                    LogSingleton.Instance.WriteLog("------------------ Close Form ------------------" + @"with serialport{0}" + serialport[0], LogSingleton.wzEND_TESTING);
+                    //if (bWriteLogFlag)
+                    //{
+                    //    this.WriteTotalCountData();
+                    //}
+                    //ResultCsvSingleton.Instance.DeleteEmptyTestResultCsv();
+                    //ResultCsvItSingleton.Instance.DeleteEmptyTestResultCsv();
+>>>>>>> 6243db72d126c8e7ba782aa13cdc3c67aab8827b
                 }
                 catch { }
 
@@ -900,7 +922,8 @@ namespace MiniPwrSupply
                 }
                 if (!this.Chk_Input_Content())
                 {
-                    this.ShowErrMsg("Value Missing~~~!");
+                    this.ShowErrMsg("Vset or Iset Missing~~~!");
+                    return;
                 }
                 if (btn_Power.Text == "PowerOFF")            // because Btn_Power tradeoff WuzhiCmd.WuzhiPower.PowerOn
                 {
@@ -992,9 +1015,11 @@ namespace MiniPwrSupply
         private void StartToTestRFThreadFunc(object obj)
         {
             Form1 self = obj as Form1;
+            bool IsHeard = true;
             self.BeginInvoke(new Action(() =>
             {
                 //self.ShowTestGroupInformation(false, currentItem);
+                this._loopListening(IsHeard);
             }));
             try
             {
@@ -1086,6 +1111,9 @@ namespace MiniPwrSupply
                                 wuzhicmd = WuzhiCmd.Instance._IsConnected(WuzhiCmd.WuzhiConnectStatus.Connect);
                                 serialPort1.Write(wuzhicmd, 0, wuzhicmd.Length);
                                 serialPort1.DataReceived += new SerialDataReceivedEventHandler(serialport1_DataReceived);
+
+                                //-------------------------
+
                                 break;
                             }
                             catch (Exception ex)
@@ -1099,8 +1127,8 @@ namespace MiniPwrSupply
                                 throw new Exception("serialPort1.Write ERR" + ex.Message);
                             }
                         } while (receiveData == null);
-                        //Thread thread = new Thread(new ParameterizedThreadStart(StartToTestRFThreadFunc));
-                        //thread.Start(this);
+                        Thread thread = new Thread(new ParameterizedThreadStart(StartToTestRFThreadFunc));
+                        thread.Start(this);
                     }
                     catch (Exception ex)
                     {
