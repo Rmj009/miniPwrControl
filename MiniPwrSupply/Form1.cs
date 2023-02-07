@@ -810,15 +810,6 @@ namespace MiniPwrSupply
                         serialport[i] = new SerialPort(); //note this line, otherwise you have no serial port declared, only array reference which can contains real SerialPort object
                         serialport[i].PortName = p;
                         serialport[i].BaudRate = 9600;
-<<<<<<< HEAD
-                        //serialport[i].Open();
-                        //Scan inputs for "connectAlready"
-                        //Enumerable.Range(txtbx_com.Text).Append(serialport[i].ToString());
-                        //= serialport[i].ToString();
-                    }
-                    LogSingleton.Instance.WriteLog("Close Form");
-
-=======
                     }
                     LogSingleton.Instance.WriteLog("------------------ Close Form ------------------" + @"with serialport{0}" + serialport[0], LogSingleton.wzEND_TESTING);
                     //if (bWriteLogFlag)
@@ -827,7 +818,6 @@ namespace MiniPwrSupply
                     //}
                     //ResultCsvSingleton.Instance.DeleteEmptyTestResultCsv();
                     //ResultCsvItSingleton.Instance.DeleteEmptyTestResultCsv();
->>>>>>> 6243db72d126c8e7ba782aa13cdc3c67aab8827b
                 }
                 catch { }
 
