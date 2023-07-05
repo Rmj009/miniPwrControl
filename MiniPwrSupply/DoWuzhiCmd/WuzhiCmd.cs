@@ -306,7 +306,6 @@ namespace MiniPwrSupply.DoWuzhiCmd
             }
             else if (strVset.Length > 4)       // coz the protocol wuzhi define merely suit in two bytes hexadecimal
             {
-                //double vsetting = Convert.ToDouble(txtbx_Vset.Text.Trim().Substring(0, txtbx_Vset.TextLength));
                 if (double.TryParse(strVset.Trim().Substring(0, strVset.Length), out Vset))
                 {
                     if (Vset > 55)
@@ -361,9 +360,7 @@ namespace MiniPwrSupply.DoWuzhiCmd
             {
                 double.TryParse(strVset.Trim(), out Vset);
                 double.TryParse(strIset.Trim(), out Iset);
-                //byte[] bytes = BitConverter.GetBytes(Vset * 100).Concat(BitConverter.GetBytes(Iset * 100)) as byte[];
-                //Buffer.BlockCopy();
-                //string tmp = (string)txtbx_Vset.Text.Trim().Concat(txtbx_Iset.Text.Trim());
+
             }
             return new double[] { Iset, Vset };
         }

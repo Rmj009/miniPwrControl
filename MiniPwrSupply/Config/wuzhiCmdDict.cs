@@ -35,11 +35,6 @@ namespace MiniPwrSupply.Config
             Recevied_Success, //170 -01-18-128-00-...-00-00-00-00-00-00-00 00-00-00-00-00-61
         }
 
-        //public enum wzCmd : int
-        //{
-        //    [StringValue()]
-        //    MakeConnect,
-        //}
     }
 
     public static class wuzhiCmdDict
