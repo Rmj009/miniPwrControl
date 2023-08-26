@@ -23,9 +23,9 @@ namespace MiniPwrSupply.WuizhiCmd
 
         //void SetRunResultCallback(Action<String, bool> resultCallback);
 
-        //void SetUICallback(Action<string> uiCallback);
+        void SetUICallback(Action<string> uiCallback);
 
-        //void SetLogCallback(Action<string, UInt32> logAction);
+        void SetLogCallback(Action<string, UInt32> logAction);
 
         //void SetDAQInstrument(IDAQInstrument dAQInstrument);
 
@@ -45,7 +45,6 @@ namespace MiniPwrSupply.WuizhiCmd
 
         //string GetErrorCode();
 
-
-        // void unlock(string key);
+        void unlock(string key);
     }
 }
