@@ -17,9 +17,9 @@ namespace MiniPwrSupply.WuizhiCmd
         void IDispose();
         void DoReceive();
 
-        //void CreateInstrumentObject();
+        void CreateInstrumentObject();
 
-        //void SetICSystemIni(object iniObject);
+        void SetICSystemIni(object iniObject);
 
         //void SetRunResultCallback(Action<String, bool> resultCallback);
 
@@ -39,11 +39,11 @@ namespace MiniPwrSupply.WuizhiCmd
 
         //void SetThermalDetectPowerSupplyInstrument(IPowerSupplyInstrument thermalInstrument);
 
-        //void StartToTestFromMacServer(object testItem);
+        void StartToTestFromMacServer(object testItem);
 
-        //void FailEraseFlash();
+        void FailEraseFlash();
 
-        //string GetErrorCode();
+        string GetErrorCode();
 
         void unlock(string key);
     }
