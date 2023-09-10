@@ -74,7 +74,7 @@ namespace MiniPwrSupply
 
         //private const Int32 A = 170;
         private static Int32 checksum = 0;
-
+        private InterfaceBase mSystemConfig = null;
         public double ListenVoltage = -1;                    //impossible to be negative
         private double vGap = 0.0d;
         public byte[] globalBuffer = new byte[20];  //large buffer, put globally
@@ -972,6 +972,8 @@ namespace MiniPwrSupply
 
         private void btn_Power_Click(object sender, EventArgs e)
         {
+
+            bool IsAvail = this.mSystemConfig.IsPowerSupplyEnable();
             Button OneShotBtn = (Button)sender;
             byte[] wzCmdBytes = null;
             title = "----- Set Power -----";
