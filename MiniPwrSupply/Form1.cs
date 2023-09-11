@@ -16,6 +16,8 @@ using MiniPwrSupply.Config;
 using static MiniPwrSupply.Config.wuzhiConfig;
 using System.Collections;
 using MiniPwrSupply.Singleton;
+using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 
 namespace MiniPwrSupply
 {
@@ -1190,4 +1192,71 @@ namespace MiniPwrSupply
 
         #endregion DebugPage Button
     }
+
+    internal class Binary_Serail_DLL
+    {
+        public static UInt32 ONESTOPBIT = 0;
+        public static UInt32 ONE5STOPBITS = 1;
+        public static UInt32 TWOSTOPBITS = 2;
+
+        public static UInt32 EVENPARITY = 2;
+        public static UInt32 MARKPARITY = 3;
+        public static UInt32 NOPARITY = 0;
+        public static UInt32 ODDPARITY = 1;
+        public static UInt32 SPACEPARITY = 4;
+
+        public static UInt32 HARDWARE_FLOW_CONTROL_DISABLE = 0;
+        public static UInt32 HARDWARE_FLOW_CONTROL_CTS_ENABLE_RTS_ENABLE = 1;
+        public static UInt32 HARDWARE_FLOW_CONTROL_CTS_ENABLE_RTS_HANDSHAKE = 2;
+        public static UInt32 HARDWARE_FLOW_CONTROL_CTS_ENABLE_RTS_TOGGLE = 3;
+
+        private const string DLL_PATH = "asecl_dll\\Utility\\Serial_port\\SerialPort.dll";
+
+        public delegate void LogMsg([MarshalAsAttribute(UnmanagedType.LPStr)] string sErr);
+
+        public delegate bool BinaryFormatCheck(IntPtr data, int len);
+
+        [DataContract]
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1), Serializable]
+        public struct SERIAL_PORT_VAR
+        {
+            [DataMember]
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 512)]
+            public string portName;
+
+            public UInt32 baudRate;
+            public UInt32 byteSize;
+            public UInt32 stopBit;
+            public UInt32 parity;
+            public UInt32 txRxBufferSize;
+            public UInt32 hardwareFlowControl;
+        };
+
+        [DataContract]
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1), Serializable]
+        public struct BINARY_SERIAL_RESULT
+        {
+            [DataMember]
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 512)]
+            public byte[] readData;
+
+            public int readLen;
+        };
+
+        [DllImport(DLL_PATH, SetLastError = true, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void Binary_SetLogCallback(IntPtr msg);
+
+        [DllImport(DLL_PATH, SetLastError = true, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool Binary_SerialConnect(ref SERIAL_PORT_VAR param);
+
+        [DllImport(DLL_PATH, SetLastError = true, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void Binary_SerialClose();
+
+        [DllImport(DLL_PATH, SetLastError = true, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool Binary_ClearBuffer();
+
+        [DllImport(DLL_PATH, SetLastError = true, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool Binary_TransferReceive(byte[] cmd, UInt32 cmdLen, IntPtr BinaryFormatCheck, ref BINARY_SERIAL_RESULT result, UInt32 timeoutMs);
+    }
+
 }
