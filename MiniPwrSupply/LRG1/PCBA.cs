@@ -1,5 +1,4 @@
-﻿using EasyLibrary;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -13,8 +12,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
-using WNC.API;
-using NationalInstruments.VisaNS;
+//using WNC.API;
+//using EasyLibrary;
+//using NationalInstruments.VisaNS;
 using System.Net.Security;
 using System.Runtime.CompilerServices;
 
@@ -82,9 +82,9 @@ namespace MiniPwrSupply.LRG1
         {
             if (useShield)
             {
-                fixture.ControlIO(Fixture.FixtureIO.IO_6, CTRL.ON);
-                fixture.ControlIO(Fixture.FixtureIO.IO_7, CTRL.ON);
-                fixture.ControlIO(Fixture.FixtureIO.IO_8, CTRL.ON);
+                //fixture.ControlIO(Fixture.FixtureIO.IO_6, CTRL.ON);
+                //fixture.ControlIO(Fixture.FixtureIO.IO_7, CTRL.ON);
+                //fixture.ControlIO(Fixture.FixtureIO.IO_8, CTRL.ON);
             }
 
             try
@@ -93,7 +93,7 @@ namespace MiniPwrSupply.LRG1
                 Net.NewNetPort newNetPort = new Net.NewNetPort();
                 #region create SMT file
 
-                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
                 {
                     //SE_TODO: get infor from SFCS
                     SentPsnForGetMAC(status_ATS.txtPSN.Text.Trim());

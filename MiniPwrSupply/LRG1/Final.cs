@@ -9,8 +9,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
-using WNC.API;
-using EasyLibrary;
+//using WNC.API;
+//using EasyLibrary;
 using System.Net.Security;
 using System.Runtime.CompilerServices;
 

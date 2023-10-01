@@ -8,7 +8,7 @@ using System.Windows.Forms;
 using System.Threading;
 using System.Net;
 using System.Net.Sockets;
-using WNC.API;
+//using WNC.API;
 using System.Text.RegularExpressions;
 using System.Collections;
 

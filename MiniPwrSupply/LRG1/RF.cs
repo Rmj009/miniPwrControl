@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using System.Diagnostics;
-using WNC.API;
+//using WNC.API;
 using System.Runtime.CompilerServices;
 
 namespace MiniPwrSupply.LRG1
