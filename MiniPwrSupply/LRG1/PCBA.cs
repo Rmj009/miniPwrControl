@@ -189,8 +189,8 @@ namespace MiniPwrSupply.LRG1
                 }
                 else
                 {
-                    frmOK.Label = "Xác nhận đã kết nối 'USB3.0' và 'điện thoại SLIC', 'dây mạng' đã kết nối vào cổng LAN màu vàng port1,\r\nVui lòng bật nguồn và nhấn nút nguồn để khởi động";
-                    frmOK.ShowDialog();
+                    //frmOK.Label = "Xác nhận đã kết nối 'USB3.0' và 'điện thoại SLIC', 'dây mạng' đã kết nối vào cổng LAN màu vàng port1,\r\nVui lòng bật nguồn và nhấn nút nguồn để khởi động";
+                    //frmOK.ShowDialog();
                 }
                 DisplayMsg(LogType.Log, "Power on!!!");
 

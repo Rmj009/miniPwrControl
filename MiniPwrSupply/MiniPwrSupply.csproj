@@ -70,6 +70,10 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="LRG1\Final.cs" />
+    <Compile Include="LRG1\PCBA.cs" />
+    <Compile Include="LRG1\RF.cs" />
+    <Compile Include="LRG1\wifi.cs" />
     <Compile Include="MiniPwrSystemIni.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

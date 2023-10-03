@@ -403,7 +403,7 @@ namespace MiniPwrSupply.LRG1
 
                 RunIQFact(RFTestItem.WiFi);
 
-                CheckWiFiCalData(PortType.SSH);
+                this.RF_CheckWiFiCalData(PortType.SSH);
 
                 if (CheckGoNoGo())
                 {
@@ -420,6 +420,107 @@ namespace MiniPwrSupply.LRG1
                 AddData(item, 1);
             }
         }
+        private void RF_CheckWiFiCalData(PortType portType)
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string item = "CheckWiFiCalData";
+            string keyword = "";
+            string res = "";
+            string wifi_data_backup_path = Path.Combine(Application.StartupPath, "WiFiCalData_backup");
+            string PC_IP = Func.ReadINI("Setting", "IP", "PC", "192.168.1.2");
+            var regex = "(.{2}):(.{2}):(.{2}):(.{2}):(.{2}):(.{2})";
+
+            try
+            {
+                if (portType == PortType.UART)
+                    keyword = "root@OpenWrt:/# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:/#"
+                else
+                    keyword = "root@OpenWrt:~# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:~#"
+
+                DisplayMsg(LogType.Log, "=============== Check WiFi Cal Data ===============");
+                DisplayMsg(LogType.Log, "BaseMAC: " + infor.BaseMAC);
+
+                OpenTftpd32New(wifi_data_backup_path, 15 * 1000);
+                //Backup wifi data
+                SendAndChk(portType, "cat /dev/mmcblk0p21 > /tmp/backupwifi", keyword, out res, 0, 5000);
+                if (res.Contains("No such file or directory"))
+                {
+                    DisplayMsg(LogType.Log, "Backup wifi data fail");
+                    AddData(item, 1);
+                    return;
+                }
+                //Thread.Sleep(5 * 1000);
+                // ================================
+                this.RF_enable_all_wifi();
+                // ================================
+                //check WiFi 2.4G MAC = BaseMAC+4
+                string wifi_2g_mac = MACConvert(infor.BaseMAC, 4);
+                DisplayMsg(LogType.Log, "WiFi_2G_MAC: " + wifi_2g_mac);
+                wifi_2g_mac = Regex.Replace(wifi_2g_mac, regex, "$2$1 $4$3 $6$5").ToLower();
+                SendAndChk(portType, "hexdump -s 0x58810 -n 6 /dev/mmcblk0p21", keyword, out res, 0, 5000);
+                if (!res.Contains(wifi_2g_mac))
+                {
+                    DisplayMsg(LogType.Log, "Check WiFi 2.4G MAC fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                //check WiFi 5G MAC = BaseMAC+3
+                string wifi_5g_mac = MACConvert(infor.BaseMAC, 3);
+                DisplayMsg(LogType.Log, "WiFi_5G_MAC: " + wifi_5g_mac);
+                wifi_5g_mac = Regex.Replace(wifi_5g_mac, regex, "$2$1 $4$3 $6$5").ToLower();
+                SendAndChk(portType, "hexdump -s 0xbc810 -n 6 /dev/mmcblk0p21", keyword, out res, 0, 5000);
+                if (!res.Contains(wifi_5g_mac))
+                {
+                    DisplayMsg(LogType.Log, "Check WiFi 5G MAC fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                //check WiFi 6G MAC = BaseMAC+2
+                string wifi_6g_mac = MACConvert(infor.BaseMAC, 2);
+                DisplayMsg(LogType.Log, "WiFi_6G_MAC: " + wifi_6g_mac);
+                wifi_6g_mac = Regex.Replace(wifi_6g_mac, regex, "$2$1 $4$3 $6$5").ToLower();
+                SendAndChk(portType, "hexdump -s 0x8a810 -n 6 /dev/mmcblk0p21", keyword, out res, 0, 5000);
+                if (!res.Contains(wifi_6g_mac))
+                {
+                    DisplayMsg(LogType.Log, "Check WiFi 6G MAC fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+
+                //Backup wifi data
+                if (Directory.Exists(wifi_data_backup_path))
+                {
+                    File.Delete(Path.Combine(wifi_data_backup_path, "backupwifi"));
+                    File.Delete(Path.Combine(wifi_data_backup_path, $"backupwifi_{infor.SerialNumber}"));
+                    SendAndChk(portType, "cd /tmp", "root@OpenWrt:/tmp#", out res, 0, 3000);
+                    SendAndChk(portType, $"tftp -p -l backupwifi {PC_IP}", "root@OpenWrt:/tmp# \r\n", out res, 0, 5000);
+                    if (File.Exists(Path.Combine(wifi_data_backup_path, "backupwifi")))
+                    {
+                        File.Move(Path.Combine(wifi_data_backup_path, "backupwifi"), Path.Combine(wifi_data_backup_path, $"backupwifi_{infor.SerialNumber}"));
+                        DisplayMsg(LogType.Log, $"Backup wifi data in {Path.Combine(wifi_data_backup_path, $"backupwifi_{infor.SerialNumber}")}");
+                    }
+                }
+
+                AddData(item, 0);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+            }
+            finally
+            {
+                SendAndChk(portType, "cd ~", keyword, out res, 0, 3000);
+            }
+        }
+
         private void RF_BLE()
         {
             if (!CheckGoNoGo())
