@@ -71,6 +71,7 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="LRG1\Final.cs" />
+    <Compile Include="LRG1\OTA.cs" />
     <Compile Include="LRG1\PCBA.cs" />
     <Compile Include="LRG1\RF.cs" />
     <Compile Include="LRG1\wifi.cs" />
