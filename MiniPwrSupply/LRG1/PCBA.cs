@@ -20,6 +20,7 @@ using System.Runtime.CompilerServices;
 
 namespace MiniPwrSupply.LRG1
 {
+
     public partial class frmMain
     {
         DeviceInfor infor = new DeviceInfor();
@@ -82,9 +83,9 @@ namespace MiniPwrSupply.LRG1
         {
             if (useShield)
             {
-                //fixture.ControlIO(Fixture.FixtureIO.IO_6, CTRL.ON);
-                //fixture.ControlIO(Fixture.FixtureIO.IO_7, CTRL.ON);
-                //fixture.ControlIO(Fixture.FixtureIO.IO_8, CTRL.ON);
+                fixture.ControlIO(Fixture.FixtureIO.IO_6, CTRL.ON);
+                fixture.ControlIO(Fixture.FixtureIO.IO_7, CTRL.ON);
+                fixture.ControlIO(Fixture.FixtureIO.IO_8, CTRL.ON);
             }
 
             try
@@ -93,7 +94,7 @@ namespace MiniPwrSupply.LRG1
                 Net.NewNetPort newNetPort = new Net.NewNetPort();
                 #region create SMT file
 
-                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
                 {
                     //SE_TODO: get infor from SFCS
                     SentPsnForGetMAC(status_ATS.txtPSN.Text.Trim());
@@ -189,8 +190,8 @@ namespace MiniPwrSupply.LRG1
                 }
                 else
                 {
-                    //frmOK.Label = "Xác nhận đã kết nối 'USB3.0' và 'điện thoại SLIC', 'dây mạng' đã kết nối vào cổng LAN màu vàng port1,\r\nVui lòng bật nguồn và nhấn nút nguồn để khởi động";
-                    //frmOK.ShowDialog();
+                    frmOK.Label = "Xác nhận đã kết nối 'USB3.0' và 'điện thoại SLIC', 'dây mạng' đã kết nối vào cổng LAN màu vàng port1,\r\nVui lòng bật nguồn và nhấn nút nguồn để khởi động";
+                    frmOK.ShowDialog();
                 }
                 DisplayMsg(LogType.Log, "Power on!!!");
 
@@ -215,7 +216,7 @@ namespace MiniPwrSupply.LRG1
                     Set_DECT_ID();
                     Set_DECT_RFPI(); //Rena_20230803, EEProm Param Set RFPI
                     // ===================================================================
-                    this.EEProm_Set(); //testplan0922,    v. EEPROM set (PA2_COMP) => remove by v037 testplan0925
+                    //this.EEProm_Set(); //testplan0922,    v. EEPROM set (PA2_COMP) => remove by v037 5.3.3 testplan0925
                     // ===================================================================
                 }
 
@@ -2416,4 +2417,1495 @@ namespace MiniPwrSupply.LRG1
                     }
                     else
                     {
-                        DisplayMsg(LogType.Log, $"Check LAN Port{port
+                        DisplayMsg(LogType.Log, $"Check LAN Port{port_num} fail");
+                        if (retry_cnt++ < 3)
+                        {
+                            frmOK.Label = $"Vui lòng kiểm tra dây mạng đã được kết nối đúng vào cổng LAN số {port_num} chưa";
+                            frmOK.ShowDialog();
+                            DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
+                            Thread.Sleep(1000);
+                            goto LAN_Port_Test;
+                        }
+                        else
+                        {
+                            AddData($"Eth_LAN_Port{port_num}", 1);
+                            return;
+                        }
+                    }
+                }
+
+                //WAN Port
+                retry_cnt = 0;
+                frmOK.Label = "Hãy kết nối dây mạng vào cổng WAN, sau đó nhấn\"Xác nhận\"";
+                frmOK.ShowDialog();
+
+            WAN_Port_Test:
+                if (SendAndChk(PortType.SSH, "mt eth linkrate", "port 5: 2500M FD", 0, 3000))
+                {
+                    DisplayMsg(LogType.Log, "Check WAN Port pass");
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Check WAN Port fail");
+                    if (retry_cnt++ < 3)
+                    {
+                        frmOK.Label = "Vui lòng kiểm tra dây mạng đã được kết nối đúng vào cổng WAN chưa";
+                        frmOK.ShowDialog();
+                        DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
+                        Thread.Sleep(1000);
+                        goto WAN_Port_Test;
+                    }
+                    else
+                    {
+                        AddData("Eth_WAN_Port", 1);
+                        return;
+                    }
+                }
+
+                if (write_mac)
+                {
+                    //Write MAC Address 寫完後要重開機才會生效,所以PCBA站寫入後在final站檢查
+                    //Eth0 ~ Eth3 = LAN = BaseMAC
+                    //Eth4 = WAN = BaseMAC + 1
+                    //echo -n -e '\xE8\xC7\xCF\xAF\x46\x38' > /tmp/mac
+
+                    string write_lan_mac = MACConvert(infor.BaseMAC).Replace(":", "\\x");
+                    string write_wan_mac = MACConvert(infor.WanMAC).Replace(":", "\\x");
+                    DisplayMsg(LogType.Log, $"BaseMAC: {infor.BaseMAC}, WanMAC: {infor.WanMAC}");
+                    DisplayMsg(LogType.Log, $"Write LAN MAC: {write_lan_mac}");
+                    DisplayMsg(LogType.Log, $"Write WAN MAC: {write_wan_mac}");
+
+                    SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' > /tmp/mac", keyword, out res, 0, 3000); //eth0
+                    SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth1
+                    SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth2
+                    SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth3
+                    SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_wan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth4
+                    SendAndChk(PortType.SSH, "dd if=/tmp/mac of=/dev/mmcblk0p21 bs=1 count=30", keyword, out res, 0, 3000);
+                    if (res.Contains("30 bytes (30B) copied") && !res.Contains("No such file or directory"))
+                    {
+                        DisplayMsg(LogType.Log, "Write eth0~eth4 MAC Address pass");
+                        AddData(item, 0);
+                        status_ATS.AddDataRaw("LRG1_BASE_MAC", infor.BaseMAC.Trim().Replace(":", ""), infor.BaseMAC.Trim().Replace(":", ""), "000000");
+                        status_ATS.AddDataRaw("LRG1_WAN_MAC", infor.WanMAC.Trim().Replace(":", ""), infor.WanMAC.Trim().Replace(":", ""), "000000");
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, "Write eth0~eth4 MAC Address fail");
+                        AddData(item, 1);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+        }
+        private string InsertColon(string macAddress)
+        {
+            macAddress = macAddress.Replace(":", "");
+            if (macAddress.Length != 12)
+            {
+                return macAddress;
+            }
+            string formattedMAC = string.Join(":", Enumerable.Range(0, 6).Select(i => macAddress.Substring(i * 2, 2)));
+
+            return formattedMAC;
+        }
+        private void CheckEthernetMAC()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string item = "CheckEthernetMAC";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string res = "";
+            string formattedBaseMAC = string.Empty;
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== Check Ethernet MAC ===============");
+                DisplayMsg(LogType.Log, $"Base MAC Get from SFCS: {infor.BaseMAC}");
+                formattedBaseMAC = InsertColon(infor.BaseMAC);
+                DisplayMsg(LogType.Log, $"Base MAC Convert: {formattedBaseMAC}");
+                if (formattedBaseMAC.Length != 17 || formattedBaseMAC.Length != infor.WanMAC.Length) { DisplayMsg(LogType.Log, "Leng mac fail"); return; }
+                SendAndChk(PortType.SSH, "ifconfig | grep eth", keyword, out res, 0, 5000);
+                if (Regex.IsMatch(res, $"eth0.+HWaddr {formattedBaseMAC}") && Regex.IsMatch(res, $"eth1.+HWaddr {formattedBaseMAC}") &&
+                    Regex.IsMatch(res, $"eth2.+HWaddr {formattedBaseMAC}") && Regex.IsMatch(res, $"eth3.+HWaddr {formattedBaseMAC}") &&
+                    Regex.IsMatch(res, $"eth4.+HWaddr {infor.WanMAC}"))
+                {
+                    DisplayMsg(LogType.Log, "Check eth0~eth4 MAC Address pass");
+                    AddData(item, 0);
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Check eth0~eth4 MAC Address fail");
+                    AddData(item, 1);
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+        }
+        private void CurrentSensor()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string item = "CurrentSensor";
+            string keyword = @"root@OpenWrt";
+            string res = "";
+            string Power = "";
+            string Current = "";
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== Check Current Sensor ===============");
+
+                //初期先收集數據,不判斷pass/fail
+                SendAndChk(PortType.SSH, "mt power", keyword, out res, 0, 3000);
+                Match m = Regex.Match(res, @"Power\(W\): (?<power>.+)\r\nCurrent\(A\): (?<current>.+)");
+                if (m.Success)
+                {
+                    Power = m.Groups["power"].Value.Trim();
+                    Current = m.Groups["current"].Value.Trim();
+                }
+
+                DisplayMsg(LogType.Log, "Power: " + Power);
+                DisplayMsg(LogType.Log, "Current: " + Current);
+                if (Power != "" && Current != "")
+                {
+                    status_ATS.AddData("Power", "W", Convert.ToDouble(Power));
+                    status_ATS.AddData("Current", "A", Convert.ToDouble(Current));
+                    //status_ATS.AddDataRaw("LRG1_Power", Power, Power, "000000");
+                    //status_ATS.AddDataRaw("LRG1_Current", Current, Current, "000000");
+                    AddData(item, 0);
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Check current sensor fail");
+                    AddData(item, 1);
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+        }
+        private void BleTest()
+        {
+            /*if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string item = "BleTest";
+            string keyword = @"root@OpenWrt";
+            string res = "";
+            string ble_addr = "";
+            string ble_ver = "";
+            string se_ver = "";
+
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== BLE Test ===============");
+                //Rena_20230803, add ble_ver and se_ver for BLE test
+                //Check BLE version
+                //[I] Bluetooth stack booted: v5.0.0-b108
+                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_fw_upgrade/value", keyword, out res, 0, 5000);
+                SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/ble_rst/value", keyword, out res, 0, 5000);
+                Thread.Sleep(300);
+                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_rst/value;sync;sync", keyword, out res, 0, 5000);
+                SendAndChk(PortType.SSH, "bt_host_empty -u /dev/ttyMSM1 -v", keyword, out res, 0, 5000);
+                Match m = Regex.Match(res, "Bluetooth stack booted: (?<BLE_ver>.+)");
+                if (m.Success)
+                {
+                    ble_ver = m.Groups["BLE_ver"].Value.Trim();
+                }
+                DisplayMsg(LogType.Log, $"SFCS BLEver: {infor.BLEver}");
+                DisplayMsg(LogType.Log, "BLE version: " + ble_ver);
+                if (ble_ver == "" || string.Compare(infor.BLEver, ble_ver) != 0)
+                {
+                    DisplayMsg(LogType.Log, "Check BLE version fail");
+                    AddData(item, 1);
+                }
+                status_ATS.AddDataRaw("LRG1_BLE_Version", ble_ver, ble_ver, "000000");
+
+                //check security element version
+                //[I] SE FW version: 0001020E
+                m = Regex.Match(res, "SE FW version: (?<SE_ver>.+)");
+                if (m.Success)
+                {
+                    se_ver = m.Groups["SE_ver"].Value.Trim();
+                }
+                DisplayMsg(LogType.Log, $"SFCS SEver: {infor.SEver}");
+                DisplayMsg(LogType.Log, "SE version: " + se_ver);
+                if (se_ver == "" || string.Compare(infor.SEver, se_ver) != 0)
+                {
+                    DisplayMsg(LogType.Log, "Check security element version fail");
+                    AddData(item, 1);
+                }
+
+                status_ATS.AddDataRaw("LRG1_SE_Version", se_ver, se_ver, "000000");
+
+                //BLE mac是來料就設定好了的,不需寫入,只要讀取後上拋SFCS
+                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_fw_upgrade/value;echo 0 > /sys/class/gpio/ble_rst/value;usleep 300000;echo 1 > /sys/class/gpio/ble_rst/value", "#", out res, 0, 10000);
+
+
+                SendAndChk(PortType.SSH, "bt_host_empty -u /dev/ttyMSM1", "Started advertising", out res, 0, 10000);
+                Match m = Regex.Match(res, @"Bluetooth public device address: (?<ble_addr>[\:\w]{17})");
+                if (m.Success)
+                {
+                    ble_addr = m.Groups["ble_addr"].Value;
+                    DisplayMsg(LogType.Log, "BLE address: " + ble_addr);
+                    infor.BleMAC = ble_addr; //Rena_20230522, for HQ sample test flow
+                    AddData(item, 0);
+                    status_ATS.AddDataRaw("LRG1_BLE_MAC", ble_addr.Trim().Replace(":", ""), ble_addr.Trim().Replace(":", ""), "000000");
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Check BLE address fail");
+                    AddData(item, 1);
+                }
+
+                //send ctrl+c
+                SendCommand(PortType.SSH, sCtrlC, 500);
+                ChkResponse(PortType.SSH, ITEM.NONE, keyword, out res, 3000);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }*/
+
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string item = "BleTest";
+            string keyword = @"root@OpenWrt";
+            string res = "";
+            string ble_addr = "";
+            string ble_ver = "";
+            string se_ver = "";
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== BLE Test ===============");
+
+                //Rena_20230803, add ble_ver and se_ver for BLE test
+                //Check BLE version
+                //[I] Bluetooth stack booted: v5.0.0-b108
+                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_fw_upgrade/value", keyword, out res, 0, 5000);
+                SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/ble_rst/value", keyword, out res, 0, 5000);
+                DisplayMsg(LogType.Log, @"Delay 6s UP for BLE reset time");
+                Thread.Sleep(5 * 1000);
+                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_rst/value;sync;sync", keyword, out res, 0, 5000);
+                Thread.Sleep(6 * 1000);
+                SendAndChk(PortType.SSH, "bt_host_empty -u /dev/ttyMSM1 -v", keyword, out res, 0, 5000);
+                Thread.Sleep(2 * 1000);
+                Match m = Regex.Match(res, "Bluetooth stack booted: (?<BLE_ver>.+)");
+                if (m.Success)
+                {
+                    ble_ver = m.Groups["BLE_ver"].Value.Trim();
+                }
+                DisplayMsg(LogType.Log, $"SFCS BLEver: {infor.BLEver}");
+                DisplayMsg(LogType.Log, "BLE version: " + ble_ver);
+                if (ble_ver == "" || string.Compare(infor.BLEver, ble_ver) != 0)
+                {
+                    DisplayMsg(LogType.Log, "Check BLE version fail");
+                    AddData(item, 1);
+                }
+
+                //check security element version
+                //[I] SE FW version: 0001020E
+                m = Regex.Match(res, "SE FW version: (?<SE_ver>.+)");
+                if (m.Success)
+                {
+                    se_ver = m.Groups["SE_ver"].Value.Trim();
+                }
+                DisplayMsg(LogType.Log, $"SFCS SEver: {infor.SEver}");
+                DisplayMsg(LogType.Log, "SE version: " + se_ver);
+                if (se_ver == "" || string.Compare(infor.SEver, se_ver) != 0)
+                {
+                    DisplayMsg(LogType.Log, "Check security element version fail");
+                    AddData(item, 1);
+                }
+
+                //check mac
+                //BLE mac是來料就設定好了的,不需寫入,只要讀取後上拋SFCS
+                //[I] Bluetooth public device address: E8:E0:7E:E4:DE:B7
+                m = Regex.Match(res, @"Bluetooth public device address: (?<ble_addr>[\:\w]{17})");
+                if (m.Success)
+                {
+                    ble_addr = m.Groups["ble_addr"].Value;
+                    DisplayMsg(LogType.Log, "BLE address: " + ble_addr);
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Check BLE MAC fail");
+                    AddData(item, 1);
+                }
+
+                if (CheckGoNoGo())
+                {
+                    AddData(item, 0);
+                    status_ATS.AddDataRaw("LRG1_BLE_MAC", ble_addr.Trim().Replace(":", ""), ble_addr.Trim().Replace(":", ""), "000000");
+                    status_ATS.AddDataRaw("LRG1_BLE_Ver", ble_ver, ble_ver, "000000");
+                    status_ATS.AddDataRaw("LRG1_SE_Ver", se_ver, se_ver, "000000");
+                    infor.BleMAC = ble_addr; //Rena_20230522, for HQ sample test flow
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+        }
+        private void NFCTag()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string item = "NFCTag";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string res = "";
+            string NFC_UID = "";
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== Read NFC Tag UID ===============");
+
+                //0x04 0x33 0x88 0xe2 0xed 0x10 0x90 0x00 0x44 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+                SendAndChk(PortType.SSH, "i2ctransfer -y 0 w1@0x55 0x0 r16", keyword, out res, 0, 3000);
+
+                string[] lines = res.Split('\n');
+                foreach (string line in lines)
+                {
+                    if (line.StartsWith("0x"))
+                    {
+                        string[] vals = line.Split(' ');
+                        NFC_UID = string.Join(" ", vals, 0, 7);
+                        DisplayMsg(LogType.Log, "NFC_UID: " + NFC_UID);
+                        break;
+                    }
+                }
+
+                //PCBA站使用NFC Tag陪測golden,不需上拋UID
+                if (NFC_UID == "")
+                {
+                    DisplayMsg(LogType.Log, "Read NFC Tag UID fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                //Check NFC field detection pin
+                SendAndChk(PortType.SSH, "mt gpio dump nfc", keyword, out res, 0, 3000);
+                if (res.Contains("NFC: low"))
+                {
+                    DisplayMsg(LogType.Log, "Check NFC field detection pin - low pass");
+                    AddData(item, 0);
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Check NFC field detection pin - low fail");
+                    AddData(item, 1);
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+        }
+        private bool PingDUT(string item, PortType portType, string ip, string keyword, out string res, int timeOutMs = 5 * 1000)
+        {
+            bool result = false;
+            res = "";
+
+            try
+            {
+                SendCommand(portType, "ping " + ip + " -c 3", 500);
+                ChkResponse(portType, ITEM.NONE, keyword, out res, timeOutMs);
+
+                if (res.Contains(ip) && res.Contains(keyword))
+                {
+                    AddData(item, 0);
+                    result = true;
+                }
+                else
+                {
+                    AddData(item, 1);
+                    result = false;
+                }
+                SendCommand(portType, sCtrlC, 500);
+                ChkResponse(portType, ITEM.NONE, "root@OpenWrt", out res, timeOutMs);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+                return false;
+            }
+        }
+        private void SFP_TP_Test()
+        {
+            try
+            {
+                string res = "";
+                double TP_value = -999;
+                string TP_unit = "";
+                string Iperf_CMD_TX = WNC.API.Func.ReadINI("Setting", "Iperf", "SFP_TX_CMD", "iperf3 -c 192.168.1.15 -i 1 -w 2m -t 10 -p 11111");
+                int timeOutMs = Convert.ToInt32(Func.ReadINI("Setting", "Iperf", "SFPTxTimeOutMs", "20000"));
+
+                DisplayMsg(LogType.Log, "=== SFP TP Test ===");
+
+                SendCommand(PortType.UART, Iperf_CMD_TX, 500);
+                if (!ChkResponse(PortType.UART, ITEM.NONE, "root@OpenWrt", out res, timeOutMs))
+                {
+                    SendCommand(PortType.UART, sCtrlC, 500);
+                }
+
+                //check iperf result
+                if (!res.Contains("Gbits/sec") && !res.Contains("Mbits/sec"))
+                {
+                    DisplayMsg(LogType.Log, "SFP iperf fail");
+                    AddData("SFP_TP_Test", 1);
+                    return;
+                }
+
+                string[] msg = res.Split('\n');
+                for (int i = 0; i < msg.Length; i++)
+                {
+                    //[  4]   0.00-10.00  sec  3.80 GBytes  3.26 Gbits/sec                  receiver
+                    if (msg[i].Contains("receiver"))
+                    {
+                        Match m = Regex.Match(msg[i], @"([\.\d]+) (\w+)/sec");
+                        if (m.Success)
+                        {
+                            TP_value = Convert.ToDouble(m.Groups[1].Value);
+                            TP_unit = m.Groups[2].Value.Trim();
+                            DisplayMsg(LogType.Log, $"SFP TP : {TP_value} {TP_unit}");
+                        }
+                        break;
+                    }
+                }
+                status_ATS.AddData("SFP_TP", TP_unit, TP_value);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData("SFP_TP_Test", 1);
+            }
+        }
+        private void LED_Control(string item_name, string cmd, CTRL ctrl)
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string keyword = @"root@OpenWrt";
+            string test_item = $"{item_name}_{ctrl.ToString()}";
+
+            try
+            {
+                if (ctrl == CTRL.ON)
+                {
+                    SendAndChk(PortType.SSH, $"mt led set {cmd} 255", keyword, 0, 3000);
+
+                    frmYN.Label = $"Vui lòng kiểm tra {item_name} có đang sáng không?";
+                    frmYN.ShowDialog();
+                    if (frmYN.no)
+                    {
+                        AddData(test_item, 1);
+                    }
+                    else
+                    {
+                        AddData(test_item, 0);
+                    }
+                }
+                else if (ctrl == CTRL.OFF)
+                {
+                    SendAndChk(PortType.SSH, $"mt led set {cmd} 0", keyword, 0, 3000);
+
+                    frmYN.Label = $"Vui lòng kiểm tra {item_name} có đang tắt không?";
+                    frmYN.ShowDialog();
+                    if (frmYN.no)
+                    {
+                        AddData(test_item, 1);
+                    }
+                    else
+                    {
+                        AddData(test_item, 0);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(test_item, 1);
+            }
+        }
+        private void CheckLED()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== LED Test ===============");
+
+                //LED_White_On
+                LED_Control("LED_White", "w", CTRL.ON);
+                LED_Control("LED_White", "w", CTRL.OFF);
+
+                //LED1_Green
+                LED_Control("LED_Green", "g", CTRL.ON);
+                LED_Control("LED_Green", "g", CTRL.OFF);
+
+                //LED1_Red
+                LED_Control("LED_Red", "r", CTRL.ON);
+                LED_Control("LED_Red", "r", CTRL.OFF);
+
+                //LED1_Blue
+                LED_Control("LED_Blue", "b", CTRL.ON);
+                LED_Control("LED_Blue", "b", CTRL.OFF);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData("LED", 1);
+            }
+        }
+
+        private void CheckPCIe()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            bool result = false;
+            string item = "CheckPCIe";
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== Check PCIE Interface ===============");
+                DisplayMsg(LogType.Log, "Check WiFi 2.4G PCIe Interface");
+                int Counttimer = 0;
+            retryPCIE:
+                result = SendAndChk(item, PortType.SSH, "lspci -s 0002:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x1 (ok)", 2000, 3000);
+                result &= SendAndChk(item, PortType.SSH, "lspci -s 0002:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x1 (downgraded)", 2000, 3000);
+                DisplayMsg(LogType.Log, "Check WiFi 6G PCIe Interface");
+                result &= SendAndChk(item, PortType.SSH, "lspci -s 0003:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
+                result &= SendAndChk(item, PortType.SSH, "lspci -s 0003:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
+                DisplayMsg(LogType.Log, "Check WiFi 5G PCIe Interface");
+                result &= SendAndChk(item, PortType.SSH, "lspci -s 0004:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
+                result &= SendAndChk(item, PortType.SSH, "lspci -s 0004:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
+
+                if (result)
+                {
+                    DisplayMsg(LogType.Log, "Check PCIE Interface Pass");
+                    AddData(item, 0);
+                }
+                else
+                {
+                    if (Counttimer < 3)
+                    {
+                        Counttimer++;
+                        DisplayMsg(LogType.Log, "Check PCIE Interface fail go to retry");
+                        goto retryPCIE;
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, "Check PCIE Interface fail");
+                        AddData(item, 1);
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+            }
+        }
+        private void WPSButton()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string res = "";
+            string item = "WPSButton";
+            string keyword = @"root@OpenWrt";
+
+            try
+            {
+                #region WPS
+                DisplayMsg(LogType.Log, "=============== WPS Button ===============");
+
+                bool pressed = false;
+                bool released = false;
+                for (int i = 0; i < 3; i++)
+                {
+                    frmOK.Label = "Nhấn và giữ nút WPS, sau đó nhấn\"Xác nhận\"";
+                    frmOK.ShowDialog();
+
+                    SendAndChk(PortType.SSH, "mt gpio dump all", keyword, out res, 0, 3000);
+                    if (res.Contains("WPS: low"))
+                    {
+                        pressed = true;
+                        DisplayMsg(LogType.Log, "Check WPS Button pressed ok");
+                    }
+
+                    frmOK.Label = "Nhả nút WPS, sau đó nhấn\"Xác nhận\"";
+                    frmOK.ShowDialog();
+
+                    SendAndChk(PortType.SSH, "mt gpio dump all", keyword, out res, 0, 3000);
+                    if (res.Contains("WPS: high"))
+                    {
+                        released = true;
+                        DisplayMsg(LogType.Log, "Check WPS Button released ok");
+                    }
+                    if (pressed && released)
+                    {
+                        AddData(item, 0);
+                        DisplayMsg(LogType.Log, "Check WPSButton Pass");
+                        break;
+                    }
+                }
+                if (!pressed || !released)
+                {
+                    DisplayMsg(LogType.Log, "Check WPS button fail");
+                    AddData(item, 1);
+                }
+                #endregion
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+            }
+        }
+        private void ResetButton()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string res = "";
+            string item = "ResetButton";
+            string keyword = @"root@OpenWrt";
+
+            try
+            {
+
+                #region RESET
+                DisplayMsg(LogType.Log, "=============== Reset Button ===============");
+
+                bool pressed = false;
+                bool released = false;
+                for (int i = 0; i < 3; i++)
+                {
+                    frmOK.Label = "Nhấn và giữ nút Reset, sau đó nhấn \"Xác nhận\"";
+                    frmOK.ShowDialog();
+
+                    SendAndChk(PortType.SSH, "mt gpio dump all", keyword, out res, 0, 3000);
+                    if (res.Contains("RESET: low"))
+                    {
+                        pressed = true;
+                        DisplayMsg(LogType.Log, "Check Reset Button pressed ok");
+                    }
+
+                    frmOK.Label = "Nhả nút Reset, sau đó nhấn\"Xác nhận\"";
+                    frmOK.ShowDialog();
+
+                    SendAndChk(PortType.SSH, "mt gpio dump all", keyword, out res, 0, 3000);
+                    if (res.Contains("RESET: high"))
+                    {
+                        released = true;
+                        DisplayMsg(LogType.Log, "Check Reset Button released ok");
+                    }
+                    if (pressed && released)
+                    {
+                        AddData(item, 0);
+                        DisplayMsg(LogType.Log, "Check ResetButton Pass");
+                        break;
+                    }
+                }
+                if (!pressed || !released)
+                {
+                    DisplayMsg(LogType.Log, "Check Reset button fail");
+                    AddData(item, 1);
+                }
+                #endregion
+
+                //When using standard adaptor, the AC_ALARM is low.
+                //When using customized adaptor or power supply, the AC_ALARM is high.
+                //Battery detection
+                DisplayMsg(LogType.Log, "=============== Battery Detection ===============");
+                item = "BatteryDetection";
+                if (res.Contains("AC_ALARM: low"))
+                {
+                    AddData(item, 0);
+                    DisplayMsg(LogType.Log, "Battery detection Pass");
+                }
+                else
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Battery detection fail");
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+            }
+        }
+        private void USB30Test()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string res = "";
+            string item = "USB30Test";
+            string keyword = @"root@OpenWrt";
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== USB3.0 Test ===============");
+
+                if (isLoop == 0)
+                {
+                    frmOK.Label = "Vui lòng xác nhận đã cắm USB 3.0 vào";
+                    frmOK.ShowDialog();
+                }
+
+                SendAndChk(PortType.SSH, "mount -t vfat /dev/sda1 /mnt/", keyword, out res, 1000, 5000);
+                if (res.Contains("No such file or directory"))
+                {
+                    DisplayMsg(LogType.Log, "mount usb fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                for (int i = 0; i < 3; i++)
+                {
+                    SendAndChk(PortType.SSH, "df", keyword, out res, 0, 10000);
+
+                    if (res.Contains("/dev/sda1"))
+                    {
+                        DisplayMsg(LogType.Log, @"got keyword /dev/sdal");
+                        break;
+                    }
+                }
+                if (!res.Contains("/dev/sda1"))
+                {
+                    DisplayMsg(LogType.Log, "mount usb fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                SendAndChk(PortType.SSH, "echo \"usb test\" > /mnt/test", keyword, out res, 0, 3000);
+                if (!SendAndChk(PortType.SSH, "cat /mnt/test", "usb test", out res, 0, 3000))
+                {
+                    DisplayMsg(LogType.Log, "usb write/read fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                if (!SendAndChk(PortType.SSH, "cat /sys/bus/usb/devices/2-1/speed", "5000", out res, 0, 3000))
+                {
+                    DisplayMsg(LogType.Log, "check usb speed fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                AddData(item, 0);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+            }
+            finally
+            {
+                SendAndChk(PortType.SSH, "rm -f /mnt/test;sync", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "umount /mnt/", keyword, out res, 0, 3000);
+            }
+        }
+        private void SLICTest()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string res = "";
+            string item = "SLICTest";
+            string keyword = @"root@OpenWrt";
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== SLIC Test ===============");
+
+                if (!SendAndChk(PortType.SSH, "proslic_api_demo", "Demo: Linux SPI Dev Connected", out res, 0, 5000))
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "proslic_api_demo fail");
+                    return;
+                }
+
+                if (!SendAndChk(PortType.SSH, "", "05) Ringing Menu", out res, 0, 10000))
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Check ProSLIC Menu fail");
+                    return;
+                }
+
+                SendAndChk(PortType.SSH, "5", "Stop Ringing", out res, 0, 3000);
+
+                //Start Ringing
+                SendAndChk(PortType.SSH, "0", "Stop Ringing", out res, 0, 3000);
+                frmYN.Label = "不需要接起電話,只要確認電話是否有響鈴?";
+                frmYN.ShowDialog();
+                if (frmYN.no)
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Start ringing fail");
+                    return;
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Start ringing pass");
+                }
+
+                //Stop Ringing
+                SendAndChk(PortType.SSH, "1", "Stop Ringing", out res, 0, 3000);
+                frmYN.Label = "確認電話鈴聲已停止?";
+                frmYN.ShowDialog();
+                if (frmYN.no)
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Stop ringing fail");
+                    return;
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Stop ringing pass");
+                }
+
+                //exit Ringing Menu
+                SendAndChk(PortType.SSH, "q", "09) Interrupt Menu", out res, 0, 3000);
+                SendAndChk(PortType.SSH, "9", "09) Pulse digit decode/hook flash demo", out res, 0, 3000);
+
+                DisplayMsg(LogType.Cmd, $"Write '9' to ssh");
+                SSH_stream.WriteLine("9");
+                ChkResponse(PortType.SSH, ITEM.NONE, "detected:", out res, 3000);
+
+                frmOK.Label = "請舉起話機後按\"確定\"";
+                frmOK.ShowDialog();
+                if (!ChkResponse(PortType.SSH, ITEM.NONE, "OFFHOOK", out res, 10000))
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Check OFFHOOK fail");
+                    return;
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Check OFFHOOK pass");
+                }
+
+                frmOK.Label = "請掛掉話機後按\"確定\"";
+                frmOK.ShowDialog();
+                if (!ChkResponse(PortType.SSH, ITEM.NONE, "ONHOOK", out res, 10000))
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Check ONHOOK fail");
+                    return;
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Check ONHOOK pass");
+                }
+                AddData(item, 0);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+            }
+            finally
+            {
+                SendCommand(PortType.SSH, sCtrlC, 0);
+                ChkResponse(PortType.SSH, ITEM.NONE, keyword, out res, 3000);
+            }
+        }
+
+
+        bool CheckNvram(string data, string keyword)
+        {
+            if (!CheckGoNoGo())
+                return false;
+            if (!data.Contains(keyword))
+            {
+                DisplayMsg(LogType.Log, $"Check '{keyword}' fail");
+                AddData("Nvram", 1);
+                return false;
+            }
+            DisplayMsg(LogType.Log, $"Check '{keyword}' ok");
+            return true;
+        }
+        private void SLICTest_ByUsbModem()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            int retry_cnt = 3;
+            string res = "";
+            string item = "SLICTest";
+            string keyword = @"root@OpenWrt";
+            var comInfo1 = WNC.API.Func.ReadINI("Setting", "Port", "Modem_1_COM", "COM8");
+            EzComport com1 = null;
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== SLIC Test ===============");
+
+                if (!SendAndChk(PortType.SSH, "proslic_api_demo", "Demo: Linux SPI Dev Connected", out res, 0, 5000))
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "proslic_api_demo fail");
+                    return;
+                }
+
+                if (!SendAndChk(PortType.SSH, "", "05) Ringing Menu", out res, 0, 10000))
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Check ProSLIC Menu fail");
+                    return;
+                }
+
+                SendAndChk(PortType.SSH, "5", "Stop Ringing", out res, 0, 3000);
+                //預設響鈴方式為一聲響到底,UsbModem判斷會有問題,改成斷斷續續的響法後方便判斷
+                if (!SendAndChk(PortType.SSH, "3", "Ring Cadence Timers (enabled)", out res, 0, 3000)) //更改響鈴方式
+                {
+                    DisplayMsg(LogType.Log, "Enable Ring Cadence fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                //UsbModem initial 
+                com1 = new EzComport();
+                com1.ComportMessageDumped += MessageOut;
+            openmodem:
+                if (!com1.OpenComport(comInfo1, 115200))
+                {
+                    DisplayMsg(LogType.Log, $"Initial UsbModem {comInfo1} fail");
+                    if (retry_cnt > 0)
+                    {
+                        retry_cnt--;
+                        goto openmodem;
+                    }
+                    AddData(item, 1);
+                    return;
+                }
+
+                //Start Ringing
+                SendAndChk(PortType.SSH, "0", "Stop Ringing", out res, 0, 3000);
+                //check ring via UsbModem
+                retry_cnt = 3;
+            retry:
+                if (com1.WaitFor("RING", 40))
+                {
+                    DisplayMsg(LogType.Log, "SLIC Test PASS\n Check 'RING' pass");
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Wait 'RING' fail");
+                    if (retry_cnt > 0)
+                    {
+                        retry_cnt--;
+                        goto retry;
+                    }
+                    AddData(item, 1);
+                    return;
+                }
+
+                //Stop Ringing
+                SendAndChk(PortType.SSH, "1", "Stop Ringing", out res, 0, 3000);
+
+                //exit Ringing Menu
+                SendAndChk(PortType.SSH, "q", "09) Interrupt Menu", out res, 0, 3000);
+                SendAndChk(PortType.SSH, "9", "09) Pulse digit decode/hook flash demo", out res, 0, 3000);
+
+                DisplayMsg(LogType.Cmd, $"Write '9' to ssh");
+                SSH_stream.WriteLine("9");
+                ChkResponse(PortType.SSH, ITEM.NONE, "detected:", out res, 3000);
+
+                //舉起話機
+                DisplayMsg(LogType.Cmd, $"Write 'ath1' to UsbModem");
+                com1.WriteLine("ath1", 1000);
+
+                if (!ChkResponse(PortType.SSH, ITEM.NONE, "OFFHOOK", out res, 10000))
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Check OFFHOOK fail");
+                    return;
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Check OFFHOOK pass");
+                }
+
+                //掛掉話機
+                DisplayMsg(LogType.Cmd, $"Write 'ath0' to UsbModem");
+                com1.WriteLine("ath0", 1000);
+
+                if (!ChkResponse(PortType.SSH, ITEM.NONE, "ONHOOK", out res, 10000))
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Check ONHOOK fail");
+                    return;
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Check ONHOOK pass");
+                }
+
+                AddData(item, 0);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+            }
+            finally
+            {
+                if (com1 != null)
+                    com1.Close();
+                SendCommand(PortType.SSH, sCtrlC, 0);
+                ChkResponse(PortType.SSH, ITEM.NONE, keyword, out res, 3000);
+            }
+        }
+        private void MessageOut(object sender, EzComportMessageDumpedEventArgs e)
+        {
+            DisplayMsg(LogType.UsbModem, e.Message);
+        }
+        private void VoiceTest_ByUsbModem(PortType port)
+        {
+            var comInfo1 = WNC.API.Func.ReadINI("Setting", "Port", "Modem_1_COM", "COM3");
+            var comInfo2 = WNC.API.Func.ReadINI("Setting", "Port", "Modem_2_COM", "COM3");
+            if (CheckGoNoGo() == false) return;
+            string res = "";
+            if (!SendAndChk("VoiceTest", port, "slic_le9632 -a 0 -r 25", "Calibration completed on both lines", 0, 5000))
+            {
+                AddData("SlicTest", 1);
+                DisplayMsg(LogType.Log, "Initialize SLIC fail");
+                return;
+            }
+            DisplayMsg(LogType.Log, "Initialize SLIC ok");
+            AddData("SlicTest", 0);
+            EzComport com1 = null;
+            EzComport com2 = null;
+            try
+            {
+                com1 = new EzComport();
+                com2 = new EzComport();
+                com1.ComportMessageDumped += MessageOut;
+                com2.ComportMessageDumped += MessageOut;
+
+                #region com1 send
+
+                if (!com1.OpenComport(comInfo1, 115200))
+                {
+                    DisplayMsg(LogType.Log, $"Initial {comInfo1} fail");
+                    AddData("VoiceTest", 1);
+                    return;
+                }
+                if (!com2.OpenComport(comInfo2, 115200))
+                {
+                    DisplayMsg(LogType.Log, $"Initial {comInfo2} fail");
+                    AddData("VoiceTest", 1);
+                    return;
+                }
+                int c = 3;
+            retry1:
+                DisplayMsg(LogType.Log, comInfo1 + " send:");
+                com1.WriteLineAndWait("atx", "OK", 5);
+                DisplayMsg(LogType.Log, $"Delay 3s");
+                Thread.Sleep(3000);
+                com1.WriteLine("atd2", 1000);
+                if (com2.WaitFor("RING", 40))
+                {
+                    bool check = false;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        Thread.Sleep(1000);
+                        DisplayMsg(LogType.Log, comInfo1 + " send:");
+                        if (com1.WriteLineAndWait("\n", "NO CARRIER", 5))
+                        { check = true; break; }
+                    }
+                    if (!check)
+                    {
+                        DisplayMsg(LogType.Log, $"Wait 'NO CARRIER' fail");
+                        AddData("VoiceTest", 1);
+                        return;
+                    }
+                }
+                else
+                {
+                    if (c > 0)
+                    {
+                        c--;
+                        goto retry1;
+                    }
+                    DisplayMsg(LogType.Log, $"Wait 'RING' fail");
+                    AddData("VoiceTest", 1);
+                    return;
+                }
+                #endregion
+
+                #region com2 send
+                c = 3;
+            retry2:
+                DisplayMsg(LogType.Log, comInfo2 + " send:");
+                com2.WriteLineAndWait("atx", "OK", 5);
+                DisplayMsg(LogType.Log, $"Delay 3s");
+                Thread.Sleep(3000);
+                com2.WriteLine("atd1", 1000);
+
+                if (com1.WaitFor("RING", 40))
+                {
+
+                    bool check = false;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        Thread.Sleep(1000);
+                        DisplayMsg(LogType.Log, comInfo2 + " send:");
+                        if (com2.WriteLineAndWait("\n", "OK", 5))
+                        { check = true; break; }
+                    }
+                    if (!check)
+                    {
+                        DisplayMsg(LogType.Log, $"Wait 'NO CARRIER' fail");
+                        AddData("VoiceTest", 1);
+                        return;
+                    }
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, $"Wait 'RING' fail");
+                    if (c > 0)
+                    {
+                        c--;
+                        goto retry2;
+                    }
+                    AddData("VoiceTest", 1);
+                    return;
+                }
+                #endregion
+                AddData("VoiceTest", 0);
+            }
+            catch (Exception e)
+            {
+                status_ATS.AddLog("Exception:" + e.Message);
+                AddData("VoiceTest", 1);
+            }
+            finally
+            {
+                com1.Close();
+                com2.Close();
+                SendCommand(port, sCtrlC, 2000);
+                ChkResponse(port, ITEM.NONE, "@", out res, 3000);
+            }
+        }
+
+        bool SendCMD(SerialPort port, string cmd, string keyword, int delay, int timeout)
+        {
+            try
+            {
+                if (cmd.Length != 0)
+                {
+                    port.WriteLine(cmd);
+                    DisplayMsg(LogType.Log, $"{port.PortName} send:{cmd}");
+                    DisplayMsg(LogType.Log, $"Delay {delay}ms");
+                    Thread.Sleep(delay);
+                }
+
+                DateTime dt = DateTime.Now;
+                while (true)
+                {
+                    if (dt.AddMilliseconds(timeout) < DateTime.Now)
+                    {
+                        DisplayMsg(LogType.Log, "Timeout");
+                        warning = "Timeout";
+                        return false;
+                    }
+                    string data = port.ReadExisting();
+                    if (data.Length != 0)
+                        DisplayMsg(LogType.Log, $"{port.PortName} received:{data}");
+                    if (data.Contains(keyword))
+                    {
+                        DisplayMsg(LogType.Log, $"{port.PortName} check '{keyword}' ok");
+                        return true;
+                    }
+                    if (keyword.Length == 0)
+                        return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Log, ex.ToString());
+                warning = "Exception";
+                return false;
+            }
+        }
+        private void CheckFWVerAndHWID()
+        {
+            if (!CheckGoNoGo() || isGolden)
+            {
+                return;
+            }
+
+            string item = "ChkFWVer";
+            string keyword = @"root@OpenWrt";
+            string res = "";
+            string FWversion = "";
+            string HWID = "";
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== Check FW version & HW ID ===============");
+
+                SendAndChk(PortType.SSH, "mt info", keyword, out res, 0, 3000);
+                Match m = Regex.Match(res, @"FW Version: (?<FWver>.+)");
+                if (m.Success)
+                {
+                    FWversion = m.Groups["FWver"].Value.Trim();
+                    string a = FWversion.Split('v')[1];
+                }
+
+                DisplayMsg(LogType.Log, "DUT FWversion: " + FWversion);
+
+                if (Convert.ToInt32(Func.ReadINI("Setting", "CheckInfo", "FWvercheckbysetting", "0")) == 1)
+                {
+
+                    DisplayMsg(LogType.Log, "Current Setting Check enable [CheckInfo] FWvercheckbysetting=1 ");
+                    string settingfwver = string.Empty;
+                    settingfwver = Func.ReadINI("Setting", "CheckInfo", "FWver", "XXXX");
+                    DisplayMsg(LogType.Log, "Setting FW version:" + settingfwver);
+                    if (string.Compare(FWversion, settingfwver, true) == 0)
+                    {
+                        AddData(item, 0);
+                        DisplayMsg(LogType.Log, "Check FW Version with setting PASS");
+                        status_ATS.AddDataRaw("LRG1_MFG_FW_VER", FWversion, FWversion, "000000");
+                    }
+                    else
+                    {
+                        AddData(item, 1);
+                        DisplayMsg(LogType.Log, "Check FW Version with setting fail");
+                    }
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Current Check with SFCS");
+                    DisplayMsg(LogType.Log, "SFCS_FWversion:" + infor.FWver);
+                    if (string.Compare(FWversion, infor.FWver, true) == 0)
+                    {
+                        AddData(item, 0);
+                        DisplayMsg(LogType.Log, "Check FW Version With SFCS PASS");
+                        status_ATS.AddDataRaw("LRG1_MFG_FW_VER", FWversion, FWversion, "000000");
+                    }
+                    else
+                    {
+                        AddData(item, 1);
+                        DisplayMsg(LogType.Log, "Check FW Version with SFCS fail");
+                    }
+                }
+
+                //check HW ID
+                item = "ChkHWID";
+                //HW Version (GPIO): 1001
+                m = Regex.Match(res, @"HW Version \(GPIO\): (?<HWID>.+)");
+                if (m.Success)
+                {
+                    HWID = m.Groups["HWID"].Value.Trim();
+                }
+
+                DisplayMsg(LogType.Log, "HWID: " + HWID);
+                DisplayMsg(LogType.Log, "SFCS_HWID:" + infor.HWID);
+
+
+                if (string.Compare(HWID, infor.HWID, true) == 0)
+                {
+                    AddData(item, 0);
+                    DisplayMsg(LogType.Log, "Check HW ID PASS");
+                    status_ATS.AddDataRaw("LRG1_HW_ID", HWID, HWID, "000000");
+                }
+                else
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Check HW ID fail");
+                }
+
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+            }
+        }
+
+        private bool Camera()
+        {
+            try
+            {
+                if (File.Exists("d:/getSMT"))
+                    File.Delete("d:/getSMT");
+                if (File.Exists("d:/OK"))
+                    File.Delete("d:/OK");
+                if (File.Exists(sExeDirectory + "\\cam_result.ini"))
+                    File.Delete(sExeDirectory + "\\cam_result.ini");
+                DisplayMsg(LogType.Log, "Delay 2s..");
+                Thread.Sleep(2000);
+                File.Create("d:/getSMT").Close();
+                DateTime dt = DateTime.Now;
+                while (!File.Exists("d:/OK"))
+                {
+                    if (dt.AddMinutes(1) < DateTime.Now)
+                    {
+                        return false;
+                    }
+                    Thread.Sleep(500);
+                }
+                status_ATS.AddLog("camera path：" + sExeDirectory);
+                return true;
+            }
+            catch (Exception camera)
+            {
+                warning = "Exception";
+                return false;
+            }
+        }
+        private bool CheckCameraResult(string item, string keyword)
+        {
+            bool rs = false;
+            Directory.SetCurrentDirectory(sExeDirectory);
+            string temp1 = WNC.API.Func.ReadINI("cam_result", "result", item, "");
+            try
+            {
+                if (temp1.ToUpper().Contains(keyword.ToUpper()))
+                {
+                    rs = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                status_ATS.AddLog(ex.ToString());
+                Directory.SetCurrentDirectory(Application.StartupPath);
+                return false;
+            }
+            status_ATS.AddLog(String.Format("Camera item {0}, result:{1}, keyword:{2}", item, temp1, keyword));
+            Directory.SetCurrentDirectory(Application.StartupPath);
+            return rs;
+        }
+        private void StartupCamera()
+        {
+            string sReceive = string.Empty;
+            Process[] ps;
+            Net.NewNetPort newNetPort = new Net.NewNetPort();
+            Directory.SetCurrentDirectory(sExeDirectory);
+            if (!CheckTaskProcess("camera"))
+            {
+                try
+                {
+                    newNetPort.ExecuteDOSCommand(sExeDirectory + @".\camera.exe", "", false, ref sReceive, 10, true);
+                    status_ATS.AddLog("Open camera path：" + sExeDirectory);
+                }
+                catch (Exception ex)
+                {
+                    Directory.SetCurrentDirectory(Application.StartupPath);
+                    status_ATS.AddLog("Camera Open Exception:" + ex.Message);
+                }
+            }
+            else
+            {
+                Thread.Sleep(500);
+                status_ATS.AddLog("Camera is closing...");
+                KillTaskProcess("camera");
+                Thread.Sleep(1000);
+                newNetPort.ExecuteDOSCommand(sExeDirectory + @".\camera.exe", "", false, ref sReceive, 10, true);
+                status_ATS.AddLog("Camera is opening...");
+            }
+
+            ps = Process.GetProcesses();
+            string sWindowName = "NONE";
+            foreach (Process p in ps)
+            {
+                string s = p.ProcessName;
+                if (s == "camera")
+                {
+                    sWindowName = p.MainWindowTitle;
+                    //Thread.Sleep(3000);
+                    if (!File.Exists("c:\\show"))
+                    {
+                        File.Create("c:\\show");
+                    }
+                    break;
+                }
+            }
+            if ("NONE".Equals(sWindowName))
+            {
+                status_ATS.AddLog("Camera Open Failed!!!");
+            }
+            Directory.SetCurrentDirectory(Application.StartupPath);
+        }
+        private bool CheckTaskProcess(string sFileName)
+        {
+            bool bExist = false;
+            try
+            {
+                Process[] localAll = Process.GetProcesses();
+                foreach (Process i in localAll)
+                {
+                    if (sFileName.Equals(i.ProcessName))
+                    {
+                        bExist = true;
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("KillTaskProcess Exception: " + ex.Message);
+            }
+            return bExist;
+        }
+    }
+}
+
+    }
+}
