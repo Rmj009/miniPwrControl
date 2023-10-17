@@ -70,6 +70,7 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="LCS5\PCBA.cs" />
     <Compile Include="LRG1\Final.cs" />
     <Compile Include="LRG1\OTA.cs" />
     <Compile Include="LRG1\PCBA.cs" />
@@ -108,6 +109,8 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="CSV\" />
+    <Folder Include="Exception\" />
     <Folder Include="LMG1\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
