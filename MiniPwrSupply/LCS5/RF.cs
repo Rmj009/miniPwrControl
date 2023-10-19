@@ -24,7 +24,7 @@ using System.Windows.Forms;
 
 namespace MiniPwrSupply.LCS5
 {
-    public partial class frmMain_RF
+     public partial class frmMain_RF
     {
         private string _LitePointFolder = string.Empty;
         private string _LitePointTool = string.Empty;
