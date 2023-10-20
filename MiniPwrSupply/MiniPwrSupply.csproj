@@ -61,6 +61,8 @@
     <Compile Include="Config\InterfaceSystemIin.cs" />
     <Compile Include="Config\SystemIni.cs" />
     <Compile Include="Config\wuzhiCmdDict.cs" />
+    <Compile Include="CSV\ICSV.cs" />
+    <Compile Include="CSV\ICsvItem.cs" />
     <Compile Include="DoWuzhiCmd\RS232.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmd.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmdBase.cs" />
@@ -110,7 +112,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="CSV\" />
     <Folder Include="Exception\" />
     <Folder Include="LMG1\" />
   </ItemGroup>
