@@ -5,8 +5,6 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using ATS_Template.Ex;
-using MiniPwrSupply.CSV;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -359,7 +357,7 @@ namespace MiniPwrSupply.CSV
             this.mResultTable.Clear();
             if (mLimitUpper == null || mLimitLower == null)
             {
-                throw new UIException("Not Set Upper And Lower !!", "msgCode");
+                //throw new UIException("Not Set Upper And Lower !!", "msgCode");
             }
             _addTestItemValueToDataTable(mLimitUpper);
             _addTestItemValueToDataTable(mLimitLower);
