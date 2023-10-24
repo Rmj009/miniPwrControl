@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EasyLibrary;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -12,15 +13,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
-//using WNC.API;
-//using EasyLibrary;
-//using NationalInstruments.VisaNS;
+using WNC.API;
+using NationalInstruments.VisaNS;
 using System.Net.Security;
 using System.Runtime.CompilerServices;
 
-namespace MiniPwrSupply.LRG1
+namespace ATS
 {
-
     public partial class frmMain
     {
         DeviceInfor infor = new DeviceInfor();
@@ -105,7 +104,7 @@ namespace MiniPwrSupply.LRG1
 
                         infor.SerialNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LRG1_SN");
                         infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
-                        infor.FWver = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LRG1_MFG_FW");
+                        infor.FWver = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MFG_FW_17");
 
                         infor.HWID = Func.ReadINI("Setting", "PCBA", "HWID", "1001");
                         infor.HWver = Func.ReadINI("Setting", "PCBA", "HWver", "EVT2");
@@ -121,11 +120,18 @@ namespace MiniPwrSupply.LRG1
                     DisplayMsg(LogType.Log, $"Get SN From SFCS is: {infor.SerialNumber}");
                     DisplayMsg(LogType.Log, $"Get Base MAC From SFCS is: {infor.BaseMAC}");
                     DisplayMsg(LogType.Log, $"Get FWver From SFCS is: {infor.FWver}");
+                    if (string.IsNullOrEmpty(infor.SerialNumber) || string.IsNullOrEmpty(infor.BaseMAC) || string.IsNullOrEmpty(infor.FWver)
+                       || infor.SerialNumber.Contains("Dut not have") || infor.BaseMAC.Contains("Dut not have") || infor.FWver.Contains("Dut not have"))
+                    {
+                        warning = "Get from SFCS FAIL";
+                        return;
+                    }
+
                     string result = string.Empty;
                     result = infor.FWver.Substring(0, infor.FWver.Length - 9);
 
-                    DisplayMsg(LogType.Log, $"Get FWver trim is: LRG1_v{result}");
-                    infor.FWver = "LRG1_v" + result;
+                    DisplayMsg(LogType.Log, $"Get FWver trim is: LRG1_{result}");
+                    infor.FWver = "LRG1_" + result.ToLower();
                     infor.DECTver = Func.ReadINI("Setting", "PCBA", "DECTver", "Version 04.13 - Build 19");
                     DisplayMsg(LogType.Log, $"Get HWID From setting is: {infor.HWID}");
                     DisplayMsg(LogType.Log, $"Get HWver From setting is: {infor.HWver}");
@@ -152,8 +158,64 @@ namespace MiniPwrSupply.LRG1
                 }
                 else
                 {
+                    DisplayMsg(LogType.Log, $"Test In engineer mode");
+                    infor.SerialNumber = string.Empty;
+                    infor.SerialNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LRG1_SN");
+                    DisplayMsg(LogType.Log, $"Get SN From SFCS is: {infor.SerialNumber}");
+                    if (infor.SerialNumber.Length == 18)
+                    {
+                        /*SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                        //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                        status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                        status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;*/
+                    }
+                    else // if cannot get from sfcs will get from setting/ jason add 2023/09/27
+                    {
+                        infor.SerialNumber = Func.ReadINI("Setting", "PCBA", "LRG1_SN_Sample", "");
+                        DisplayMsg(LogType.Log, $"Get SN 'LRG1_SN_Sample=' From Setting  is: {infor.SerialNumber}");
+                        if (string.IsNullOrEmpty(infor.SerialNumber) || infor.SerialNumber.Length != 18)
+                        {
+                            warning = "Get SN sample from setting fail";
+                            return;
+                        }
+
+                        /* SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                         //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                         status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                         status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;*/
+
+                    }
+
+                    infor.BaseMAC = string.Empty;
+                    if (forHQtest)
+                    {
+                        infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
+                        DisplayMsg(LogType.Log, $"Get MAC From SFCS is: {infor.BaseMAC}");
+                    }
+                    if (infor.BaseMAC.Length == 12)
+                    {
+                        DisplayMsg(LogType.Log, $"Get MAC From SFCS OK");
+                    }
+                    else // if cannot get from sfcs will get from setting/ jason add 2023/09/27
+                    {
+                        infor.BaseMAC = Func.ReadINI("Setting", "PCBA", "MAC_Sample", "");
+                        DisplayMsg(LogType.Log, $"Get SN 'MAC_Sample=' From Setting  is: {infor.BaseMAC}");
+                        if (string.IsNullOrEmpty(infor.BaseMAC) || infor.BaseMAC.Length != 12)
+                        {
+                            warning = "Get MAC sample from setting fail";
+                            return;
+                        }
+                    }
+
+                    infor.BaseMAC = MACConvert(infor.BaseMAC);
+
+                    SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                    //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                    status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                    status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;
+
                     //Rena_20230407 add for HQ test
-                    GetBoardDataFromExcel(status_ATS.txtPSN.Text);
+                    GetRFPIFromExcel(infor.BaseMAC);
                     //Rena_20230803, add ble_ver and se_ver for BLE test
                     infor.BLEver = Func.ReadINI("Setting", "PCBA", "BLEver", "v5.0.0-b108");
                     infor.SEver = Func.ReadINI("Setting", "PCBA", "SEver", "0001020E");
@@ -197,7 +259,11 @@ namespace MiniPwrSupply.LRG1
 
                 ChkBootUp(PortType.SSH);
 
-                CheckFWVerAndHWID();
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)
+                {
+                    CheckFWVerAndHWID();
+                }
+
 
                 if (Func.ReadINI("Setting", "PCBA", "SkipNFC", "0") == "0")
                 {
@@ -206,21 +272,12 @@ namespace MiniPwrSupply.LRG1
 
                 if (Func.ReadINI("Setting", "PCBA", "SkipDECT", "0") == "0")
                 {
-                    Set_DECT_Full_Power();
-
                     string rxtun = "";
-                    DECTCal(ref rxtun);
+                    Set_DECT_Full_Power();
+                    this.DECTCal(ref rxtun);
                     infor.DECT_cal_rxtun = rxtun;
                     DisplayMsg(LogType.Log, "DECT_cal_rxtun: " + infor.DECT_cal_rxtun);
-
-                    Set_DECT_ID();
-                    Set_DECT_RFPI(); //Rena_20230803, EEProm Param Set RFPI
-                    // ===================================================================
-                    //this.EEProm_Set(); //testplan0922,    v. EEPROM set (PA2_COMP) => remove by v037 5.3.3 testplan0925
-                    // ===================================================================
                 }
-
-                //SLICTest();
                 SLICTest_ByUsbModem();
 
                 if (forHQtest || (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden))
@@ -230,25 +287,20 @@ namespace MiniPwrSupply.LRG1
                 }
 
                 if (isLoop == 0)
-                {
                     CheckLED();
-                }
 
                 CheckPCIe();
 
                 if (isLoop == 0)
-                {
                     WPSButton();
-                    ResetButton();
-                }
 
+                if (isLoop == 0)
+                    ResetButton();
 
                 USB30Test();
 
                 if (isLoop == 0)
-                {
                     EthernetTest(true);
-                }
 
                 CurrentSensor();
 
@@ -267,7 +319,7 @@ namespace MiniPwrSupply.LRG1
             }
             finally
             {
-                if (status_ATS._testMode == StatusUI2.StatusUI.TestMode.EngMode)
+                if (status_ATS._testMode == StatusUI2.StatusUI.TestMode.EngMode && isLoop == 0)
                 {
                     if (!CheckGoNoGo())
                     {
@@ -292,8 +344,6 @@ namespace MiniPwrSupply.LRG1
                 else SwitchRelay(CTRL.ON);
             }
         }
-
-
         //Rena_20230803, EEProm Param Set RFPI
         private void Set_DECT_RFPI()
         {
@@ -306,7 +356,7 @@ namespace MiniPwrSupply.LRG1
 
             string item = "SetDECTRFPI";
             string res = string.Empty;
-            string keyword = "root@OpenWrt:~# \r\n";
+            //string keyword = "root@OpenWrt:~# \r\n";
             string RFPI_val = infor.DECT_rfpi.Replace(".", "").ToUpper(); //寫入格式為 0303B009B0
 
             try
@@ -323,21 +373,21 @@ namespace MiniPwrSupply.LRG1
                     return;
                 }
 
-                for (int i = 0; i < 3; i++)
-                {
-                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
-                        break;
-                    DisplayMsg(LogType.Log, "Delay 2s...");
-                    Thread.Sleep(2000);
-                }
+                //for (int i = 0; i < 3; i++)
+                //{
+                //    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
+                //    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
+                //        break;
+                //    DisplayMsg(LogType.Log, "Delay 2s...");
+                //    Thread.Sleep(2000);
+                //}
 
-                if (!result)
-                {
-                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
-                    AddData(item, 1);
-                    return;
-                }
+                //if (!result)
+                //{
+                //    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
+                //    AddData(item, 1);
+                //    return;
+                //}
 
                 //s -> 2 -> 1 -> {RFPI value (5bytes)}
                 SendWithoutEnterAndChk(PortType.SSH, "s", "q => Return to Interface Menu", delayMs, timeOutMs);
@@ -386,15 +436,15 @@ namespace MiniPwrSupply.LRG1
                 DisplayMsg(LogType.Exception, ex.Message);
                 AddData(item, 1);
             }
-            finally
-            {
-                //exit calibration mode
-                for (int i = 0; i < 5; i++)
-                {
-                    if (SendAndChk(PortType.SSH, "q", keyword, out res, 0, 2000))
-                        break;
-                }
-            }
+            //finally
+            //{
+            //    //exit calibration mode
+            //    for (int i = 0; i < 5; i++)
+            //    {
+            //        if (SendAndChk(PortType.SSH, "q", keyword, out res, 0, 2000))
+            //            break;
+            //    }
+            //}
         }
 
         private bool IsTftpd32Running()
@@ -402,9 +452,6 @@ namespace MiniPwrSupply.LRG1
             Process[] processes = Process.GetProcessesByName("tftpd32");
             return processes.Length > 0;
         }
-
-
-
         private bool OpenTftpd32New(string path, int timeoutMilliseconds)
         {
             try
@@ -536,7 +583,7 @@ namespace MiniPwrSupply.LRG1
             }
 
             DisplayMsg(LogType.Log, "=============== Check BootUp ===============");
-            string keyword = @"root@OpenWrt";
+            string keyword = @"root@";
             string item = "BootUp";
             try
             {
@@ -569,18 +616,19 @@ namespace MiniPwrSupply.LRG1
             }
 
             DisplayMsg(LogType.Log, "=============== Set DECT Full Power ===============");
-
-            string item = "SetDECTFullPower";
-            string res = string.Empty;
+            // s -> 2 -> j  \n
+            // FE
+            string offset_val = Func.ReadINI("Setting", "PCBA", "DECT_Default_RXTUN", "70");   //RxTun
             string keyword = "root@OpenWrt:~# \r\n";
-
+            string item = "SetDECTFullPower";
+            string Full_power_value = "FE";
+            string DECTver = string.Empty;
+            string res = string.Empty;
+            int timeOutMs = 10 * 1000;
+            int delayMs = 0;
+            bool result = false;
             try
             {
-                bool result = false;
-                int delayMs = 0;
-                int timeOutMs = 10 * 1000;
-                string Full_power_value = "FE";
-
                 for (int i = 0; i < 3; i++)
                 {
                     SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
@@ -596,7 +644,30 @@ namespace MiniPwrSupply.LRG1
                     AddData(item, 1);
                     return;
                 }
-
+                //check DECT version
+                #region check_DECT_version
+                Match m = Regex.Match(res, @"Target\s+: (?<DECT_ver>.+)");
+                if (m.Success)
+                {
+                    DECTver = m.Groups["DECT_ver"].Value.Trim();
+                }
+                DisplayMsg(LogType.Log, "Current DECT_version:" + DECTver);
+                DisplayMsg(LogType.Log, "SFCS DECT_version:" + infor.DECTver);
+                if (DECTver != "" && string.Compare(DECTver, infor.DECTver, true) == 0)
+                {
+                    status_ATS.AddDataRaw("LRG1_DECT_Ver", infor.DECTver, infor.DECTver, "000000");
+                    AddData("DECT_Ver", 0);
+                }
+                else
+                {
+                    AddData("DECT_Ver", 1);
+                    DisplayMsg(LogType.Log, "Check DECT version fail");
+                    return;
+                }
+                #endregion
+                //========================================================================================
+                this.Set_DECT_ID_AND_DECT_RFPI();
+                //========================================================================================
                 SendWithoutEnterAndChk(item, PortType.SSH, "s", "q => Return to Interface Menu", delayMs, timeOutMs);
                 result = SendWithoutEnterAndChk(PortType.SSH, "2", "q => Return", out res, delayMs, timeOutMs);
                 if (!result || !res.Contains("j => Full Power"))
@@ -622,16 +693,89 @@ namespace MiniPwrSupply.LRG1
                     AddData(item, 0);
                 }
 
-                //exit calibration mode
-                for (int i = 0; i < 5; i++)
+                // testplan revised 
+                // ===============================
+                // into EEProm Param Set
+                result = SendWithoutEnterAndChk(PortType.SSH, "2", "q => Return", out res, delayMs, timeOutMs);
+                SSH_stream.Write("r");
+                // sent A0 之後跳出去
+                //SSH_stream.WriteLine("A0");
+                SendWithoutEnterAndChk(PortType.SSH, "A0\n", "q => Return", out res, delayMs, timeOutMs);
+                if (!res.Contains("A0"))
                 {
-                    /*if (SendAndChk(PortType.SSH, "q\r\n", keyword, out res, 0, 12000))
-                        break;*/
-                    SendAndChk(PortType.SSH, "q\r\n", "", out res, 0, 12000);
-                    if (SendAndChk(PortType.SSH, "\r\n", keyword, out res, 0, 12000))
-                    { break; }
+                    DisplayMsg(LogType.Log, "Set full power fail");
+                    AddData(item, 1);
                 }
+                // q
+                //exit calibration mode
+                this.exitMode("Version");
+                // =========================================================================================
+                // 之後從改寫RxTun開始
+                // =========================================================================================
 
+                #region set_RXTUN_default
+                //x -> x -> 26 -> 1 -> 70
+                //q (回到主選單)
+                //繼續開始calibration流程
+                if (true)
+                {
+                    DisplayMsg(LogType.Log, "Write x to ssh");
+                    SSH_stream.Write("x\r");
+                    ChkResponse(PortType.SSH, ITEM.NONE, "q) Quit", out res, timeOutMs);
+
+                    if (!SendWithoutEnterAndChk(PortType.SSH, "x", "Enter Location (dec):", delayMs, timeOutMs))
+                    {
+                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
+                        AddData(item, 1);
+                        return;
+                    }
+
+                    DisplayMsg(LogType.Log, $"Write '26' to ssh");
+                    SSH_stream.WriteLine("26");
+                    if (!ChkResponse(PortType.SSH, ITEM.NONE, "Enter Length (dec. max 512):", out res, timeOutMs))
+                    {
+                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
+                        AddData(item, 1);
+                        return;
+                    }
+
+                    DisplayMsg(LogType.Log, $"Write '1' to ssh");
+                    SSH_stream.WriteLine("1");
+                    if (!ChkResponse(PortType.SSH, ITEM.NONE, "Enter New Data (hexadecimal):", out res, timeOutMs))
+                    {
+                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
+                        AddData(item, 1);
+                        return;
+                    }
+
+                    DisplayMsg(LogType.Log, $"Write '{offset_val}' to ssh");
+                    SSH_stream.WriteLine(offset_val);
+                    if (!ChkResponse(PortType.SSH, ITEM.NONE, "CURRENT VALUE:", out res, timeOutMs))
+                    {
+                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
+                        AddData(item, 1);
+                        return;
+                    }
+                    //========================================== 還是退到第二層x大選單 =================================================
+                    if (!SendWithoutEnterAndChk(PortType.SSH, "q", "q) Quit", delayMs, timeOutMs))
+                    {
+                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
+                        AddData(item, 1);
+                        return;
+                    }
+                }
+                #endregion
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+            finally
+            {
+                // q to layer 1 for Reboot DECT
+                //exit calibration mode
+                this.exitMode(keyword);
                 //Reboot DECT
                 DisplayMsg(LogType.Log, "Reboot DECT");
                 SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
@@ -639,6 +783,229 @@ namespace MiniPwrSupply.LRG1
                 SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
                 DisplayMsg(LogType.Log, "Delay 3s...");
                 Thread.Sleep(3000);
+            }
+        }
+        private void DECTCal(ref string RXTUNE)
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            DisplayMsg(LogType.Log, "=============== DECT Calibration ===============");
+            string item = "DECTCal";
+            string res = string.Empty;
+            string keyword = "root@OpenWrt:~#";
+            string offset_val = Func.ReadINI("Setting", "PCBA", "DECT_Default_RXTUN", "70");   //RxTun
+            try
+            {
+                byte[] data = new byte[] { };
+                string cmd = string.Empty;
+                //string version = Func.ReadINI("Setting", "Parameter", "DECT_Version", "ERROR");
+                //double freqHz = 13824000;  //Freq. = 13.824 MHz
+                double freqHz = 1888356500; //1888.3565 MHz
+                double pwrThreshold = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "PwrThreshold", "0"));
+                double outFreqHz = 0;
+                double tolerance = 1500;
+                double freqDeltaHz = 0;
+                double pwr = -999;
+                bool result = false;
+                bool isRxtunOK = false;
+                int delayMs = 0;
+                int timeOutMs = 10 * 1000;
+                int retryTimes = 1;
+                string RxRes = string.Empty;
+                DateTime dt;
+                TimeSpan ts;
+
+                if (!DECTSignalAnalyzerPresetting(1888704000))
+                {
+                    warning = "Initial Spectrum fail";
+                    return;
+                }
+
+                for (int i = 0; i < 3; i++)
+                {
+                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
+                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
+                        break;
+                    DisplayMsg(LogType.Log, "Delay 2s...");
+                    Thread.Sleep(2000);
+                }
+
+                if (!result)
+                {
+                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
+                    AddData(item, 1);
+                    return;
+                }
+            RetryPwr:
+                //Rena_20230524, change RXTUN default value as 70
+                DisplayMsg(LogType.Log, "Write x to ssh");
+                SSH_stream.Write("x\r");
+                ChkResponse(PortType.SSH, ITEM.NONE, "q) Quit", out RxRes, timeOutMs);
+                //Rena_20230524, check RXTUN default value 
+                #region check_RXTUN_default
+                if (retryTimes < 2)
+                {
+                    //check RXTUN default value
+                    RXTUNE = ParseRXTUNE(RxRes).Trim();
+                    if (RXTUNE != offset_val)
+                    {
+                        DisplayMsg(LogType.Log, $"Check RXTUN={offset_val} fail");
+                        AddData(item, 1);
+                        return;
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, $"Check RXTUN={offset_val} pass");
+                    }
+                }
+                #endregion
+                // jump into CALIBRATION MENU
+                //s -> ff -> 0 -> 3(continuous TX) -> 0 -> 05(CH5) -> 0 (ANT0) -> q
+                SendWithoutEnterAndChk(item, PortType.SSH, "s", "FF for default", delayMs, timeOutMs);
+                SendWithoutEnterAndChk(item, PortType.SSH, "ff", "2 - long slot", delayMs, timeOutMs);
+                SendWithoutEnterAndChk(item, PortType.SSH, "0", "3 - continuous TX", delayMs, timeOutMs);
+                SendWithoutEnterAndChk(item, PortType.SSH, "3", "Enter Instance (0..9):", delayMs, timeOutMs);
+                SendWithoutEnterAndChk(item, PortType.SSH, "0", "DECT (decimal):", delayMs, timeOutMs);
+                SendWithoutEnterAndChk(item, PortType.SSH, "05", "Enter Ant (0,1):", delayMs, timeOutMs);
+                SendWithoutEnterAndChk(item, PortType.SSH, "0", "Press any key !", delayMs, timeOutMs);
+                SendWithoutEnterAndChk(item, PortType.SSH, "q", "q) Quit", delayMs, timeOutMs);
+                if (!CheckGoNoGo())
+                {
+                    DisplayMsg(LogType.Log, "continuous TX fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                if (!SendWithoutEnterAndChk(PortType.SSH, "c", "(0xFF for None):", delayMs, timeOutMs))
+                {
+                    DisplayMsg(LogType.Log, "Enter RXTUN fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                DisplayMsg(LogType.Log, "Write 07 to ssh");
+                SSH_stream.Write("07\r");
+
+                result = ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN:", out res, timeOutMs);
+                //RXTUNE = ParseRXTUNE(res).Trim();
+                if (ParseRXTUNE(res).Trim().Length == 0)
+                {
+                    warning = "RXTUN is empty";
+                    return;
+                }
+
+                dt = DateTime.Now;
+                while (true)
+                {
+                    ts = new TimeSpan(DateTime.Now.Ticks - dt.Ticks);
+                    if (ts.TotalMilliseconds > 240 * 1000)
+                    {
+                        DisplayMsg(LogType.Error, "DECT Calibration timeout");
+                        AddData(item, 1);
+                        return;
+                    }
+
+                    DisplayMsg(LogType.Log, "Delay 500 (ms)..");
+                    System.Threading.Thread.Sleep(500);
+
+                    if (!FetchFrequency(out outFreqHz))
+                    {
+                        AddData(item, 1);
+                        return;
+                    }
+                    freqDeltaHz = outFreqHz - freqHz;
+                    DisplayMsg(LogType.Log, "freqDeltaHz: " + freqDeltaHz.ToString());
+                    DisplayMsg(LogType.Log, "freqHz: " + outFreqHz.ToString());
+                    DisplayMsg(LogType.Log, "Tolerence: " + tolerance.ToString());
+
+                    //Rena_20230414, disable for LRG1 HQ sample build
+                    //int delay = 0;
+                    //if (false)// need to check env in V2 to set threshold
+                    //int delay = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "DelayPower", "0"));
+                    int delay = 100;
+                    FetchPower(out pwr, delay);
+                    DisplayMsg(LogType.Log, "Dect_TxPower: " + pwr.ToString());
+                    if (pwr < pwrThreshold)
+                    {
+                        retryTimes++;
+                        DisplayMsg(LogType.Warning, "Under power threshold : " + pwr.ToString());
+                        if (retryTimes > 3)
+                        {
+                            warning = $"Power under threahold failed retry 3 time";
+                            isRxtunOK = false;
+                            return;
+                        }
+                        else
+                        {
+                            DisplayMsg(LogType.Log, $"TxPower {pwr.ToString()} Too low, try again");
+                            this.exitMode("Version");
+                            goto RetryPwr;
+                        }
+                        //continue;
+                    }
+                    //==============================================================================================
+                    if (freqDeltaHz > tolerance)
+                    {
+                        cmd = ">";
+                        data = new byte[] { 0x3e };
+                    }
+                    else if (freqDeltaHz < -tolerance)
+                    {
+                        cmd = "<";
+                        data = new byte[] { 0x3c };
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, " ========= Get last rxtun ========");
+                        cmd = "q";
+                        DisplayMsg(LogType.Log, $"Write '{cmd}' to ssh");
+                        SSH_stream.Write(cmd);
+                        ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN: ", out res, timeOutMs);
+
+                        RXTUNE = ParseRXTUNE(res, "RXTUN:").Trim();
+                        if (RXTUNE.Length == 0)
+                        {
+                            warning = "RXTUN is empty";
+                            return;
+                        }
+
+                        DisplayMsg(LogType.Log, "---DECT RXTUN-------------------> " + RXTUNE);
+                        status_ATS.AddDataRaw("LGR1_RXTURN", RXTUNE, RXTUNE, "000000");
+
+                        status_ATS.AddData("CrystalFrequencyHz", "Hz", outFreqHz);
+                        AddData(item, 0);
+
+                        //Rena_20230714 modify
+                        //status_ATS.AddDataRaw("LRG1_DECT_RXTUN", RXTUNE, RXTUNE, "000000");
+                        int decRxtune = int.Parse(RXTUNE, System.Globalization.NumberStyles.HexNumber);
+                        status_ATS.AddData("DECT_RXTUNE", "", decRxtune);
+                        break;
+                    }
+                    //Rena_20230707,LRG1 DECT會先寫預設值, 所以調整flow
+                    //double delta = freqDeltaHz / 6;
+                    //delta = Math.Round(delta, 0);
+                    //DisplayMsg(LogType.Log, "Shift " + delta.ToString() + " times..");
+                    //delta = Math.Abs(delta);
+                    for (int i = 0; i < 3; i++)
+                    {
+                        DisplayMsg(LogType.Log, $"Write '{cmd}' to ssh");
+                        SSH_stream.Write(cmd);
+                        Thread.Sleep(100);
+                        if (!ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN: ", out res, timeOutMs))
+                        {
+                            AddData(item, 1);
+                            return;
+                        }
+                        else
+                        {
+                            DisplayMsg(LogType.Log, "get RXTUN succeed");
+                            AddData(item, 0);
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -648,138 +1015,37 @@ namespace MiniPwrSupply.LRG1
             finally
             {
                 //exit calibration mode
-                for (int i = 0; i < 5; i++)
-                {
-                    if (SendAndChk(PortType.SSH, "q", keyword, out res, 0, 2000))
-                        break;
-                }
+                exitMode(keyword);
+                SendAndChk(PortType.SSH, "cd ~", keyword, out res, 0, 3000);
             }
         }
-        private void EEProm_Set()     // (PA2_COMP)
+        public void exitMode(string keyWord)
         {
-            if (!CheckGoNoGo())
-            {
-                return;
-            }
-
-            DisplayMsg(LogType.Log, "=============== Set EEProm_Param ===============");
-
-            string item = "PA2_COMP";
             string res = string.Empty;
-            string keyword = "root@OpenWrt:~# \r\n";
-
-            try
+            for (int i = 0; i < 5; i++)
             {
-                bool result = false;
-                int delayMs = 0;
-                int timeOutMs = 10 * 1000;
-
-                for (int i = 0; i < 3; i++)
-                {
-                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
-                        break;
-                    DisplayMsg(LogType.Log, "Delay 2s...");
-                    Thread.Sleep(2000);
-                }
-
-                if (!result)
-                {
-                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
-                    AddData(item, 1);
-                    return;
-                }
-
-                DisplayMsg(LogType.Log, "Write x to ssh");
-                SSH_stream.Write("x\r");
-                ChkResponse(PortType.SSH, ITEM.NONE, "q) Quit", out res, timeOutMs);
-
-                if (!SendWithoutEnterAndChk(PortType.SSH, "x", "Enter Location (dec):", delayMs, timeOutMs))
-                {
-                    DisplayMsg(LogType.Log, "Modify DECT EEPROM fail");
-                    AddData(item, 1);
-                    return;
-                }
-                DisplayMsg(LogType.Log, $"Write '178' to ssh");
-                SSH_stream.WriteLine("178");
-                if (!ChkResponse(PortType.SSH, ITEM.NONE, "Enter Length (dec. max 512):", out res, timeOutMs))
-                {
-                    DisplayMsg(LogType.Log, "Modify DECT EEPROM fail");
-                    AddData(item, 1);
-                    return;
-                }
-                DisplayMsg(LogType.Log, $"Write '1' to ssh");
-                SSH_stream.WriteLine("1");
-                if (!ChkResponse(PortType.SSH, ITEM.NONE, "Enter New Data (hexadecimal):", out res, timeOutMs))
-                {
-                    DisplayMsg(LogType.Log, "Modify DECT EEPROM fail");
-                    AddData(item, 1);
-                    return;
-                }
-                DisplayMsg(LogType.Log, "Write a0 to ssh");
-                SSH_stream.WriteLine("a0");
-                if (!ChkResponse(PortType.SSH, ITEM.NONE, "CURRENT VALUE:", out res, timeOutMs))
-                {
-                    DisplayMsg(LogType.Log, "Modify DECT EEPROM fail");
-                    AddData(item, 1);
-                    return;
-                }
-                if (!res.Contains("A0"))
-                {
-                    DisplayMsg(LogType.Log, "Check 'CURRENT VALUE: a0' fail");
-                    AddData(item, 1);
-                }
-            }
-            catch (Exception ex)
-            {
-                DisplayMsg(LogType.Exception, @"EEProm_Set=>" + ex.Message);
-                AddData(item, 1);
-            }
-            finally
-            {
-                //exit calibration mode
-                for (int i = 0; i < 5; i++)
-                {
-                    if (SendAndChk(PortType.SSH, "q", keyword, out res, 0, 2000))
-                        break;
-                }
+                //if (SendAndChk(PortType.SSH, "q\r\n", keyWord, out res, 0, 12000))
+                //{ break; }
+                SendAndChk(PortType.SSH, "q\r\n", keyWord, out res, 0, 10000);
+                if (SendAndChk(PortType.SSH, "\r\n", keyWord, out res, 0, 3000))
+                { break; }
+                Thread.Sleep(50);
             }
         }
-        private void Set_DECT_ID()
+        private void Set_DECT_ID_AND_DECT_RFPI()
         {
             if (!CheckGoNoGo())
             {
                 return;
             }
-
             DisplayMsg(LogType.Log, "=============== Set DECT ID ===============");
-
             string item = "SetDECTID";
             string res = string.Empty;
-            string keyword = "root@OpenWrt:~# \r\n";
-
             try
             {
-                bool result = false;
+                //bool result = false;
                 int delayMs = 0;
                 int timeOutMs = 10 * 1000;
-
-                for (int i = 0; i < 3; i++)
-                {
-                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
-                        break;
-                    DisplayMsg(LogType.Log, "Delay 2s...");
-                    Thread.Sleep(2000);
-                }
-
-                if (!result)
-                {
-                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
-                    AddData(item, 1);
-                    return;
-                }
-
                 DisplayMsg(LogType.Log, "Write x to ssh");
                 SSH_stream.Write("x\r");
                 ChkResponse(PortType.SSH, ITEM.NONE, "q) Quit", out res, timeOutMs);
@@ -827,6 +1093,13 @@ namespace MiniPwrSupply.LRG1
                     DisplayMsg(LogType.Log, "Check 'CURRENT VALUE: 0f eb 09' pass");
                     AddData(item, 0);
                 }
+                // ===============================================================
+                // ==================== BACK MAIN MENU ===========================
+                // ===============================================================
+                this.exitMode("Version");
+                //=================================================================
+                this.Set_DECT_RFPI(); //Rena_20230803, EEProm Param Set RFPI
+                //=================================================================
             }
             catch (Exception ex)
             {
@@ -836,701 +1109,7 @@ namespace MiniPwrSupply.LRG1
             finally
             {
                 //exit calibration mode
-                for (int i = 0; i < 5; i++)
-                {
-                    if (SendAndChk(PortType.SSH, "q", keyword, out res, 0, 2000))
-                        break;
-                }
-            }
-        }
-        private void DECTCal(ref string RXTUNE)
-        {
-            if (!CheckGoNoGo())
-            {
-                return;
-            }
-
-            DisplayMsg(LogType.Log, "=============== 5.3.3 DECT Calibration ===============");
-
-            string item = "DECTCal";
-            string res = string.Empty;
-            string keyword = "root@OpenWrt:~# \r\n";
-
-            try
-            {
-                string DECTver = "";
-                string cmd = string.Empty;
-                //string offset_val = "60";
-                string offset_val = Func.ReadINI("Setting", "PCBA", "DECT_Default_RXTUN", "70");
-                //string version = Func.ReadINI("Setting", "Parameter", "DECT_Version", "ERROR");
-                //double freqHz = 13824000;  //Freq. = 13.824 MHz
-                double freqHz = 1888356500; //1888.3565 MHz
-                double pwr = -999;
-                double pwrThreshold = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "PwrThreshold", "0"));
-                double outFreqHz = 0;
-                //double tolerance = 5;
-                double tolerance = 1500;
-                double freqDeltaHz = 0;
-                double delta = 0;
-
-                bool result = false;
-                int delayMs = 0;
-                int timeOutMs = 10 * 1000;
-                RXTUNE = "";
-
-                byte[] data = new byte[] { };
-
-                DateTime dt;
-                TimeSpan ts;
-
-                if (!DECTSignalAnalyzerPresetting(1888704000))
-                {
-                    warning = "Initial Spectrum fail";
-                    return;
-                }
-
-                for (int i = 0; i < 3; i++)
-                {
-                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
-                        break;
-                    DisplayMsg(LogType.Log, "Delay 2s...");
-                    Thread.Sleep(2000);
-                }
-
-                if (!result)
-                {
-                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
-                    AddData(item, 1);
-                    return;
-                }
-
-                //check DECT version
-                #region check_DECT_version
-                Match m = Regex.Match(res, @"Target\s+: (?<DECT_ver>.+)");
-                if (m.Success)
-                {
-                    DECTver = m.Groups["DECT_ver"].Value.Trim();
-                }
-                DisplayMsg(LogType.Log, "Current DECT_version:" + DECTver);
-                DisplayMsg(LogType.Log, "SFCS DECT_version:" + infor.DECTver);
-                if (DECTver != "" && string.Compare(DECTver, infor.DECTver, true) == 0)
-                {
-                    status_ATS.AddDataRaw("LRG1_DECT_Ver", infor.DECTver, infor.DECTver, "000000");
-                }
-                else
-                {
-                    //更新DECT FW
-                    //if (Func.ReadINI("Setting", "PCBA", "DoDECTFWUpgrade", "0") == "1")
-                    //{
-                    //    if (!UpgradeDECTFW())
-                    //    {
-                    //        return;
-                    //    }
-                    //}
-                    //else
-                    {
-                        AddData("DECT_Ver", 1);
-                        DisplayMsg(LogType.Log, "Check DECT version fail");
-                        return;
-                    }
-                }
-                #endregion
-
-                //Rena_20230524, change RXTUN default value as 70
-                #region set_RXTUN_default
-                //x -> x -> 26 -> 1 -> 70
-                //q (回到主選單)
-                //繼續開始calibration流程
-                if (true)
-                {
-                    DisplayMsg(LogType.Log, "Write x to ssh");
-                    SSH_stream.Write("x\r");
-                    ChkResponse(PortType.SSH, ITEM.NONE, "q) Quit", out res, timeOutMs);
-
-                    if (!SendWithoutEnterAndChk(PortType.SSH, "x", "Enter Location (dec):", delayMs, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    DisplayMsg(LogType.Log, $"Write '26' to ssh");
-                    SSH_stream.WriteLine("26");
-                    if (!ChkResponse(PortType.SSH, ITEM.NONE, "Enter Length (dec. max 512):", out res, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    DisplayMsg(LogType.Log, $"Write '1' to ssh");
-                    SSH_stream.WriteLine("1");
-                    if (!ChkResponse(PortType.SSH, ITEM.NONE, "Enter New Data (hexadecimal):", out res, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    DisplayMsg(LogType.Log, $"Write '{offset_val}' to ssh");
-                    SSH_stream.WriteLine(offset_val);
-                    if (!ChkResponse(PortType.SSH, ITEM.NONE, "CURRENT VALUE:", out res, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    if (!SendWithoutEnterAndChk(PortType.SSH, "q", "q) Quit", delayMs, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    //exit calibration mode
-                    for (int i = 0; i < 5; i++)
-                    {
-                        if (SendAndChk(PortType.SSH, "q", keyword, out res, 0, 2000))
-                            break;
-                    }
-
-                    //Reboot DECT
-                    DisplayMsg(LogType.Log, "Reboot DECT");
-                    SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
-                    Thread.Sleep(2000);
-                    SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
-                    DisplayMsg(LogType.Log, "Delay 3s...");
-                    Thread.Sleep(3000);
-                }
-                #endregion
-
-                for (int i = 0; i < 3; i++)
-                {
-                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
-                        break;
-                    DisplayMsg(LogType.Log, "Delay 2s...");
-                    Thread.Sleep(2000);
-                }
-
-                if (!result)
-                {
-                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
-                    AddData(item, 1);
-                    return;
-                }
-
-                DisplayMsg(LogType.Log, "Write x to ssh");
-                SSH_stream.Write("x\r");
-                ChkResponse(PortType.SSH, ITEM.NONE, "q) Quit", out res, timeOutMs);
-
-                //Rena_20230524, check RXTUN default value
-                #region check_RXTUN_default
-                if (true)
-                {
-                    //check RXTUN default value
-                    RXTUNE = ParseRXTUNE(res).Trim();
-                    if (RXTUNE != offset_val)
-                    {
-                        DisplayMsg(LogType.Log, $"Check RXTUN={offset_val} fail");
-                        AddData(item, 1);
-                        return;
-                    }
-                    else
-                    {
-                        DisplayMsg(LogType.Log, $"Check RXTUN={offset_val} pass");
-                    }
-                }
-                #endregion
-
-                //continuous TX
-                //s -> ff -> 0 -> 3(continuous TX) -> 0 -> 05(CH5) -> 0 (ANT0) -> q
-                SendWithoutEnterAndChk(item, PortType.SSH, "s", "FF for default", delayMs, timeOutMs);
-                SendWithoutEnterAndChk(item, PortType.SSH, "ff", "2 - long slot", delayMs, timeOutMs);
-                SendWithoutEnterAndChk(item, PortType.SSH, "0", "3 - continuous TX", delayMs, timeOutMs);
-                SendWithoutEnterAndChk(item, PortType.SSH, "3", "Enter Instance (0..9):", delayMs, timeOutMs);
-                SendWithoutEnterAndChk(item, PortType.SSH, "0", "DECT (decimal):", delayMs, timeOutMs);
-                SendWithoutEnterAndChk(item, PortType.SSH, "05", "Enter Ant (0,1):", delayMs, timeOutMs);
-                SendWithoutEnterAndChk(item, PortType.SSH, "0", "Press any key !", delayMs, timeOutMs);
-                SendWithoutEnterAndChk(item, PortType.SSH, "q", "q) Quit", delayMs, timeOutMs);
-                if (!CheckGoNoGo())
-                {
-                    DisplayMsg(LogType.Log, "continuous TX fail");
-                    AddData(item, 1);
-                    return;
-                }
-
-                if (!SendWithoutEnterAndChk(PortType.SSH, "c", "(0xFF for None):", delayMs, timeOutMs))
-                {
-                    DisplayMsg(LogType.Log, "Enter RXTUN fail");
-                    AddData(item, 1);
-                    return;
-                }
-
-                DisplayMsg(LogType.Log, "Write 07 to ssh");
-                SSH_stream.Write("07\r");
-                result = ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN:", out res, timeOutMs);
-                //RXTUNE = ParseRXTUNE(res).Trim();
-                if (ParseRXTUNE(res).Trim().Length == 0)
-                {
-                    warning = "RXTUN is empty";
-                    return;
-                }
-
-                dt = DateTime.Now;
-                int c = 0;
-                while (true)
-                {
-                    ts = new TimeSpan(DateTime.Now.Ticks - dt.Ticks);
-                    if (ts.TotalMilliseconds > 180 * 1000)
-                    {
-                        DisplayMsg(LogType.Error, "DECT Calibration timeout");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    DisplayMsg(LogType.Log, "Delay 500 (ms)..");
-                    System.Threading.Thread.Sleep(500);
-
-                    if (!FetchFrequency(out outFreqHz))
-                    {
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    //Rena_20230414, disable for LRG1 HQ sample build
-                    if (false)// need to check env in V2 to set threshold
-                    {
-                        int delay = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "DelayPower", "0"));
-                        FetchPower(out pwr, delay);
-                        DisplayMsg(LogType.Log, "Power: " + pwr.ToString());
-
-                        if (pwr < pwrThreshold)
-                        {
-                            DisplayMsg(LogType.Warning, "Under power threshold : " + pwr.ToString());
-                            continue;
-                        }
-                    }
-
-                    freqDeltaHz = outFreqHz - freqHz;
-                    DisplayMsg(LogType.Log, "freqDeltaHz: " + freqDeltaHz.ToString());
-                    DisplayMsg(LogType.Log, "freqHz: " + outFreqHz.ToString());
-                    DisplayMsg(LogType.Log, "Tolerence: " + tolerance.ToString());
-
-                    if (freqDeltaHz > tolerance)
-                    {
-                        cmd = ">";
-                        data = new byte[] { 0x3e };
-                    }
-                    else if (freqDeltaHz < -tolerance)
-                    {
-                        cmd = "<";
-                        data = new byte[] { 0x3c };
-                    }
-                    else
-                    {
-                        DisplayMsg(LogType.Log, " ========= Get last rxtun ========");
-                        cmd = "q";
-                        DisplayMsg(LogType.Log, $"Write '{cmd}' to ssh");
-                        SSH_stream.Write(cmd);
-                        ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN: ", out res, timeOutMs);
-
-                        RXTUNE = ParseRXTUNE(res, "RXTUN:").Trim();
-                        if (RXTUNE.Length == 0)
-                        {
-                            warning = "RXTUN is empty";
-                            return;
-                        }
-
-                        DisplayMsg(LogType.Log, "---DECT RXTUN-------------------> " + RXTUNE);
-                        status_ATS.AddDataRaw("LGR1_RXTURN", RXTUNE, RXTUNE, "000000");
-
-                        status_ATS.AddData("CrystalFrequencyHz", "Hz", outFreqHz);
-                        AddData(item, 0);
-
-                        //Rena_20230714 modify
-                        //status_ATS.AddDataRaw("LRG1_DECT_RXTUN", RXTUNE, RXTUNE, "000000");
-                        int decRxtune = int.Parse(RXTUNE, System.Globalization.NumberStyles.HexNumber);
-                        status_ATS.AddData("DECT_RXTUNE", "", decRxtune);
-                        break;
-                    }
-                    /*Rena_20230707,LRG1 DECT會先寫預設值,所以調整flow
-                    delta = freqDeltaHz / 6;
-                    delta = Math.Round(delta, 0);
-                    DisplayMsg(LogType.Log, "Shift " + delta.ToString() + " times..");
-                    delta = Math.Abs(delta);
-
-                    #region Jed modify flow 2023/02/08
-                    if (c <= 2)
-                    {
-                        c++;
-                        string rxtune = RXTUNE.Replace("0x", "");
-                        int decRxtune = int.Parse(rxtune, System.Globalization.NumberStyles.HexNumber);
-                        int step = (int)delta + decRxtune;
-                        DisplayMsg(LogType.Log, "Rxtune in decimal:" + decRxtune);
-                        DisplayMsg(LogType.Log, "Rxtune + step in decimal:" + step);
-                        //if (decRxtune < 112 || decRxtune > 144) //LS04
-                        if (decRxtune < 96 || decRxtune > 128) //LRG1 EVT 暫定值
-                        {
-                            DisplayMsg(LogType.Log, $"{c}==========> Measure freqency again.");
-                            DisplayMsg(LogType.Log, $"Delay 3s...");
-                            Thread.Sleep(3000);
-                            continue;
-                        }
-                    }
-                    #endregion
-
-                    for (int i = 0; i < delta; i++)*/
-                    {
-                        DisplayMsg(LogType.Log, $"Write '{cmd}' to ssh");
-                        SSH_stream.Write(cmd);
-                        if (!ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN: ", out res, timeOutMs))
-                        {
-                            AddData(item, 1);
-                            return;
-                        }
-                        //Thread.Sleep(1000);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                DisplayMsg(LogType.Exception, ex.Message);
-                AddData(item, 1);
-            }
-            finally
-            {
-                //exit calibration mode
-                for (int i = 0; i < 5; i++)
-                {
-                    if (SendAndChk(PortType.SSH, "q", keyword, out res, 0, 2000))
-                        break;
-                }
-                SendAndChk(PortType.SSH, "cd ~", keyword, out res, 0, 3000);
-            }
-        }
-        //Rena_20230705,先保留原做法
-        private void DECTCal_org(ref string RXTUNE)
-        {
-            if (!CheckGoNoGo())
-            {
-                return;
-            }
-
-            DisplayMsg(LogType.Log, "=============== DECT Calibration ===============");
-
-            string item = "DECTCal";
-            string res = string.Empty;
-            string keyword = @"root@OpenWrt";
-
-            try
-            {
-                string DECTver = "";
-                string cmd = string.Empty;
-                string version = Func.ReadINI("Setting", "Parameter", "DECT_Version", "ERROR");
-                double freqHz = 13824000;
-                double pwr = -999;
-                double pwrThreshold = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "PwrThreshold", "0"));
-                double outFreqHz = 0;
-                double tolerance = 5;
-                double freqDeltaHz = 0;
-                double delta = 0;
-
-                bool result = false;
-                int delayMs = 0;
-                int timeOutMs = 10 * 1000;
-                RXTUNE = "";
-
-                byte[] data = new byte[] { };
-
-                DateTime dt;
-                TimeSpan ts;
-
-                if (!DECTSignalAnalyzerPresetting(freqHz))
-                {
-                    warning = "Initial Spectrum fail";
-                    return;
-                }
-
-                for (int i = 0; i < 3; i++)
-                {
-                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
-                        break;
-                    DisplayMsg(LogType.Log, "Delay 2s...");
-                    Thread.Sleep(2000);
-                }
-
-                if (!result)
-                {
-                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
-                    AddData(item, 1);
-                    return;
-                }
-
-                //check DECT version
-                Match m = Regex.Match(res, @"Target\s+: (?<DECT_ver>.+)");
-                if (m.Success)
-                {
-                    DECTver = m.Groups["DECT_ver"].Value.Trim();
-                }
-                DisplayMsg(LogType.Log, "Current DECT_version:" + DECTver);
-                DisplayMsg(LogType.Log, "SFCS DECT_version:" + infor.DECTver);
-                if (DECTver != "" && string.Compare(DECTver, infor.DECTver, true) == 0)
-                {
-                    status_ATS.AddDataRaw("LRG1_DECT_Ver", infor.DECTver, infor.DECTver, "000000");
-                }
-                else
-                {
-                    if (Func.ReadINI("Setting", "PCBA", "DoDECTFWUpgrade", "0") == "1")
-                    {
-                        if (!UpgradeDECTFW())
-                        {
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        AddData("DECT_Ver", 1);
-                        DisplayMsg(LogType.Log, "Check DECT version fail");
-                        return;
-                    }
-                }
-
-                //Rena_20230524, change RXTUN default value as 70 for HQ sample build(TODO)
-                #region set_RXTUN_default
-                //s -> 2 -> 7 -> 26 -> 1 -> 70 -> enter
-                //q (回到主選單)
-                //繼續開始calibration流程
-                if (Func.ReadINI("Setting", "PCBA", "DECTDefaultChange", "0") == "1")
-                {
-                    SendWithoutEnterAndChk(PortType.SSH, "s", "q => Return to Interface Menu", delayMs, timeOutMs);
-                    SendWithoutEnterAndChk(PortType.SSH, "2", "q => Return", delayMs, timeOutMs);
-                    if (!SendWithoutEnterAndChk(PortType.SSH, "7", "Enter Location (dec):", delayMs, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    DisplayMsg(LogType.Log, $"Write '26' to ssh");
-                    SSH_stream.WriteLine("26");
-                    if (!ChkResponse(PortType.SSH, ITEM.NONE, "Enter Length (dec. max 512):", out res, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    DisplayMsg(LogType.Log, $"Write '1' to ssh");
-                    SSH_stream.WriteLine("1");
-                    if (!ChkResponse(PortType.SSH, ITEM.NONE, "Enter New Data (hexadecimal):", out res, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    DisplayMsg(LogType.Log, $"Write '70' to ssh");
-                    SSH_stream.WriteLine("70");
-                    if (!ChkResponse(PortType.SSH, ITEM.NONE, "CURRENT VALUE:", out res, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    if (!SendWithoutEnterAndChk(PortType.SSH, "q", "q => Return to Interface Menu", delayMs, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-                    if (!SendWithoutEnterAndChk(PortType.SSH, "q", "q => Quit", delayMs, timeOutMs))
-                    {
-                        DisplayMsg(LogType.Log, "Modify RXTUN fail");
-                        AddData(item, 1);
-                        return;
-                    }
-                }
-                #endregion
-
-                //SendWithoutEnterAndChk(PortType.SSH, "x", "q) Quit", delayMs, timeOutMs);
-                DisplayMsg(LogType.Log, "Write x to ssh");
-                SSH_stream.Write("x\r");
-                ChkResponse(PortType.SSH, ITEM.NONE, "q) Quit", out res, timeOutMs);
-
-                //Rena_20230524, check RXTUN default value for HQ sample build(TODO)
-                #region check_RXTUN_default
-                if (Func.ReadINI("Setting", "PCBA", "DECTDefaultChange", "0") == "1")
-                {
-                    //check RXTUN default value
-                    RXTUNE = ParseRXTUNE(res).Trim();
-                    if (RXTUNE != "70")
-                    {
-                        DisplayMsg(LogType.Log, "Check RXTUN=70 fail");
-                        AddData(item, 1);
-                        return;
-                    }
-                    else
-                    {
-                        DisplayMsg(LogType.Log, "Check RXTUN=70 pass");
-                    }
-                }
-                #endregion
-
-                SendWithoutEnterAndChk(PortType.SSH, "c", "(0xFF for None):", delayMs, timeOutMs);
-
-                DisplayMsg(LogType.Log, "Write 07 to ssh");
-                SSH_stream.Write("07\r");
-                result = ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN:", out res, timeOutMs);
-                RXTUNE = ParseRXTUNE(res).Trim();
-                if (RXTUNE.Length == 0)
-                {
-                    warning = "RXTUN is empty";
-                    return;
-                }
-
-                //Rena_20230414, for HQ sample build
-                if (forHQtest)
-                {
-                    frmOK.Label = "請將探針接觸DECT Crystal後按OK";
-                    frmOK.ShowDialog();
-                    Thread.Sleep(5000);
-                }
-
-                dt = DateTime.Now;
-                int c = 0;
-                while (true)
-                {
-                    ts = new TimeSpan(DateTime.Now.Ticks - dt.Ticks);
-                    if (ts.TotalMilliseconds > 180 * 1000)
-                    {
-                        DisplayMsg(LogType.Error, "DECT Calibration timeout");
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    DisplayMsg(LogType.Log, "Delay 500 (ms)..");
-                    System.Threading.Thread.Sleep(500);
-
-                    if (!FetchFrequency(out outFreqHz))
-                    {
-                        AddData(item, 1);
-                        return;
-                    }
-
-                    //Rena_20230414, disable for LRG1 HQ sample build
-                    if (false)// need to check env in V2 to set threshold
-                    {
-                        int delay = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "DelayPower", "0"));
-                        FetchPower(out pwr, delay);
-                        DisplayMsg(LogType.Log, "Power: " + pwr.ToString());
-
-                        if (pwr < pwrThreshold)
-                        {
-                            DisplayMsg(LogType.Warning, "Under power threshold : " + pwr.ToString());
-                            continue;
-                        }
-                    }
-
-                    freqDeltaHz = outFreqHz - freqHz;
-                    DisplayMsg(LogType.Log, "freqDeltaHz: " + freqDeltaHz.ToString());
-                    DisplayMsg(LogType.Log, "freqHz: " + outFreqHz.ToString());
-                    DisplayMsg(LogType.Log, "Tolerence: " + tolerance.ToString());
-
-                    if (freqDeltaHz > tolerance)
-                    {
-                        cmd = ">";
-                        data = new byte[] { 0x3e };
-                    }
-                    else if (freqDeltaHz < -tolerance)
-                    {
-                        cmd = "<";
-                        data = new byte[] { 0x3c };
-                    }
-                    else
-                    {
-                        DisplayMsg(LogType.Log, " ========= Get last rxtun ========");
-                        cmd = "q";
-                        DisplayMsg(LogType.Log, $"Write '{cmd}' to ssh");
-                        SSH_stream.Write(cmd);
-                        ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN: ", out res, timeOutMs);
-
-                        RXTUNE = ParseRXTUNE(res, "RXTUN:").Trim();
-                        if (RXTUNE.Length == 0)
-                        {
-                            warning = "RXTUN is empty";
-                            return;
-                        }
-
-                        DisplayMsg(LogType.Log, "---DECT RXTUN-------------------> " + RXTUNE);
-                        status_ATS.AddData("CrystalFrequencyHz", "Hz", outFreqHz);
-                        AddData(item, 0);
-                        status_ATS.AddDataRaw("LRG1_DECT_RXTUN", RXTUNE, RXTUNE, "000000");
-                        break;
-                    }
-
-                    delta = freqDeltaHz / 6;
-                    delta = Math.Round(delta, 0);
-                    DisplayMsg(LogType.Log, "Shift " + delta.ToString() + " times..");
-                    delta = Math.Abs(delta);
-
-                    #region Jed modify flow 2023/02/08
-                    if (c <= 2)
-                    {
-                        c++;
-                        string rxtune = RXTUNE.Replace("0x", "");
-                        int decRxtune = int.Parse(rxtune, System.Globalization.NumberStyles.HexNumber);
-                        int step = (int)delta + decRxtune;
-                        DisplayMsg(LogType.Log, "Rxtune in decimal:" + decRxtune);
-                        DisplayMsg(LogType.Log, "Rxtune + step in decimal:" + step);
-                        //if (decRxtune < 112 || decRxtune > 144) //LS04
-                        if (decRxtune < 96 || decRxtune > 128) //LRG1 EVT 暫定值
-                        {
-                            DisplayMsg(LogType.Log, $"{c}==========> Measure freqency again.");
-                            DisplayMsg(LogType.Log, $"Delay 3s...");
-                            Thread.Sleep(3000);
-                            continue;
-                        }
-                    }
-                    #endregion
-
-                    for (int i = 0; i < delta; i++)
-                    {
-                        DisplayMsg(LogType.Log, $"Write '{cmd}' to ssh");
-                        SSH_stream.Write(cmd);
-                        if (!ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN: ", out res, timeOutMs))
-                        {
-                            AddData(item, 1);
-                            return;
-                        }
-                        Thread.Sleep(1000);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                DisplayMsg(LogType.Exception, ex.Message);
-                AddData(item, 1);
-            }
-            finally
-            {
-                //Rena_20230414, for HQ sample build
-                if (forHQtest)
-                {
-                    frmOK.Label = "請移除探針";
-                    frmOK.ShowDialog();
-                }
-                //exit calibration mode
-                for (int i = 0; i < 5; i++)
-                {
-                    if (SendAndChk(PortType.SSH, "q", keyword, out res, 0, 2000))
-                        break;
-                }
-                SendAndChk(PortType.SSH, "cd ~", keyword, out res, 0, 3000);
+                this.exitMode("Version");
             }
         }
         private bool UpgradeDECTFW()
@@ -1679,9 +1258,9 @@ namespace MiniPwrSupply.LRG1
 
             try
             {
-                double spanHz = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "SpanHz", "0"));
-                double rbwKHz = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "RbwHz", "0"));
-                double vbwKHz = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "VbwHz", "0"));
+                double spanHz = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "SpanHz", "1000000"));
+                double rbwKHz = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "RbwHz", "1000"));
+                double vbwKHz = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "VbwHz", "1000"));
                 double rlevDbm = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "RefLevelDb", "0"));
                 double SweepTimeMs = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "SweepTimeMs", "0"));
                 double att = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "Attenuation", "0"));
@@ -1902,49 +1481,57 @@ namespace MiniPwrSupply.LRG1
                 SendAndChk(PortType.SSH, "mkdir /mnt/test", keyword, out res, 0, 3000);
                 SendAndChk(PortType.SSH, "mount -t ext4 /dev/mmcblk0p32 /mnt/test", keyword, out res, 0, 3000);
                 SendAndChk(PortType.SSH, "echo test123 > /mnt/test/file;sync", keyword, out res, 0, 3000);
+
                 // =================================
                 // [5.3.4] Remove gen_board_data.py
                 // =================================
-                //#region replace_py
-                //int index = 0;
-                //bool MD5_check = false;
-                ////Rena_20230714, replace gen_board_data.py(暫時做法,之後MFG FW進版後就不需要了)
-                ////put gen_board_data.py in default_image_backup folder
-                //if (!File.Exists(Path.Combine(defaults_img_path, "gen_board_data.py")))
-                //{
-                //    DisplayMsg(LogType.Log, $"File '{Path.Combine(defaults_img_path, "gen_board_data.py")}' doesn't exist");
-                //    AddData(item, 1);
-                //    return;
-                //}
-                //SendAndChk(PortType.SSH, $"tftp -gr gen_board_data.py {PC_IP}", keyword, out res, 0, 5000);
-                //SendAndChk(PortType.SSH, "mv gen_board_data.py /lib/gen_board_data.py", keyword, out res, 0, 5000);
-                //while (index++ < 5)
-                //{
-                //    SendAndChk(PortType.SSH, "md5sum /lib/gen_board_data.py", keyword, out res, 0, 5000);
-                //    if (res.Contains(py_md5sum))
-                //    {
-                //        MD5_check = true;
-                //        DisplayMsg(LogType.Log, "gen_board_data.py MD5 check pass");
-                //        break;
-                //    }
-                //    else
-                //    {
-                //        DisplayMsg(LogType.Log, "gen_board_data.pyMD5 check fail");
-                //        Thread.Sleep(1000);
-                //    }
-                //}
-                //if (!MD5_check)
-                //{
-                //    AddData(item, 1);
-                //    return;
-                //}
-                //#endregion
+                /* #region replace_py
+                 int index = 0;
+                 bool MD5_check = false;
+                 //Rena_20230714, replace gen_board_data.py(暫時做法,之後MFG FW進版後就不需要了)
+                 //put gen_board_data.py in default_image_backup folder
+                 if (!File.Exists(Path.Combine(defaults_img_path, "gen_board_data.py")))
+                 {
+                     DisplayMsg(LogType.Log, $"File '{Path.Combine(defaults_img_path, "gen_board_data.py")}' doesn't exist");
+                     AddData(item, 1);
+                     return;
+                 }
+                 SendAndChk(PortType.SSH, $"tftp -gr gen_board_data.py {PC_IP}", keyword, out res, 0, 5000);
+                 SendAndChk(PortType.SSH, "mv gen_board_data.py /lib/gen_board_data.py", keyword, out res, 0, 5000);
+                 while (index++ < 5)
+                 {
+                     SendAndChk(PortType.SSH, "md5sum /lib/gen_board_data.py", keyword, out res, 0, 5000);
+                     if (res.Contains(py_md5sum))
+                     {
+                         MD5_check = true;
+                         DisplayMsg(LogType.Log, "gen_board_data.py MD5 check pass");
+                         break;
+                     }
+                     else
+                     {
+                         DisplayMsg(LogType.Log, "gen_board_data.pyMD5 check fail");
+                         Thread.Sleep(1000);
+                     }
+                 }
+                 if (!MD5_check)
+                 {
+                     AddData(item, 1);
+                     return;
+                 }
+                 #endregion*/
+
                 //SE_TODO: get wifi_password, admin_password, wlan_ssid from SFCS
                 //如果已經寫過SFCS有紀錄,就讀出SFCS的值後帶入,如果沒寫過就用renew
                 //HQ sample build都直接用renew,生產時請SE修改
-                string WiFi_SSID_ToWrite = "renew";
-                string WiFi_PWD_ToWrite = "renew";
-                string Admin_PWD_ToWrite = "renew";
+                SFCS_Query _sfcsQuery = new SFCS_Query();
+                ATS_Template.SFCS_ATS_2_0.ATS ss = new ATS_Template.SFCS_ATS_2_0.ATS();
+                string WiFi_SSID_ToWrite = string.Empty;
+                string WiFi_PWD_ToWrite = string.Empty;
+                string Admin_PWD_ToWrite = string.Empty;
+
+                if (!_sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LRG1_LABEL_NETWORK", ref WiFi_SSID_ToWrite)) { WiFi_SSID_ToWrite = "renew"; }
+                if (!_sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LRG1_LABEL_PW", ref WiFi_PWD_ToWrite)) { WiFi_PWD_ToWrite = "renew"; }
+                if (!_sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LRG1_LABEL_ADMIN_PW", ref Admin_PWD_ToWrite)) { Admin_PWD_ToWrite = "renew"; }
 
                 //假設wlan_ssid=BT-JHCFPT,gen_board_data.sh時只需帶JHCFPT
                 //依客戶要求,EVT3-2 wlan_ssid改為EE-XXXXXX
@@ -1959,38 +1546,6 @@ namespace MiniPwrSupply.LRG1
                     AddData(item, 1);
                     return;
                 }
-                //SE_TODO: get wifi_password, admin_password, wlan_ssid from SFCS
-                //如果已經寫過SFCS有紀錄,就讀出SFCS的值後帶入,如果沒寫過就用renew
-                //HQ sample build都直接用renew,生產時請SE修改
-                // ===================================
-                // Markup for PCBA stress test
-                // ===================================
-                //SFCS_Query _sfcsQuery = new SFCS_Query();
-                //ATS_Template.SFCS_ATS_2_0.ATS ss = new ATS_Template.SFCS_ATS_2_0.ATS();
-                //string WiFi_SSID_ToWrite = string.Empty;
-                //string WiFi_PWD_ToWrite = string.Empty;
-                //string Admin_PWD_ToWrite = string.Empty;
-
-                //if (!_sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LRG1_LABEL_NETWORK", ref WiFi_SSID_ToWrite)) { WiFi_SSID_ToWrite = "renew"; }
-                //if (!_sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LRG1_LABEL_PW", ref WiFi_PWD_ToWrite)) { WiFi_PWD_ToWrite = "renew"; }
-                //if (!_sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LRG1_LABEL_ADMIN_PW", ref Admin_PWD_ToWrite)) { Admin_PWD_ToWrite = "renew"; }
-
-                ////假設wlan_ssid=BT-JHCFPT,gen_board_data.sh時只需帶JHCFPT
-                ////依客戶要求,EVT3-2 wlan_ssid改為EE-XXXXXX
-                //WiFi_SSID_ToWrite = WiFi_SSID_ToWrite.Replace("BT-", "").Replace("EE-", "");
-
-                //Generate Board data
-                //BaseMAC & DECT_rfpi are capital letters
-                //SendAndChk(PortType.SSH, $"gen_board_data.sh {SerialNumber} {infor.HWver} {infor.BaseMAC.ToUpper()} {infor.DECT_rfpi.ToUpper()} {infor.DECT_cal_rxtun} {WiFi_PWD_ToWrite} {Admin_PWD_ToWrite} {WiFi_SSID_ToWrite}", keyword, out res, 0, 10000);
-                //if (!res.Contains(keyword) || res.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
-                //{
-                //    DisplayMsg(LogType.Log, "Generate board data fail");
-                //    AddData(item, 1);
-                //    return;
-                //}
-                // ===================================
-                // ===================================
-                // ===================================
                 //Generate D2 License Key
                 cmd = $"echo \"{infor.License_key}\" > /tmp/defaults/D2License.key";
                 SendAndChk(PortType.SSH, cmd, keyword, 0, 5000);
@@ -2219,6 +1774,8 @@ namespace MiniPwrSupply.LRG1
                     status_ATS.AddDataRaw("LRG1_LABEL_NETWORK", infor.WiFi_SSID, infor.WiFi_SSID, "000000");
                     status_ATS.AddDataRaw("LRG1_LABEL_PW", infor.WiFi_PWD, infor.WiFi_PWD, "000000");
                     status_ATS.AddDataRaw("LRG1_LABEL_ADMIN_PW", infor.Admin_PWD, infor.Admin_PWD, "000000");
+
+                    CheckRuleLRG1(infor.BaseMAC.Trim().Replace(":", ""), infor.SerialNumber, infor.WiFi_PWD, infor.Admin_PWD, infor.WiFi_SSID); //Jason add 全参数比对/ Check Thông số đầy đủ
                     //TODO:上拋其他data,如wifi相關data
                 }
             }
@@ -2789,7 +2346,6 @@ namespace MiniPwrSupply.LRG1
 
                 //0x04 0x33 0x88 0xe2 0xed 0x10 0x90 0x00 0x44 0x00 0x00 0x00 0x00 0x00 0x00 0x00
                 SendAndChk(PortType.SSH, "i2ctransfer -y 0 w1@0x55 0x0 r16", keyword, out res, 0, 3000);
-
                 string[] lines = res.Split('\n');
                 foreach (string line in lines)
                 {
@@ -2801,7 +2357,6 @@ namespace MiniPwrSupply.LRG1
                         break;
                     }
                 }
-
                 //PCBA站使用NFC Tag陪測golden,不需上拋UID
                 if (NFC_UID == "")
                 {
@@ -2809,7 +2364,6 @@ namespace MiniPwrSupply.LRG1
                     AddData(item, 1);
                     return;
                 }
-
                 //Check NFC field detection pin
                 SendAndChk(PortType.SSH, "mt gpio dump nfc", keyword, out res, 0, 3000);
                 if (res.Contains("NFC: low"))
@@ -2855,7 +2409,7 @@ namespace MiniPwrSupply.LRG1
             }
             catch (Exception ex)
             {
-                DisplayMsg(LogType.Exception, ex.ToString());
+                DisplayMsg(LogType.Exception, ex.Message);
                 AddData(item, 1);
                 return false;
             }
@@ -3160,13 +2714,12 @@ namespace MiniPwrSupply.LRG1
 
                 //When using standard adaptor, the AC_ALARM is low.
                 //When using customized adaptor or power supply, the AC_ALARM is high.
-                //Battery detection
                 DisplayMsg(LogType.Log, "=============== Battery Detection ===============");
                 item = "BatteryDetection";
                 if (res.Contains("AC_ALARM: low"))
                 {
                     AddData(item, 0);
-                    DisplayMsg(LogType.Log, "Battery detection Pass");
+                    DisplayMsg(LogType.Log, "got AC_ALARM: low => Battery detection Pass");
                 }
                 else
                 {
@@ -3214,10 +2767,7 @@ namespace MiniPwrSupply.LRG1
                     SendAndChk(PortType.SSH, "df", keyword, out res, 0, 10000);
 
                     if (res.Contains("/dev/sda1"))
-                    {
-                        DisplayMsg(LogType.Log, @"got keyword /dev/sdal");
                         break;
-                    }
                 }
                 if (!res.Contains("/dev/sda1"))
                 {
@@ -3440,7 +2990,7 @@ namespace MiniPwrSupply.LRG1
             retry:
                 if (com1.WaitFor("RING", 40))
                 {
-                    DisplayMsg(LogType.Log, "SLIC Test PASS\n Check 'RING' pass");
+                    DisplayMsg(LogType.Log, "Check 'RING' pass");
                 }
                 else
                 {
@@ -3467,6 +3017,8 @@ namespace MiniPwrSupply.LRG1
 
                 //舉起話機
                 DisplayMsg(LogType.Cmd, $"Write 'ath1' to UsbModem");
+                // [3.2] Adjust the SLIC test sequence, ringingèoff hookèoh hook by Stanley
+                // [3.5] Adjust the SLIC test sequence, ringingèoff hookèoh hook by Stanley
                 com1.WriteLine("ath1", 1000);
 
                 if (!ChkResponse(PortType.SSH, ITEM.NONE, "OFFHOOK", out res, 10000))
@@ -3904,8 +3456,5 @@ namespace MiniPwrSupply.LRG1
             }
             return bExist;
         }
-    }
-}
-
     }
 }
