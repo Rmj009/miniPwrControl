@@ -1944,7 +1944,7 @@ namespace ATS
             }
         }
 
-        private void EthernetTest(bool write_mac)
+        private void EthernetTest(bool write_mac, int port_num)
         {
             if (!CheckGoNoGo())
             {
@@ -1955,51 +1955,54 @@ namespace ATS
             string item = "EthernetTest";
             string keyword = @"root@OpenWrt";
             string res = "";
-
+            // ================================================
+            //PCBA
+            //RF
+            //OTA
+            //FINAL
+            // ================================================
+            DisplayMsg(LogType.Log, "=============== Ethernet Test ===============");
+            retry_cnt = 0;
             try
             {
-                DisplayMsg(LogType.Log, "=============== Ethernet Test ===============");
+                frmOK.Label = $"Sau khi kết nối dây mạng vào cổng LAN số {port_num}, vui lòng nhấn\"Xác nhận\"";
+                frmOK.ShowDialog();
 
-                //LAN Port1~4
-                for (int port_num = 1; port_num <= 4; port_num++)
+            LAN_Port_Test:
+                if (SendAndChk(PortType.SSH, "mt eth linkrate", $"port {port_num}: 2500M FD", 0, 3000))
                 {
-                    retry_cnt = 0;
-                    frmOK.Label = $"Sau khi kết nối dây mạng vào cổng LAN số {port_num}, vui lòng nhấn\"Xác nhận\"";
-                    frmOK.ShowDialog();
-
-                LAN_Port_Test:
-                    if (SendAndChk(PortType.SSH, "mt eth linkrate", $"port {port_num}: 2500M FD", 0, 3000))
+                    DisplayMsg(LogType.Log, $"Check LAN Port{port_num} pass");
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, $"Check LAN Port{port_num} fail");
+                    if (retry_cnt++ < 3)
                     {
-                        DisplayMsg(LogType.Log, $"Check LAN Port{port_num} pass");
+                        frmOK.Label = $"Vui lòng kiểm tra dây mạng đã được kết nối đúng vào cổng LAN số {port_num} chưa";
+                        frmOK.ShowDialog();
+                        DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
+                        Thread.Sleep(1000);
+                        goto LAN_Port_Test;
                     }
                     else
                     {
-                        DisplayMsg(LogType.Log, $"Check LAN Port{port_num} fail");
-                        if (retry_cnt++ < 3)
-                        {
-                            frmOK.Label = $"Vui lòng kiểm tra dây mạng đã được kết nối đúng vào cổng LAN số {port_num} chưa";
-                            frmOK.ShowDialog();
-                            DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
-                            Thread.Sleep(1000);
-                            goto LAN_Port_Test;
-                        }
-                        else
-                        {
-                            AddData($"Eth_LAN_Port{port_num}", 1);
-                            return;
-                        }
+                        AddData($"Eth_LAN_Port{port_num}", 1);
+                        return;
                     }
                 }
-
                 //WAN Port
+                if (port_num != 1) // test bind to WAN only
+                {
+                    return;
+                }
                 retry_cnt = 0;
                 frmOK.Label = "Hãy kết nối dây mạng vào cổng WAN, sau đó nhấn\"Xác nhận\"";
                 frmOK.ShowDialog();
-
             WAN_Port_Test:
                 if (SendAndChk(PortType.SSH, "mt eth linkrate", "port 5: 2500M FD", 0, 3000))
                 {
                     DisplayMsg(LogType.Log, "Check WAN Port pass");
+                    break;
                 }
                 else
                 {
@@ -2018,7 +2021,26 @@ namespace ATS
                         return;
                     }
                 }
+                
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+        }
 
+        private void ChkMacAddr()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+            string keyword = @"root@OpenWrt";
+            string item = "ChkMacAddr";
+            string res = "";
+            try
+            {
                 if (write_mac)
                 {
                     //Write MAC Address 寫完後要重開機才會生效,所以PCBA站寫入後在final站檢查
