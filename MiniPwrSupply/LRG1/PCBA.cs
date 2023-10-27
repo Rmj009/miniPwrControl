@@ -158,64 +158,64 @@ namespace ATS
                 }
                 else
                 {
-                    DisplayMsg(LogType.Log, $"Test In engineer mode");
-                    infor.SerialNumber = string.Empty;
-                    infor.SerialNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LRG1_SN");
-                    DisplayMsg(LogType.Log, $"Get SN From SFCS is: {infor.SerialNumber}");
-                    if (infor.SerialNumber.Length == 18)
-                    {
-                        /*SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                        //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
-                        status_ATS.SFCS_Data.PSN = infor.SerialNumber;
-                        status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;*/
-                    }
-                    else // if cannot get from sfcs will get from setting/ jason add 2023/09/27
-                    {
-                        infor.SerialNumber = Func.ReadINI("Setting", "PCBA", "LRG1_SN_Sample", "");
-                        DisplayMsg(LogType.Log, $"Get SN 'LRG1_SN_Sample=' From Setting  is: {infor.SerialNumber}");
-                        if (string.IsNullOrEmpty(infor.SerialNumber) || infor.SerialNumber.Length != 18)
-                        {
-                            warning = "Get SN sample from setting fail";
-                            return;
-                        }
+                    //DisplayMsg(LogType.Log, $"Test In engineer mode");
+                    //infor.SerialNumber = string.Empty;
+                    //infor.SerialNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LRG1_SN");
+                    //DisplayMsg(LogType.Log, $"Get SN From SFCS is: {infor.SerialNumber}");
+                    //if (infor.SerialNumber.Length == 18)
+                    //{
+                    //    /*SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                    //    //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                    //    status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                    //    status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;*/
+                    //}
+                    //else // if cannot get from sfcs will get from setting/ jason add 2023/09/27
+                    //{
+                    //    infor.SerialNumber = Func.ReadINI("Setting", "PCBA", "LRG1_SN_Sample", "");
+                    //    DisplayMsg(LogType.Log, $"Get SN 'LRG1_SN_Sample=' From Setting  is: {infor.SerialNumber}");
+                    //    if (string.IsNullOrEmpty(infor.SerialNumber) || infor.SerialNumber.Length != 18)
+                    //    {
+                    //        warning = "Get SN sample from setting fail";
+                    //        return;
+                    //    }
 
-                        /* SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                         //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
-                         status_ATS.SFCS_Data.PSN = infor.SerialNumber;
-                         status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;*/
+                    //    /* SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                    //     //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                    //     status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                    //     status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;*/
 
-                    }
+                    //}
 
-                    infor.BaseMAC = string.Empty;
-                    if (forHQtest)
-                    {
-                        infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
-                        DisplayMsg(LogType.Log, $"Get MAC From SFCS is: {infor.BaseMAC}");
-                    }
-                    if (infor.BaseMAC.Length == 12)
-                    {
-                        DisplayMsg(LogType.Log, $"Get MAC From SFCS OK");
-                    }
-                    else // if cannot get from sfcs will get from setting/ jason add 2023/09/27
-                    {
-                        infor.BaseMAC = Func.ReadINI("Setting", "PCBA", "MAC_Sample", "");
-                        DisplayMsg(LogType.Log, $"Get SN 'MAC_Sample=' From Setting  is: {infor.BaseMAC}");
-                        if (string.IsNullOrEmpty(infor.BaseMAC) || infor.BaseMAC.Length != 12)
-                        {
-                            warning = "Get MAC sample from setting fail";
-                            return;
-                        }
-                    }
+                    //infor.BaseMAC = string.Empty;
+                    //if (forHQtest)
+                    //{
+                    //    infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
+                    //    DisplayMsg(LogType.Log, $"Get MAC From SFCS is: {infor.BaseMAC}");
+                    //}
+                    //if (infor.BaseMAC.Length == 12)
+                    //{
+                    //    DisplayMsg(LogType.Log, $"Get MAC From SFCS OK");
+                    //}
+                    //else // if cannot get from sfcs will get from setting/ jason add 2023/09/27
+                    //{
+                    //    infor.BaseMAC = Func.ReadINI("Setting", "PCBA", "MAC_Sample", "");
+                    //    DisplayMsg(LogType.Log, $"Get SN 'MAC_Sample=' From Setting  is: {infor.BaseMAC}");
+                    //    if (string.IsNullOrEmpty(infor.BaseMAC) || infor.BaseMAC.Length != 12)
+                    //    {
+                    //        warning = "Get MAC sample from setting fail";
+                    //        return;
+                    //    }
+                    //}
 
-                    infor.BaseMAC = MACConvert(infor.BaseMAC);
+                    //infor.BaseMAC = MACConvert(infor.BaseMAC);
 
-                    SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                    //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
-                    status_ATS.SFCS_Data.PSN = infor.SerialNumber;
-                    status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;
+                    //SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                    ////SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                    //status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                    //status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;
 
                     //Rena_20230407 add for HQ test
-                    GetRFPIFromExcel(infor.BaseMAC);
+                    GetBoardDataFromExcel(status_ATS.txtPSN.Text);
                     //Rena_20230803, add ble_ver and se_ver for BLE test
                     infor.BLEver = Func.ReadINI("Setting", "PCBA", "BLEver", "v5.0.0-b108");
                     infor.SEver = Func.ReadINI("Setting", "PCBA", "SEver", "0001020E");
@@ -259,7 +259,7 @@ namespace ATS
 
                 ChkBootUp(PortType.SSH);
 
-                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)
+                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)
                 {
                     CheckFWVerAndHWID();
                 }
@@ -280,7 +280,7 @@ namespace ATS
                 }
                 SLICTest_ByUsbModem();
 
-                if (forHQtest || (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden))
+                //if (forHQtest || (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden))
                 {
                     SetDUTInfo();
                     CheckDUTInfo();
@@ -297,10 +297,15 @@ namespace ATS
                 if (isLoop == 0)
                     ResetButton();
 
-                USB30Test();
-
+                USBTest();
+                //=================================
+                this.USB30(); // testplan 5.3.9
+                //=================================
                 if (isLoop == 0)
-                    EthernetTest(true);
+                {
+                    this.EthernetTest(1);
+                    this.ChkMacAddr();
+                }
 
                 CurrentSensor();
 
@@ -353,10 +358,8 @@ namespace ATS
             }
 
             DisplayMsg(LogType.Log, "=============== Set DECT RFPI ===============");
-
             string item = "SetDECTRFPI";
             string res = string.Empty;
-            //string keyword = "root@OpenWrt:~# \r\n";
             string RFPI_val = infor.DECT_rfpi.Replace(".", "").ToUpper(); //寫入格式為 0303B009B0
 
             try
@@ -436,15 +439,6 @@ namespace ATS
                 DisplayMsg(LogType.Exception, ex.Message);
                 AddData(item, 1);
             }
-            //finally
-            //{
-            //    //exit calibration mode
-            //    for (int i = 0; i < 5; i++)
-            //    {
-            //        if (SendAndChk(PortType.SSH, "q", keyword, out res, 0, 2000))
-            //            break;
-            //    }
-            //}
         }
 
         private bool IsTftpd32Running()
@@ -708,11 +702,7 @@ namespace ATS
                 }
                 // q
                 //exit calibration mode
-                this.exitMode("Version");
-                // =========================================================================================
-                // 之後從改寫RxTun開始
-                // =========================================================================================
-
+                this.exitMode();
                 #region set_RXTUN_default
                 //x -> x -> 26 -> 1 -> 70
                 //q (回到主選單)
@@ -756,7 +746,6 @@ namespace ATS
                         AddData(item, 1);
                         return;
                     }
-                    //========================================== 還是退到第二層x大選單 =================================================
                     if (!SendWithoutEnterAndChk(PortType.SSH, "q", "q) Quit", delayMs, timeOutMs))
                     {
                         DisplayMsg(LogType.Log, "Modify RXTUN fail");
@@ -773,16 +762,8 @@ namespace ATS
             }
             finally
             {
-                // q to layer 1 for Reboot DECT
-                //exit calibration mode
-                this.exitMode(keyword);
-                //Reboot DECT
-                DisplayMsg(LogType.Log, "Reboot DECT");
-                SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
-                Thread.Sleep(2000);
-                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
-                DisplayMsg(LogType.Log, "Delay 3s...");
-                Thread.Sleep(3000);
+                //// q to layer 1 for Reboot DECT
+                this.ResetDect();
             }
         }
         private void DECTCal(ref string RXTUNE)
@@ -823,7 +804,7 @@ namespace ATS
                     warning = "Initial Spectrum fail";
                     return;
                 }
-
+            RetryPwr:
                 for (int i = 0; i < 3; i++)
                 {
                     SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
@@ -839,7 +820,6 @@ namespace ATS
                     AddData(item, 1);
                     return;
                 }
-            RetryPwr:
                 //Rena_20230524, change RXTUN default value as 70
                 DisplayMsg(LogType.Log, "Write x to ssh");
                 SSH_stream.Write("x\r");
@@ -922,13 +902,10 @@ namespace ATS
                     DisplayMsg(LogType.Log, "Tolerence: " + tolerance.ToString());
 
                     //Rena_20230414, disable for LRG1 HQ sample build
-                    //int delay = 0;
-                    //if (false)// need to check env in V2 to set threshold
-                    //int delay = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "DelayPower", "0"));
-                    int delay = 100;
+                    int delay = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "DelayPower", "50"));
                     FetchPower(out pwr, delay);
                     DisplayMsg(LogType.Log, "Dect_TxPower: " + pwr.ToString());
-                    if (pwr < pwrThreshold)
+                    if (pwr < pwrThreshold) // need to check env in V2 to set threshold
                     {
                         retryTimes++;
                         DisplayMsg(LogType.Warning, "Under power threshold : " + pwr.ToString());
@@ -941,7 +918,7 @@ namespace ATS
                         else
                         {
                             DisplayMsg(LogType.Log, $"TxPower {pwr.ToString()} Too low, try again");
-                            this.exitMode("Version");
+                            this.ResetDect();
                             goto RetryPwr;
                         }
                         //continue;
@@ -989,21 +966,14 @@ namespace ATS
                     //delta = Math.Round(delta, 0);
                     //DisplayMsg(LogType.Log, "Shift " + delta.ToString() + " times..");
                     //delta = Math.Abs(delta);
-                    for (int i = 0; i < 3; i++)
+                    DisplayMsg(LogType.Log, $"Write '{cmd}' to ssh");
+                    SSH_stream.Write(cmd);
+                    Thread.Sleep(100);
+                    if (!ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN: ", out res, timeOutMs))
                     {
-                        DisplayMsg(LogType.Log, $"Write '{cmd}' to ssh");
-                        SSH_stream.Write(cmd);
-                        Thread.Sleep(100);
-                        if (!ChkResponse(PortType.SSH, ITEM.NONE, "RXTUN: ", out res, timeOutMs))
-                        {
-                            AddData(item, 1);
-                            return;
-                        }
-                        else
-                        {
-                            DisplayMsg(LogType.Log, "get RXTUN succeed");
-                            AddData(item, 0);
-                        }
+                        DisplayMsg(LogType.Log, $"cannot_acquire_Rxtun {res}");
+                        AddData(item, 1);
+                        return;
                     }
                 }
             }
@@ -1015,21 +985,54 @@ namespace ATS
             finally
             {
                 //exit calibration mode
-                exitMode(keyword);
-                SendAndChk(PortType.SSH, "cd ~", keyword, out res, 0, 3000);
+                //exitMode(keyword);
+                SendAndChk(PortType.SSH, "qqqqq\r\n", keyword, out res, 0, 1200);
+                //SendAndChk(PortType.SSH, "cd ~", keyword, out res, 0, 3000);
             }
         }
-        public void exitMode(string keyWord)
+        public void exitMode()
         {
             string res = string.Empty;
-            for (int i = 0; i < 5; i++)
+            bool result = false;
+            string keyWord = "root@OpenWrt";
+            do
             {
-                //if (SendAndChk(PortType.SSH, "q\r\n", keyWord, out res, 0, 12000))
-                //{ break; }
-                SendAndChk(PortType.SSH, "q\r\n", keyWord, out res, 0, 10000);
-                if (SendAndChk(PortType.SSH, "\r\n", keyWord, out res, 0, 3000))
-                { break; }
-                Thread.Sleep(50);
+                if (SendAndChk(PortType.SSH, "qqqqq\n", keyWord, out res, 0, 1000))
+                {
+                    { break; }
+                }
+            } while (!SendAndChk(PortType.SSH, "\r\n", keyWord, out res, 0, 100));
+            //for (int i = 0; i < 5; i++)
+            //{
+            //if (SendAndChk(PortType.SSH, "q\r\n", keyWord, out res, 0, 12000))
+            //{ break; }
+            //SendAndChk(PortType.SSH, "qq\r\n", keyWord, out res, 0, 10000);
+            //if (SendAndChk(PortType.SSH, "\r\n", keyWord, out res, 0, 3000))
+            //{ break; }
+            //}
+            try
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", 0);
+                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
+                        break;
+                    DisplayMsg(LogType.Log, "Delay 2s...");
+                    Thread.Sleep(2000);
+                }
+
+                if (!result)
+                {
+                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
+                    AddData("exitMode", 1);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+
+                DisplayMsg(LogType.Exception, ex.Message);
+                return;
             }
         }
         private void Set_DECT_ID_AND_DECT_RFPI()
@@ -1096,7 +1099,7 @@ namespace ATS
                 // ===============================================================
                 // ==================== BACK MAIN MENU ===========================
                 // ===============================================================
-                this.exitMode("Version");
+                this.exitMode();
                 //=================================================================
                 this.Set_DECT_RFPI(); //Rena_20230803, EEProm Param Set RFPI
                 //=================================================================
@@ -1109,7 +1112,7 @@ namespace ATS
             finally
             {
                 //exit calibration mode
-                this.exitMode("Version");
+                this.exitMode();
             }
         }
         private bool UpgradeDECTFW()
@@ -1944,7 +1947,7 @@ namespace ATS
             }
         }
 
-        private void EthernetTest(bool write_mac, int port_num)
+        private void EthernetTest(int port_num)
         {
             if (!CheckGoNoGo())
             {
@@ -1953,8 +1956,8 @@ namespace ATS
 
             int retry_cnt;
             string item = "EthernetTest";
-            string keyword = @"root@OpenWrt";
-            string res = "";
+            //string keyword = @"root@OpenWrt";
+            //string res = "";
             // ================================================
             //PCBA
             //RF
@@ -1972,6 +1975,10 @@ namespace ATS
                 if (SendAndChk(PortType.SSH, "mt eth linkrate", $"port {port_num}: 2500M FD", 0, 3000))
                 {
                     DisplayMsg(LogType.Log, $"Check LAN Port{port_num} pass");
+                    if (port_num == 5)
+                    {
+                        DisplayMsg(LogType.Log, "Check WAN Port pass");
+                    }
                 }
                 else
                 {
@@ -1991,37 +1998,36 @@ namespace ATS
                     }
                 }
                 //WAN Port
-                if (port_num != 1) // test bind to WAN only
-                {
-                    return;
-                }
-                retry_cnt = 0;
-                frmOK.Label = "Hãy kết nối dây mạng vào cổng WAN, sau đó nhấn\"Xác nhận\"";
-                frmOK.ShowDialog();
-            WAN_Port_Test:
-                if (SendAndChk(PortType.SSH, "mt eth linkrate", "port 5: 2500M FD", 0, 3000))
-                {
-                    DisplayMsg(LogType.Log, "Check WAN Port pass");
-                    break;
-                }
-                else
-                {
-                    DisplayMsg(LogType.Log, "Check WAN Port fail");
-                    if (retry_cnt++ < 3)
-                    {
-                        frmOK.Label = "Vui lòng kiểm tra dây mạng đã được kết nối đúng vào cổng WAN chưa";
-                        frmOK.ShowDialog();
-                        DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
-                        Thread.Sleep(1000);
-                        goto WAN_Port_Test;
-                    }
-                    else
-                    {
-                        AddData("Eth_WAN_Port", 1);
-                        return;
-                    }
-                }
-                
+                //if (!ToTest_WanPort) // test bind to WAN only
+                //{
+                //    return;
+                //}
+                //retry_cnt = 0;
+                //frmOK.Label = "Hãy kết nối dây mạng vào cổng WAN, sau đó nhấn\"Xác nhận\"";
+                //frmOK.ShowDialog();
+                //WAN_Port_Test:
+                //if (SendAndChk(PortType.SSH, "mt eth linkrate", "port 5: 2500M FD", 0, 3000))
+                //{
+                //    DisplayMsg(LogType.Log, "Check WAN Port pass");
+                //}
+                //else
+                //{
+                //    DisplayMsg(LogType.Log, "Check WAN Port fail");
+                //    if (retry_cnt++ < 3)
+                //    {
+                //        frmOK.Label = "Vui lòng kiểm tra dây mạng đã được kết nối đúng vào cổng WAN chưa";
+                //        frmOK.ShowDialog();
+                //        DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
+                //        Thread.Sleep(1000);
+                //        goto WAN_Port_Test;
+                //    }
+                //    else
+                //    {
+                //        AddData("Eth_WAN_Port", 1);
+                //        return;
+                //    }
+                //}
+
             }
             catch (Exception ex)
             {
@@ -2041,37 +2047,34 @@ namespace ATS
             string res = "";
             try
             {
-                if (write_mac)
+                //Write MAC Address 寫完後要重開機才會生效,所以PCBA站寫入後在final站檢查
+                //Eth0 ~ Eth3 = LAN = BaseMAC
+                //Eth4 = WAN = BaseMAC + 1
+                //echo -n -e '\xE8\xC7\xCF\xAF\x46\x38' > /tmp/mac
+                DisplayMsg(LogType.Log, "=============== chk eth0-eth4 MacAddr ===============");
+                string write_lan_mac = MACConvert(infor.BaseMAC).Replace(":", "\\x");
+                string write_wan_mac = MACConvert(infor.WanMAC).Replace(":", "\\x");
+                DisplayMsg(LogType.Log, $"BaseMAC: {infor.BaseMAC}, WanMAC: {infor.WanMAC}");
+                DisplayMsg(LogType.Log, $"Write LAN MAC: {write_lan_mac}");
+                DisplayMsg(LogType.Log, $"Write WAN MAC: {write_wan_mac}");
+
+                SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' > /tmp/mac", keyword, out res, 0, 3000); //eth0
+                SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth1
+                SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth2
+                SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth3
+                SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_wan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth4
+                SendAndChk(PortType.SSH, "dd if=/tmp/mac of=/dev/mmcblk0p21 bs=1 count=30", keyword, out res, 0, 3000);
+                if (res.Contains("30 bytes (30B) copied") && !res.Contains("No such file or directory"))
                 {
-                    //Write MAC Address 寫完後要重開機才會生效,所以PCBA站寫入後在final站檢查
-                    //Eth0 ~ Eth3 = LAN = BaseMAC
-                    //Eth4 = WAN = BaseMAC + 1
-                    //echo -n -e '\xE8\xC7\xCF\xAF\x46\x38' > /tmp/mac
-
-                    string write_lan_mac = MACConvert(infor.BaseMAC).Replace(":", "\\x");
-                    string write_wan_mac = MACConvert(infor.WanMAC).Replace(":", "\\x");
-                    DisplayMsg(LogType.Log, $"BaseMAC: {infor.BaseMAC}, WanMAC: {infor.WanMAC}");
-                    DisplayMsg(LogType.Log, $"Write LAN MAC: {write_lan_mac}");
-                    DisplayMsg(LogType.Log, $"Write WAN MAC: {write_wan_mac}");
-
-                    SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' > /tmp/mac", keyword, out res, 0, 3000); //eth0
-                    SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth1
-                    SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth2
-                    SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_lan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth3
-                    SendAndChk(PortType.SSH, $"echo -n -e '\\x{write_wan_mac}' >> /tmp/mac", keyword, out res, 0, 3000); //eth4
-                    SendAndChk(PortType.SSH, "dd if=/tmp/mac of=/dev/mmcblk0p21 bs=1 count=30", keyword, out res, 0, 3000);
-                    if (res.Contains("30 bytes (30B) copied") && !res.Contains("No such file or directory"))
-                    {
-                        DisplayMsg(LogType.Log, "Write eth0~eth4 MAC Address pass");
-                        AddData(item, 0);
-                        status_ATS.AddDataRaw("LRG1_BASE_MAC", infor.BaseMAC.Trim().Replace(":", ""), infor.BaseMAC.Trim().Replace(":", ""), "000000");
-                        status_ATS.AddDataRaw("LRG1_WAN_MAC", infor.WanMAC.Trim().Replace(":", ""), infor.WanMAC.Trim().Replace(":", ""), "000000");
-                    }
-                    else
-                    {
-                        DisplayMsg(LogType.Log, "Write eth0~eth4 MAC Address fail");
-                        AddData(item, 1);
-                    }
+                    DisplayMsg(LogType.Log, "Write eth0~eth4 MAC Address pass");
+                    AddData(item, 0);
+                    status_ATS.AddDataRaw("LRG1_BASE_MAC", infor.BaseMAC.Trim().Replace(":", ""), infor.BaseMAC.Trim().Replace(":", ""), "000000");
+                    status_ATS.AddDataRaw("LRG1_WAN_MAC", infor.WanMAC.Trim().Replace(":", ""), infor.WanMAC.Trim().Replace(":", ""), "000000");
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "Write eth0~eth4 MAC Address fail");
+                    AddData(item, 1);
                 }
             }
             catch (Exception ex)
@@ -2286,10 +2289,10 @@ namespace ATS
                 //[I] Bluetooth stack booted: v5.0.0-b108
                 SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_fw_upgrade/value", keyword, out res, 0, 5000);
                 SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/ble_rst/value", keyword, out res, 0, 5000);
-                DisplayMsg(LogType.Log, @"Delay 6s UP for BLE reset time");
-                Thread.Sleep(5 * 1000);
+                DisplayMsg(LogType.Log, @"Delay 3s UP for BLE reset time");
+                Thread.Sleep(3 * 1000);
                 SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_rst/value;sync;sync", keyword, out res, 0, 5000);
-                Thread.Sleep(6 * 1000);
+                Thread.Sleep(3 * 1000);
                 SendAndChk(PortType.SSH, "bt_host_empty -u /dev/ttyMSM1 -v", keyword, out res, 0, 5000);
                 Thread.Sleep(2 * 1000);
                 Match m = Regex.Match(res, "Bluetooth stack booted: (?<BLE_ver>.+)");
@@ -2575,26 +2578,27 @@ namespace ATS
             {
                 return;
             }
-
-            bool result = false;
+            string res = string.Empty;
             string item = "CheckPCIe";
-
+            string keyword = "ok";
             try
             {
-                DisplayMsg(LogType.Log, "=============== Check PCIE Interface ===============");
-                DisplayMsg(LogType.Log, "Check WiFi 2.4G PCIe Interface");
+                DisplayMsg(LogType.Log, "=============== Check WiFi 2.4G PCIe Interface ===============");
                 int Counttimer = 0;
             retryPCIE:
-                result = SendAndChk(item, PortType.SSH, "lspci -s 0002:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x1 (ok)", 2000, 3000);
-                result &= SendAndChk(item, PortType.SSH, "lspci -s 0002:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x1 (downgraded)", 2000, 3000);
-                DisplayMsg(LogType.Log, "Check WiFi 6G PCIe Interface");
-                result &= SendAndChk(item, PortType.SSH, "lspci -s 0003:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
-                result &= SendAndChk(item, PortType.SSH, "lspci -s 0003:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
-                DisplayMsg(LogType.Log, "Check WiFi 5G PCIe Interface");
-                result &= SendAndChk(item, PortType.SSH, "lspci -s 0004:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
-                result &= SendAndChk(item, PortType.SSH, "lspci -s 0004:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
-
-                if (result)
+                //========================================================================================
+                //result = SendAndChk(item, PortType.SSH, "lspci -s 0002:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x1 (ok)", 2000, 3000);
+                //result &= SendAndChk(item, PortType.SSH, "lspci -s 0002:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x1 (downgraded)", 2000, 3000);
+                //DisplayMsg(LogType.Log, "Check WiFi 6G PCIe Interface");
+                //result &= SendAndChk(item, PortType.SSH, "lspci -s 0003:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
+                //result &= SendAndChk(item, PortType.SSH, "lspci -s 0003:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
+                //DisplayMsg(LogType.Log, "Check WiFi 5G PCIe Interface");
+                //result &= SendAndChk(item, PortType.SSH, "lspci -s 0004:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
+                //result &= SendAndChk(item, PortType.SSH, "lspci -s 0004:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
+                //=========================================================================================
+                //===== Audrey consoldiate cmd based on testplan
+                SendAndChk(PortType.SSH, "lspci -vv | grep \"LnkSta:\"", "#", out res, 2000, 80000);
+                if (res.Contains(keyword))
                 {
                     DisplayMsg(LogType.Log, "Check PCIE Interface Pass");
                     AddData(item, 0);
@@ -2612,12 +2616,11 @@ namespace ATS
                         DisplayMsg(LogType.Log, "Check PCIE Interface fail");
                         AddData(item, 1);
                     }
-
                 }
             }
             catch (Exception ex)
             {
-                DisplayMsg(LogType.Exception, ex.ToString());
+                DisplayMsg(LogType.Exception, ex.Message);
                 AddData(item, 1);
             }
         }
@@ -2755,7 +2758,7 @@ namespace ATS
                 AddData(item, 1);
             }
         }
-        private void USB30Test()
+        private void USBTest()
         {
             if (!CheckGoNoGo())
             {
@@ -2783,13 +2786,15 @@ namespace ATS
                     AddData(item, 1);
                     return;
                 }
-
                 for (int i = 0; i < 3; i++)
                 {
-                    SendAndChk(PortType.SSH, "df", keyword, out res, 0, 10000);
+                    SendAndChk(PortType.SSH, "mount | grep \"/mnt\"", keyword, out res, 0, 10000);
 
                     if (res.Contains("/dev/sda1"))
+                    {
+                        DisplayMsg(LogType.Log, $"mount usb ok! \r\n {res}");
                         break;
+                    }
                 }
                 if (!res.Contains("/dev/sda1"))
                 {
@@ -2805,14 +2810,6 @@ namespace ATS
                     AddData(item, 1);
                     return;
                 }
-
-                if (!SendAndChk(PortType.SSH, "cat /sys/bus/usb/devices/2-1/speed", "5000", out res, 0, 3000))
-                {
-                    DisplayMsg(LogType.Log, "check usb speed fail");
-                    AddData(item, 1);
-                    return;
-                }
-
                 AddData(item, 0);
             }
             catch (Exception ex)
@@ -3010,6 +3007,10 @@ namespace ATS
                 //check ring via UsbModem
                 retry_cnt = 3;
             retry:
+
+                //com1.LogFile = "myModem.txt";
+                //com1.AutoLog = true;
+
                 if (com1.WaitFor("RING", 40))
                 {
                     DisplayMsg(LogType.Log, "Check 'RING' pass");
@@ -3478,5 +3479,60 @@ namespace ATS
             }
             return bExist;
         }
+        private void USB30()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+            string item = "USB3p0";
+            string res = string.Empty;
+            try
+            {
+                if (!SendAndChk(PortType.SSH, "cat /sys/bus/usb/devices/2-1/speed", "5000", out res, 0, 3000))
+                {
+                    DisplayMsg(LogType.Log, "check usb speed fail");
+                    AddData(item, 1);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                warning = "Exception USB30 speed failed!!!";
+            }
+        }
+        private bool ResetDect()
+        {
+            bool IsResetOK = false;
+            string res = string.Empty;
+            string item = "Reset__Dect";
+            string keyword = "root@OpenWrt";
+            try
+            {
+                SendAndChk(PortType.SSH, "qqqqq\r\n", keyword, out res, 0, 2500);
+                //do
+                //{
+                //    //SendCommand(PortType.SSH, sCtrlZ, 2000); //SendKeys.SendWait("{^Z}");
+                //    if (SendAndChk(PortType.SSH, "qqqqq\r\n", keyword, out res, 0, 2000))
+                //    { break; }
+                //} while (ChkResponse(PortType.SSH, ITEM.NONE, keyword, out res, 3000));
+                //Reboot DECT
+                DisplayMsg(LogType.Log, "Reboot DECT");
+                SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
+                Thread.Sleep(1800);
+                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
+                DisplayMsg(LogType.Log, "Delay 3s...");
+                Thread.Sleep(2800);
+                IsResetOK = true;
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+            return IsResetOK;
+        }
+
     }
 }
