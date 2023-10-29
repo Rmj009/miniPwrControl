@@ -42,6 +42,7 @@ namespace MiniPwrSupply.LRG1
             try
             {
                 infor.ResetParam();
+                isGolden = false;
                 OpenTftpd32(Application.StartupPath);
                 //SE_TODO: get SN and BaseMAC from SFCS
                 if (forHQtest)
@@ -90,7 +91,15 @@ namespace MiniPwrSupply.LRG1
                 }
                 else
                 {
+                    DisplayMsg(LogType.Log, $"SMT SN Input: {status_ATS.txtPSN.Text}");
                     infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
+                    infor.SerialNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LRG1_SN");
+                    if (string.IsNullOrEmpty(infor.SerialNumber) || string.IsNullOrEmpty(infor.BaseMAC)
+                       || infor.SerialNumber.Contains("Dut not have") || infor.BaseMAC.Contains("Dut not have"))
+                    {
+                        warning = "Get from SFCS FAIL";
+                        return;
+                    }
                     infor.WanMAC = MACConvert(infor.BaseMAC, 1);
                     //WiFi 2.4G MAC = BaseMAC+4
                     infor.WiFiMAC_2G = MACConvert(infor.BaseMAC, 4);
@@ -98,11 +107,25 @@ namespace MiniPwrSupply.LRG1
                     infor.WiFiMAC_5G = MACConvert(infor.BaseMAC, 3);
                     //WiFi 6G MAC = BaseMAC+2
                     infor.WiFiMAC_6G = MACConvert(infor.BaseMAC, 2);
+                    DisplayMsg(LogType.Log, $"LRG1_SN: {infor.SerialNumber}");
                     DisplayMsg(LogType.Log, $"BaseMAC: {infor.BaseMAC}");
                     DisplayMsg(LogType.Log, $"WanMAC: {infor.WanMAC}");
                     DisplayMsg(LogType.Log, $"WiFiMAC_2G: {infor.WiFiMAC_2G}");
                     DisplayMsg(LogType.Log, $"WiFiMAC_5G: {infor.WiFiMAC_5G}");
                     DisplayMsg(LogType.Log, $"WiFiMAC_6G: {infor.WiFiMAC_6G}");
+
+                    if (infor.SerialNumber.Length == 18)
+                    {
+                        SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                        //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                        status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                        status_ATS.SFCS_Data.First_Line = infor.SerialNumber;
+                    }
+                    else
+                    {
+                        warning = "Get SN from SFCS fail";
+                        return;
+                    }
                 }
 
                 if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
@@ -115,7 +138,10 @@ namespace MiniPwrSupply.LRG1
                 }
                 else if (Func.ReadINI("Setting", "Port", "RelayBoard", "Disable").ToUpper() == "ENABLE")
                 {
+                    SwitchRelay(CTRL.ON);
+                    Thread.Sleep(8 * 60 * 1000);
                     SwitchRelay(CTRL.OFF);
+
                 }
                 else
                 {
@@ -123,6 +149,20 @@ namespace MiniPwrSupply.LRG1
                     frmOK.ShowDialog();
                 }
                 DisplayMsg(LogType.Log, "Power on!!!");
+
+                if (Func.ReadINI("Setting", "Golden", "GoldenSN", "(*&^%$").Contains(status_ATS.txtPSN.Text))
+                {
+                    isGolden = true;
+                    DisplayMsg(LogType.Log, "Golden testing..." + status_ATS.txtPSN.Text);
+                }
+                else
+                    isGolden = false;
+
+
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                {
+                    if (!ChkStation(status_ATS.txtPSN.Text)) { return; }
+                }
 
                 ChkBootUp(PortType.SSH);
 
@@ -141,7 +181,9 @@ namespace MiniPwrSupply.LRG1
                 SendAndChk(PortType.SSH, "ps | grep ve_vtsp_main", keyword, out res, 0, 5000);
                 if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
                 {
-                    if (!res.Contains("/usr/bin/ve_vtsp_main"))
+                    //if (!res.Contains("/usr/bin/ve_vtsp_main"))
+
+                    if (!res.Contains("ve_vtsp_main"))
                     {
                         DisplayMsg(LogType.Log, "Check ve_vtsp_main fail, D2 License is incorrect");
                         AddData("D2_License", 1);
@@ -154,7 +196,6 @@ namespace MiniPwrSupply.LRG1
                 }
                 SendAndChk(PortType.SSH, "/etc/init.d/vtspd stop", keyword, out res, 0, 5000);
                 #endregion
-
                 //DECT需透過uart
                 if (Func.ReadINI("Setting", "RF", "SkipDECT", "0") == "0")
                 {
@@ -164,7 +205,7 @@ namespace MiniPwrSupply.LRG1
                 //BLE & Thread透過uart
                 if (Func.ReadINI("Setting", "RF", "SkipBLE", "0") == "0" || Func.ReadINI("Setting", "RF", "SkipThread", "0") == "0")
                 {
-                    UartDispose(uart);
+                    //UartDispose(uart);
                     ChkBootUp(PortType.UART);
                 }
 
@@ -182,10 +223,7 @@ namespace MiniPwrSupply.LRG1
                 {
                     RF_WiFi();
                 }
-                if (Func.ReadINI("Setting", "RF", "SkipGoldenThread", "0") == "0")
-                {
-                    this.LRG1_FTM_bridge();
-                }
+
             }
             catch (Exception ex)
             {
@@ -194,7 +232,7 @@ namespace MiniPwrSupply.LRG1
             }
             finally
             {
-                if (status_ATS._testMode == StatusUI2.StatusUI.TestMode.EngMode)
+                if (status_ATS._testMode == StatusUI2.StatusUI.TestMode.EngMode && isLoop == 0)
                 {
                     if (!CheckGoNoGo())
                     {
@@ -235,7 +273,7 @@ namespace MiniPwrSupply.LRG1
             try
             {
                 DisplayMsg(LogType.Cmd, $"Write 'mkfs.ext4 /dev/mmcblk0p30' via Uart");
-                SendAndChk(PortType.UART, "mkfs.ext4 /dev/mmcblk0p32", keyword, out res, 500, 3000);
+                SendAndChk(PortType.UART, "mkfs.ext4 /dev/mmcblk0p30", keyword, out res, 500, 3000);
                 SendAndChk(PortType.UART, "mount -t ext4 /dev/mmcblk0p30 /overlay1/", keyword, out res, 500, 3000);
                 SendAndChk(PortType.UART, "uci set network.lan.ipaddr=192.168.1.5", keyword, out res, 500, 3000);
                 SendAndChk(PortType.UART, "uci commit", keyword, out res, 500, 3000);
@@ -322,7 +360,6 @@ namespace MiniPwrSupply.LRG1
                 AddData(item, 1);
             }
         }
-
         private void ReadSN(PortType portType)
         {
             if (!CheckGoNoGo())
@@ -390,11 +427,17 @@ namespace MiniPwrSupply.LRG1
             try
             {
                 //TODO: check QUTS status?
-
+                // =================================
+                // LRG1 DONT NEED removeCalData by SamSung
+                // =================================
+                if (!isGolden)
+                {
+                    this.RemoveCalData(); //THIEM in accordance with breakdown
+                }
                 EnterWiFiTestMode(PortType.SSH);
 
                 //開始test前要關閉uart
-                UartDispose(uart);
+                //UartDispose(uart); //shall be removed , no Uart now
 
                 ModifySerialMAC();
 
@@ -403,7 +446,88 @@ namespace MiniPwrSupply.LRG1
 
                 RunIQFact(RFTestItem.WiFi);
 
-                this.RF_CheckWiFiCalData(PortType.SSH);
+                if (!isGolden)
+                {
+                    //if (Func.ReadINI("Setting", "RF", "CheckCalData", "0") == "1")
+                    // {
+                    CheckWiFiCalDataRFStation(PortType.SSH);
+                    // }
+                }
+
+
+                if (CheckGoNoGo())
+                {
+                    AddData(item, 0);
+                }
+                else
+                {
+                    AddData(item, 1);
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+            }
+            finally
+            {
+                this.UartDispose(uart);
+            }
+        }
+        private void BLE_FTM_via_Bridge(RFTestItem testItem)
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string item = "Enable_FTM";
+            //string keyword = "root@OpenWrt:~# \r\n";
+            //string keyword_bridge = "root@Bridge_golden:/# \r\n";
+            string keyword = "root@OpenWrt";
+            string keyword_bridge = "root@Bridge_golden";
+            string res = "";
+
+            try
+            {
+                DisplayMsg(LogType.Log, "Enable BLE FTM via bridge");
+
+                //In bridge debug console, SSH into DUT
+                SendAndChk(PortType.UART, "ssh 192.168.1.1 -y -y", keyword, "Do you want to continue connecting?", out res, 0, 10 * 1000);
+                if (res.Contains("Do you want to continue connecting?"))
+                {
+                    SendAndChk(PortType.UART, "y", keyword, keyword_bridge, out res, 0, 5000);
+                }
+
+                if (!res.Contains("BusyBox") || !res.Contains(keyword))
+                {
+                    DisplayMsg(LogType.Log, "SSH into DUT fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                if (testItem == RFTestItem.BLE)
+                {
+                    if (!SendAndChk(PortType.SSH, "bt_upgrade_utility -p /dev/ttyMSM1 -f /lib/firmware/efr32/bt_ncp_afh_se.gbl", "Transfer completed successfully", out res, 0, 60 * 1000))
+                    {
+                        DisplayMsg(LogType.Log, "Switch BLE FW fail");
+                        AddData("SwitchBLEFW", 1);
+                        return;
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, "Switch BLE FW pass");
+                        AddData("SwitchBLEFW", 0);
+                    }
+                }
+
+                if (testItem == RFTestItem.Thread)
+                {
+                    SendAndChk(PortType.UART, "bt_host_empty -u /dev/ttyMSM1", "Press Crtl+C to quit", out res, 0, 3000);
+                    SendAndChk(PortType.UART, sCtrlC, keyword, out res, 500, 3000);
+                }
+
+                SendCommand(PortType.UART, "microcom /dev/ttyMSM1 -s 115200 -X", 5000);
 
                 if (CheckGoNoGo())
                 {
@@ -420,107 +544,6 @@ namespace MiniPwrSupply.LRG1
                 AddData(item, 1);
             }
         }
-        private void RF_CheckWiFiCalData(PortType portType)
-        {
-            if (!CheckGoNoGo())
-            {
-                return;
-            }
-
-            string item = "CheckWiFiCalData";
-            string keyword = "";
-            string res = "";
-            string wifi_data_backup_path = Path.Combine(Application.StartupPath, "WiFiCalData_backup");
-            string PC_IP = Func.ReadINI("Setting", "IP", "PC", "192.168.1.2");
-            var regex = "(.{2}):(.{2}):(.{2}):(.{2}):(.{2}):(.{2})";
-
-            try
-            {
-                if (portType == PortType.UART)
-                    keyword = "root@OpenWrt:/# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:/#"
-                else
-                    keyword = "root@OpenWrt:~# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:~#"
-
-                DisplayMsg(LogType.Log, "=============== Check WiFi Cal Data ===============");
-                DisplayMsg(LogType.Log, "BaseMAC: " + infor.BaseMAC);
-
-                OpenTftpd32New(wifi_data_backup_path, 15 * 1000);
-                //Backup wifi data
-                SendAndChk(portType, "cat /dev/mmcblk0p21 > /tmp/backupwifi", keyword, out res, 0, 5000);
-                if (res.Contains("No such file or directory"))
-                {
-                    DisplayMsg(LogType.Log, "Backup wifi data fail");
-                    AddData(item, 1);
-                    return;
-                }
-                //Thread.Sleep(5 * 1000);
-                // ================================
-                this.RF_enable_all_wifi();
-                // ================================
-                //check WiFi 2.4G MAC = BaseMAC+4
-                string wifi_2g_mac = MACConvert(infor.BaseMAC, 4);
-                DisplayMsg(LogType.Log, "WiFi_2G_MAC: " + wifi_2g_mac);
-                wifi_2g_mac = Regex.Replace(wifi_2g_mac, regex, "$2$1 $4$3 $6$5").ToLower();
-                SendAndChk(portType, "hexdump -s 0x58810 -n 6 /dev/mmcblk0p21", keyword, out res, 0, 5000);
-                if (!res.Contains(wifi_2g_mac))
-                {
-                    DisplayMsg(LogType.Log, "Check WiFi 2.4G MAC fail");
-                    AddData(item, 1);
-                    return;
-                }
-
-                //check WiFi 5G MAC = BaseMAC+3
-                string wifi_5g_mac = MACConvert(infor.BaseMAC, 3);
-                DisplayMsg(LogType.Log, "WiFi_5G_MAC: " + wifi_5g_mac);
-                wifi_5g_mac = Regex.Replace(wifi_5g_mac, regex, "$2$1 $4$3 $6$5").ToLower();
-                SendAndChk(portType, "hexdump -s 0xbc810 -n 6 /dev/mmcblk0p21", keyword, out res, 0, 5000);
-                if (!res.Contains(wifi_5g_mac))
-                {
-                    DisplayMsg(LogType.Log, "Check WiFi 5G MAC fail");
-                    AddData(item, 1);
-                    return;
-                }
-
-                //check WiFi 6G MAC = BaseMAC+2
-                string wifi_6g_mac = MACConvert(infor.BaseMAC, 2);
-                DisplayMsg(LogType.Log, "WiFi_6G_MAC: " + wifi_6g_mac);
-                wifi_6g_mac = Regex.Replace(wifi_6g_mac, regex, "$2$1 $4$3 $6$5").ToLower();
-                SendAndChk(portType, "hexdump -s 0x8a810 -n 6 /dev/mmcblk0p21", keyword, out res, 0, 5000);
-                if (!res.Contains(wifi_6g_mac))
-                {
-                    DisplayMsg(LogType.Log, "Check WiFi 6G MAC fail");
-                    AddData(item, 1);
-                    return;
-                }
-
-
-                //Backup wifi data
-                if (Directory.Exists(wifi_data_backup_path))
-                {
-                    File.Delete(Path.Combine(wifi_data_backup_path, "backupwifi"));
-                    File.Delete(Path.Combine(wifi_data_backup_path, $"backupwifi_{infor.SerialNumber}"));
-                    SendAndChk(portType, "cd /tmp", "root@OpenWrt:/tmp#", out res, 0, 3000);
-                    SendAndChk(portType, $"tftp -p -l backupwifi {PC_IP}", "root@OpenWrt:/tmp# \r\n", out res, 0, 5000);
-                    if (File.Exists(Path.Combine(wifi_data_backup_path, "backupwifi")))
-                    {
-                        File.Move(Path.Combine(wifi_data_backup_path, "backupwifi"), Path.Combine(wifi_data_backup_path, $"backupwifi_{infor.SerialNumber}"));
-                        DisplayMsg(LogType.Log, $"Backup wifi data in {Path.Combine(wifi_data_backup_path, $"backupwifi_{infor.SerialNumber}")}");
-                    }
-                }
-
-                AddData(item, 0);
-            }
-            catch (Exception ex)
-            {
-                DisplayMsg(LogType.Exception, ex.ToString());
-                AddData(item, 1);
-            }
-            finally
-            {
-                SendAndChk(portType, "cd ~", keyword, out res, 0, 3000);
-            }
-        }
-
         private void RF_BLE()
         {
             if (!CheckGoNoGo())
@@ -530,14 +553,14 @@ namespace MiniPwrSupply.LRG1
 
             DisplayMsg(LogType.Log, "=============== BLE Test ===============");
 
-            string keyword = @"root@OpenWrt";
+            string keyword = @"root@";
             string item = $"RF_{RFTestItem.BLE.ToString()}";
             string res = "";
 
             try
             {
                 //切換BLE FW
-                if (!SendAndChk(PortType.SSH, "bt_upgrade_utility -p /dev/ttyMSM1 -f /lib/firmware/efr32/bt_ncp_afh_se.gbl", "Transfer completed successfully", out res, 0, 60 * 1000))
+                /*if (!SendAndChk(PortType.SSH, "bt_upgrade_utility -p /dev/ttyMSM1 -f /lib/firmware/efr32/bt_ncp_afh_se.gbl", "Transfer completed successfully", out res, 0, 60 * 1000))
                 {
                     DisplayMsg(LogType.Log, "Switch BLE FW fail");
                     AddData("SwitchBLEFW", 1);
@@ -547,7 +570,7 @@ namespace MiniPwrSupply.LRG1
                 {
                     DisplayMsg(LogType.Log, "Switch BLE FW pass");
                     AddData("SwitchBLEFW", 0);
-                }
+                }*/
 
                 //Bring up BLE
                 //SendAndChk(PortType.UART, "echo 470 > /sys/class/gpio/export", keyword, out res, 0, 3000);
@@ -556,7 +579,10 @@ namespace MiniPwrSupply.LRG1
                 //SendAndChk(PortType.UART, "echo 466 > /sys/class/gpio/export", keyword, out res, 0, 3000);
                 //SendAndChk(PortType.UART, "echo out > /sys/class/gpio/gpio466/direction", keyword, out res, 0, 3000);
                 //SendAndChk(PortType.UART, "echo 1 > /sys/class/gpio/gpio466/value", keyword, out res, 0, 3000);
-                SendCommand(PortType.SSH, "microcom /dev/ttyMSM1 -s 115200 -X", 2000);
+
+                BLE_FTM_via_Bridge(RFTestItem.BLE);//Jason add follow PE method 2023/09/29
+
+                // SendCommand(PortType.UART, "microcom /dev/ttyMSM1 -s 115200 -X", 2000); //Jason remove follow PE method 2023/09/29
 
                 //開始BLE test前要關閉uart
                 UartDispose(uart);
@@ -581,6 +607,7 @@ namespace MiniPwrSupply.LRG1
             finally
             {
                 Kill_microcom();
+                // Close_SSH_in_Bridge();
             }
         }
         private void RF_Thread()
@@ -592,11 +619,13 @@ namespace MiniPwrSupply.LRG1
 
             DisplayMsg(LogType.Log, "=============== Thread Test ===============");
 
-            string keyword = @"root@OpenWrt";
+            string keyword = @"root@";
             string item = $"RF_{RFTestItem.Thread.ToString()}";
             string res = "";
             //string respones = "{{(getCtune)}{CTUNEXIANA:0x06a}{CTUNEXOANA:0x06a}}";   //will output 0x06a if PN = 53.LRG16.F0
-            string respes = "{{(getCtune)}{CTUNEXIANA:0x066}{CTUNEXOANA:0x066}}";  //will output 0x66 if PN = 53.LRG16.F01
+            //string respes = "{{(getCtune)}{CTUNEXIANA:0x06a}{CTUNEXOANA:0x06a}}";  //will output 0x66 if PN = 53.LRG16.F01
+            string respes = Func.ReadINI("Setting", "RFTest", "CTUNEThread", "{{(getCtune)}{CTUNEXIANA:0x066}{CTUNEXOANA:0x066}}");
+
             try
             {
                 //切換Thread FW
@@ -613,19 +642,40 @@ namespace MiniPwrSupply.LRG1
                 }
 
                 //Bring up Thread
-                SendAndChk(PortType.SSH, "bt_host_empty -u /dev/ttyMSM1", "Press Crtl+C to quit", out res, 0, 3000);
-                SendAndChk(PortType.SSH, sCtrlC, keyword, out res, 500, 3000);
-                SendCommand(PortType.SSH, "microcom /dev/ttyMSM1 -s 115200 -X", 2000);
-                Thread.Sleep(500);
-                SendCommand(PortType.SSH, "\n", 2000);
 
-                if (SendAndChk(PortType.SSH, "getCtune", respes, out res, 0, 5000))
+                //BLE_FTM_via_Bridge(RFTestItem.Thread); //Jason Change follow PE & Ryan 2023/09/29
+                SendAndChk(PortType.UART, "bt_host_empty -u /dev/ttyMSM1", "Press Crtl+C to quit", out res, 0, 3000);
+                SendAndChk(PortType.UART, sCtrlC, keyword, out res, 500, 3000);
+                SendCommand(PortType.UART, "microcom /dev/ttyMSM1 -s 115200 -X", 2000);
+                Thread.Sleep(500);
+
+                //SendCommand(PortType.UART, "\n", 2000);
+                //SendCommand(PortType.UART, "\r\n", 2000);
+
+                if (!SendAndChk(PortType.UART, "\r\n", ">", out res, 0, 5000))
+                {
+                    if (!SendAndChk(PortType.UART, "\r\n", ">", out res, 0, 5000)) //Jason Change follow PE & Ryan 2023/09/29
+                    {
+                        if (!SendAndChk(PortType.UART, "\r\n", ">", out res, 0, 5000)) { AddData("LoginMode", 1); return; }
+                    }
+                }
+
+                if (SendAndChk(PortType.UART, "getCtune", respes, out res, 0, 5000))
                 {
                     DisplayMsg(LogType.Log, @"get Ctune OK: " + res);
                 }
                 else
                 {
-                    DisplayMsg(LogType.Log, @"get Ctune NG: " + res);
+                    if (SendAndChk(PortType.UART, "getCtune", respes, out res, 0, 5000))
+                    {
+                        DisplayMsg(LogType.Log, @"get Ctune OK: " + res);
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, @"get Ctune NG: " + res);
+                        AddData("GetCtune", 1);
+                        return;
+                    }
                 }
                 // Check CTune value based on different partNumber., 
                 // For instances, 53.LRG16.F02 => 0x06a; 53.LRG16.F01 => 0x066
@@ -646,12 +696,58 @@ namespace MiniPwrSupply.LRG1
             }
             catch (Exception ex)
             {
-                DisplayMsg(LogType.Exception, @"RF_Thread____" + ex.Message);
+                DisplayMsg(LogType.Exception, ex.ToString());
                 AddData(item, 1);
             }
             finally
             {
                 Kill_microcom();
+                Close_SSH_in_Bridge();
+            }
+        }
+
+        private void Close_SSH_in_Bridge()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string item = "CloseBridge";
+            string keyword = @"root@Bridge_golden";
+            int count = 0;
+            bool result = false;
+
+            try
+            {
+                DisplayMsg(LogType.Log, "Close SSH connection in Bridge");
+
+                while (count++ < 3)
+                {
+                    result = SendAndChk(PortType.UART, "exit", keyword, 0, 3000);
+                    if (result)
+                    {
+                        break;
+                    }
+                }
+
+                if (result)
+                {
+                    AddData(item, 0);
+                }
+                else
+                {
+                    AddData(item, 1);
+
+                    DisplayMsg(LogType.Log, "Please reboot Bridge golden!!");
+                    frmOK.Label = "Please reboot Bridge golden!!";
+                    frmOK.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
             }
         }
         private void RF_DECT()
@@ -663,7 +759,7 @@ namespace MiniPwrSupply.LRG1
 
             DisplayMsg(LogType.Log, "=============== DECT Test ===============");
 
-            string keyword = @"root@OpenWrt";
+            string keyword = @"root@";
             string res = "";
             string item = $"RF_{RFTestItem.DECT.ToString()}";
 
@@ -684,13 +780,13 @@ namespace MiniPwrSupply.LRG1
                 DisplayMsg(LogType.Log, "DECT tool Path:" + toolPath);
                 DisplayMsg(LogType.Log, "DECT log Path:" + logPath);
 
-                // ping IQXel_MW
-                if (!telnet.Ping(IQXelMW_IP, 10 * 1000))
-                {
-                    DisplayMsg(LogType.Error, $"Ping IQXel_MW({IQXelMW_IP}) failed!!");
-                    AddData("PingIQXelMW", 1);
-                    return;
-                }
+                // ping IQXel_MW => cancel by breakDown
+                //if (!telnet.Ping(IQXelMW_IP, 10 * 1000))
+                //{
+                //    DisplayMsg(LogType.Error, $"Ping IQXel_MW({IQXelMW_IP}) failed!!");
+                //    AddData("PingIQXelMW", 1);
+                //    return;
+                //}
 
                 LitePoint litepoint = new LitePoint(toolPath + "\\ATSuite.exe", logPath);
                 if (litepoint.Start())
@@ -700,6 +796,7 @@ namespace MiniPwrSupply.LRG1
                     warning = "Cannot start litepoint";
                     return;
                 }
+                litepoint.CloseTool();
                 if (File.Exists(logPath))
                 {
                     DECTAnalysisLog(logPath);
@@ -707,9 +804,10 @@ namespace MiniPwrSupply.LRG1
                 else
                 {
                     warning = "File " + logPath + " not exist";
+                    //MessageBox.Show("DEUBG NO LOG");
+                    DisplayMsg(LogType.Log, "====DEUBG NO LOG============================");
+                    return;
                 }
-                litepoint.CloseTool();
-
                 if (CheckGoNoGo())
                 {
                     AddData(item, 0);
@@ -719,7 +817,7 @@ namespace MiniPwrSupply.LRG1
                     AddData(item, 1);
                 }
 
-                CheckDECTMode("None");
+                CheckDECTMode(PortType.UART, "None");
             }
             catch (Exception ex)
             {
@@ -728,12 +826,7 @@ namespace MiniPwrSupply.LRG1
             }
             finally
             {
-                //exit calibration menu
-                for (int i = 0; i < 5; i++)
-                {
-                    if (SendAndChk(PortType.UART, "q", keyword, out res, 0, 2000))
-                        break;
-                }
+                UartDispose(uart);
             }
         }
         private void Kill_microcom()
@@ -776,9 +869,9 @@ namespace MiniPwrSupply.LRG1
             {
                 return false;
             }
-
-            string DUT_IP = Func.ReadINI("Setting", "IP", "DUT", "192.168.1.1");
-            string IQXel_IP = Func.ReadINI("Setting", "IP", "IQXel", "192.168.100.254");
+            //string DUT_IP = Func.ReadINI("Setting", "IP", "DUT", "192.168.1.1");
+            //string IQXel_IP = Func.ReadINI("Setting", "IP", "IQXel", "192.168.100.254");
+            // EPR-1-2 breakdown cancel the ping
             string item = $"RF_{testItem.ToString()}";
 
             DisplayMsg(LogType.Log, $"=============== Run IQfact ({testItem.ToString()}) ===============");
@@ -787,7 +880,18 @@ namespace MiniPwrSupply.LRG1
             {
                 _RFTool = Func.ReadINI("Setting", "RF", $"ToolPath_{testItem.ToString()}", string.Empty);
                 _RFLog = Path.GetDirectoryName(_RFTool) + "\\Log\\logOutput.txt";
-                _RFTestPlan = Func.ReadINI("Setting", "RF", $"TestPlan_{testItem.ToString()}", string.Empty);
+
+                if (isGolden) //Jason add 2023/09/27 if golden will use golden test plan
+                {
+                    _RFTestPlan = Func.ReadINI("Setting", "RF", $"Golden_TestPlan_{testItem.ToString()}", string.Empty);
+                    DisplayMsg(LogType.Log, $"=============== Run IQfact In golden mode use golden test plan ===============");
+                }
+                else
+                {
+                    _RFTestPlan = Func.ReadINI("Setting", "RF", $"TestPlan_{testItem.ToString()}", string.Empty);
+                    DisplayMsg(LogType.Log, $"=============== Run IQfact In Normal Mode ===============");
+                }
+
                 _RFTimeOutSec = Convert.ToInt32(Func.ReadINI("Setting", "RF", $"TimeOutSec_{testItem.ToString()}", "180"));
                 DisplayMsg(LogType.Log, $"Tool: {_RFTool}");
                 DisplayMsg(LogType.Log, $"Log: {_RFLog}");
@@ -806,23 +910,24 @@ namespace MiniPwrSupply.LRG1
                     DisplayMsg(LogType.Log, "Delete " + _RFLog);
                     File.Delete(_RFLog);
                 }
-
+                //===================================================
+                // EPR-1-2 breakdown cancel the ping
+                //===================================================
                 // ping DUT
-                if (!telnet.Ping(DUT_IP, 10 * 1000))
-                {
-                    DisplayMsg(LogType.Error, $"Ping DUT({DUT_IP}) failed!!");
-                    AddData("PingDUT", 1);
-                    return false;
-                }
-
+                //if (!telnet.Ping(DUT_IP, 10 * 1000))
+                //{
+                //    DisplayMsg(LogType.Error, $"Ping DUT({DUT_IP}) failed!!");
+                //    AddData("PingDUT", 1);
+                //    return false;
+                //}
                 // ping IQXel
-                if (!telnet.Ping(IQXel_IP, 10 * 1000))
-                {
-                    DisplayMsg(LogType.Error, $"Ping IQXel({IQXel_IP}) failed!!");
-                    AddData("PingIQXel", 1);
-                    return false;
-                }
-
+                //if (!telnet.Ping(IQXel_IP, 10 * 1000))
+                //{
+                //    DisplayMsg(LogType.Error, $"Ping IQXel({IQXel_IP}) failed!!");
+                //    AddData("PingIQXel", 1);
+                //    return false;
+                //}
+                //===================================================
                 CallIQFactProcess(testItem);
 
                 return true;
@@ -1634,7 +1739,7 @@ namespace MiniPwrSupply.LRG1
                 AddData(item, 1);
             }
         }
-        private void CheckDECTMode(string mode)
+        private void CheckDECTMode(PortType portType, string mode)
         {
             if (!CheckGoNoGo())
             {
@@ -1645,15 +1750,16 @@ namespace MiniPwrSupply.LRG1
             string res = "";
             string test_mode = "";
             string item = $"CheckDECTMode";
-
+            string keyword = "root@OpenWrt";
+            int delayMs = 100;
             try
             {
                 DisplayMsg(LogType.Log, "Check DECT mode");
 
                 for (int i = 0; i < 3; i++)
                 {
-                    SendCommand(PortType.UART, "cmbs_tcx -comname ttyMSM2 -baud 460800", 0);
-                    if (result = ChkResponse(PortType.UART, ITEM.NONE, "q => Quit", out res, 5000))
+                    SendCommand(portType, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
+                    if (result = ChkResponse(portType, ITEM.NONE, "Choose", out res, 3000))
                         break;
                     DisplayMsg(LogType.Log, "Delay 2s...");
                     Thread.Sleep(2000);
@@ -1668,7 +1774,7 @@ namespace MiniPwrSupply.LRG1
 
                 DisplayMsg(LogType.Log, "Transmitted 'x' to device");
                 uart.Write("x\r");
-                ChkResponse(PortType.UART, ITEM.NONE, "q) Quit", out res, 5000);
+                ChkResponse(portType, ITEM.NONE, "q) Quit", out res, 5000);
 
                 //check TestMode
                 Match m = Regex.Match(res, @"TestMode:\s+(?<dect_test_mode>.+)");
@@ -1693,6 +1799,18 @@ namespace MiniPwrSupply.LRG1
             {
                 DisplayMsg(LogType.Exception, ex.Message);
                 AddData(item, 1);
+            }
+            finally
+            {
+                //exit calibration menu
+                //for (int i = 0; i < 5; i++)
+                //{
+                //if (SendAndChk(PortType.SSH, "q\r\n", keyWord, out res, 0, 12000))
+                //{ break; }
+                SendAndChk(PortType.UART, "qqqq\r\n", keyword, out res, 0, 3000);
+                //if (SendAndChk(PortType.UART, "\r\n", keyword, out res, 0, 3000))
+                //{ return; }
+                //}
             }
         }
         private bool DECTAnalysisLog(string logpath)
@@ -1831,6 +1949,35 @@ namespace MiniPwrSupply.LRG1
                 return false;
             }
         }
+        private void RemoveCalData()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
 
+            string keyword = "root@OpenWrt:~# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:~#"
+            string item = "RemoveCalData";
+
+            try
+            {
+                DisplayMsg(LogType.Log, "Remove Calibration Data");
+
+                SendAndChk(PortType.SSH, "rm /lib/firmware/IPQ5332/caldata.bin", keyword, 0, 3000);
+                SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_1.bin", keyword, 0, 3000);
+                SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_2.bin", keyword, 0, 3000);
+
+                SendAndChk(PortType.SSH, "dd of=/tmp/mac if=/dev/mmcblk0p18 bs=1 count=12", keyword, 0, 10 * 1000);
+                SendAndChk(PortType.SSH, "dd if=/dev/zero of=/dev/mmcblk0p18", keyword, 0, 10 * 1000);
+                SendAndChk(PortType.SSH, "dd if=/tmp/mac of=/dev/mmcblk0p18 bs=1 count=12", keyword, 0, 10 * 1000);
+
+                AddData(item, 0);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+        }
     }
 }
