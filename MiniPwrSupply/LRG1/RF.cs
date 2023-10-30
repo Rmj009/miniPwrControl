@@ -1955,22 +1955,18 @@ namespace MiniPwrSupply.LRG1
             {
                 return;
             }
-
             string keyword = "root@OpenWrt:~# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:~#"
             string item = "RemoveCalData";
-
             try
             {
                 DisplayMsg(LogType.Log, "Remove Calibration Data");
-
-                SendAndChk(PortType.SSH, "rm /lib/firmware/IPQ5332/caldata.bin", keyword, 0, 3000);
-                SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_1.bin", keyword, 0, 3000);
-                SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_2.bin", keyword, 0, 3000);
-
-                SendAndChk(PortType.SSH, "dd of=/tmp/mac if=/dev/mmcblk0p18 bs=1 count=12", keyword, 0, 10 * 1000);
-                SendAndChk(PortType.SSH, "dd if=/dev/zero of=/dev/mmcblk0p18", keyword, 0, 10 * 1000);
-                SendAndChk(PortType.SSH, "dd if=/tmp/mac of=/dev/mmcblk0p18 bs=1 count=12", keyword, 0, 10 * 1000);
-
+                //SendAndChk(PortType.SSH, "rm /lib/firmware/IPQ5332/caldata.bin", keyword, 0, 3600);
+                //SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_1.bin", keyword, 0, 3600);
+                //SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_2.bin", keyword, 0, 3600);
+                SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_*.bin", keyword, 0, 3600);
+                SendAndChk(PortType.SSH, "dd of=/tmp/mac if=/dev/mmcblk0p21 bs=1 count=30", keyword, 0, 10 * 1000);
+                SendAndChk(PortType.SSH, "dd if=/dev/zero of=/dev/mmcblk0p21", keyword, 0, 10 * 1000);
+                SendAndChk(PortType.SSH, "dd if=/tmp/mac of=/dev/mmcblk0p21 bs=1 count=30", keyword, 0, 10 * 1000);
                 AddData(item, 0);
             }
             catch (Exception ex)
