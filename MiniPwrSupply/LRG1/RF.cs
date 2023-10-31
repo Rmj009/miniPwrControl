@@ -1888,11 +1888,21 @@ namespace MiniPwrSupply.LRG1
                         usl = netport.getMiddleString(line, "(", "~").Trim();
                         lsl = netport.getMiddleString(line, "~", ")").Trim();
                     }
+                    // ==================================================== temporarily debug add 
+                    else if (line.Contains("\tTiming Accuracy ")) // Timing Accuracy
+                    {
+                        unit = Regex.Split(line, @"\s+")[4].Trim(); // unit
+                        item = itemPrefix + "_Freq_Offset_" + unit;
+                        value = Regex.Split(line, @"\s+")[3].Trim();
+                        usl = netport.getMiddleString(line, "(", "~").Trim();
+                        lsl = netport.getMiddleString(line, "~", ")").Trim();
+                    }
+                    // ====================================================
                     else if (line.Contains("\tFreq Offset ")) // Freq Offset
                     {
-                        unit = Regex.Split(line, @"\s+")[3].Trim(); // unit
+                        unit = Regex.Split(line, @"\s+")[4].Trim(); // unit
                         item = itemPrefix + "_Freq_Offset_" + unit;
-                        value = Regex.Split(line, @"\s+")[2].Trim();
+                        value = Regex.Split(line, @"\s+")[3].Trim();
                         usl = netport.getMiddleString(line, "(", "~").Trim();
                         lsl = netport.getMiddleString(line, "~", ")").Trim();
                     }
