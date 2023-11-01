@@ -11,6 +11,19 @@ using System.Text.RegularExpressions;
 using EasyLibrary;
 using System.Windows.Documents;
 using static WNC.UI.FrmRetry;
+using System.Text;
+using System.Windows.Forms;
+using WNC.API;
+using System.IO;
+using System.Threading;
+using NationalInstruments.VisaNS;
+using System.IO.Ports;
+using System.Text.RegularExpressions;
+using EasyLibrary;
+using System.Windows.Documents;
+using static WNC.UI.FrmRetry;
+using System.Net.Security;
+using System.Runtime.CompilerServices;
 
 namespace MiniPwrSupply.LRG1
 {
@@ -55,19 +68,43 @@ namespace MiniPwrSupply.LRG1
                     frmOK.ShowDialog();
                 }
                 DisplayMsg(LogType.Log, "Power on!!!");
+                DisplayMsg(LogType.Log, $"Current PSN Input: {status_ATS.txtPSN.Text}");
+                string SN = string.Empty;
+                SN = status_ATS.txtPSN.Text;
+                if (SN.Length == 18)
+                {
+                    SetTextBox(status_ATS.txtPSN, SN);
+                    //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                    status_ATS.SFCS_Data.PSN = SN;
+                    status_ATS.SFCS_Data.First_Line = SN;
+                }
+                else
+                {
+                    warning = "Get SN format fail";
+                    return;
+                }
 
                 if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
                 {
-                    DisplayMsg(LogType.Log, $"Current PSN Input: {status_ATS.txtPSN.Text}");
-                    if (ChkStation(status_ATS.txtPSN.Text)) { DisplayMsg(LogType.Log, "Check Station FAIL!"); return; }
+                    DisplayMsg(LogType.Log, $"Current PSN Input: {SN}");
+                    if (ChkStation(SN)) { DisplayMsg(LogType.Log, "Check Station FAIL!"); return; }
                     DisplayMsg(LogType.Log, "Check Station OK!");
                 }
 
-
                 ChkBootUp(PortType.SSH);
+                if (!CheckGoNoGo()) { return; }
 
-                #region Check dect data
-                /*string res = string.Empty;
+                #region Ethernet test
+                if (isLoop == 0)
+                {
+                    this.EthernetTest(1);
+                    this.EthernetTest(3);
+                }
+                #endregion Ethernet test
+
+                /*#region Check dect data
+
+                string res = string.Empty;
                 if (!SendAndChk(PortType.SSH, "verify_boarddata.sh", "root@OpenWrt:~# \r\n", out res, 0, 5000))
                 {
                     return;
@@ -88,26 +125,30 @@ namespace MiniPwrSupply.LRG1
                     DisplayMsg(LogType.Log, "Fin dect_rf_calibration_rxtun fail");
                     AddData("rxtun", 1);
                     return;
-                }*/
-                #endregion check dect data
+                }
+                #endregion check dect data*/
 
                 if (Func.ReadINI("Setting", "OTA", "SkipNFC", "0") == "0")
                 {
+                    if (!CheckGoNoGo()) { return; }
                     OTA_NFC();
                 }
 
                 if (Func.ReadINI("Setting", "OTA", "SkipThread", "0") == "0")
                 {
+                    if (!CheckGoNoGo()) { return; }
                     OTA_Thread();
                 }
 
                 if (Func.ReadINI("Setting", "OTA", "SkipWiFi", "0") == "0")
                 {
+                    if (!CheckGoNoGo()) { return; }
                     OTA_WiFi();
                 }
 
                 if (Func.ReadINI("Setting", "OTA", "SkipDECT", "0") == "0")
                 {
+                    if (!CheckGoNoGo()) { return; }
                     OTA_DECT();
                 }
             }
@@ -176,7 +217,7 @@ namespace MiniPwrSupply.LRG1
                 DECT_PowerSetting();
 
                 DECT_PowerTest(Antenna.Antenna_0, 1888704000);   // 1928448000 
-
+                //DECT_PowerSetting();        // enter menu again
                 DECT_PowerTest(Antenna.Antenna_1, 1888704000);   // 1928448000
 
                 CheckEEPromValue();
@@ -235,12 +276,15 @@ namespace MiniPwrSupply.LRG1
             }
             finally
             {
+                SendAndChk(PortType.SSH, "qqqqq", keyword, out res, 0, 3600);
+                SendCommand(PortType.SSH, "\r\n", 2000);
+
                 //exit calibration mode
-                for (int i = 0; i < 5; i++)
-                {
-                    if (SendAndChk(PortType.SSH, "q", keyword, out res, 0, 2000))
-                        break;
-                }
+                //for (int i = 0; i < 5; i++)
+                //{
+                //if (SendAndChk(PortType.SSH, "qqqq", keyword, out res, 0, 2000))
+                //    break;
+                //}
             }
         }
         private void DECT_PowerSetting()
@@ -257,23 +301,23 @@ namespace MiniPwrSupply.LRG1
             try
             {
                 string res = string.Empty;
-                bool result = false;
+                //bool result = false;
+                this.enterMode();
+                //for (int i = 0; i < 3; i++)
+                //{
+                //    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", 0);
+                //    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
+                //        break;
+                //    DisplayMsg(LogType.Log, "Delay 2s...");
+                //    Thread.Sleep(2000);
+                //}
 
-                for (int i = 0; i < 3; i++)
-                {
-                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", 0);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
-                        break;
-                    DisplayMsg(LogType.Log, "Delay 2s...");
-                    Thread.Sleep(2000);
-                }
-
-                if (!result)
-                {
-                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
-                    AddData(item, 1);
-                    return;
-                }
+                //if (!result)
+                //{
+                //    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
+                //    AddData(item, 1);
+                //    return;
+                //}
 
                 DisplayMsg(LogType.Log, "Write x to ssh");
                 SSH_stream.Write("x\r");
@@ -296,16 +340,28 @@ namespace MiniPwrSupply.LRG1
             {
                 return;
             }
+            string item = "DECT Power Test";
 
-            DisplayMsg(LogType.Log, "=============== DECT Power Test " + antenna.ToString().Replace("_", " ") + " ===============");
-
+            DisplayMsg(LogType.Log, $"=============== {item} " + antenna.ToString().Replace("_", " ") + " ===============");
+            string res = string.Empty;
             string errorItem = "DECT_" + antenna.ToString();
             //int delayMs = 0;
+            DateTime dt;
+            TimeSpan ts;
+            bool isRxtunOK = false;
+            //double pwr = -999;
+            int retryTimes = 1;
             int delayMs = 200; //Rena_20230713 debug
             int timeOutMs = 10 * 1000;
+            //double pwrThreshold = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "PwrThreshold", "-35"));
 
             try
             {
+            RetryPwr:
+                if (retryTimes > 2)
+                {
+                    this.DECT_PowerSetting();
+                }
                 SendWithoutEnterAndChk(errorItem, PortType.SSH, "s", "FF for default", delayMs, timeOutMs);
                 SendWithoutEnterAndChk(errorItem, PortType.SSH, "ff", "2 - long slot", delayMs, timeOutMs);
                 SendWithoutEnterAndChk(errorItem, PortType.SSH, "0", "3 - continuous TX", delayMs, timeOutMs);
@@ -317,23 +373,56 @@ namespace MiniPwrSupply.LRG1
                 SendWithoutEnterAndChk(errorItem, PortType.SSH, "4", "Enter Power Level (0,1 or 2):", delayMs, timeOutMs);
                 SendWithoutEnterAndChk(errorItem, PortType.SSH, "0", "Enter Normal Preamble(y/n):", delayMs, timeOutMs);
                 SendWithoutEnterAndChk(errorItem, PortType.SSH, "y", "Press any key !", delayMs, timeOutMs);
-
                 if (!CheckGoNoGo())
-                    return;
-
-                int c = 1;
-            retry:
-                if (!FetchPwr(errorItem, freqMhz, antenna))
+                { return; }
+                //int c = 1;
+                //retry:
+                dt = DateTime.Now;
+                while (true)
                 {
-                    if (c < 3)
+                    ts = new TimeSpan(DateTime.Now.Ticks - dt.Ticks);
+                    if (ts.TotalMilliseconds > 180 * 1000)
                     {
-                        RemoveFailedItem();
-                        warning = "";
-                        c++;
-                        goto retry;
+                        DisplayMsg(LogType.Error, "DECT_pwrTest TIMEOUT");
+                        AddData(item, 1);
+                        return;
                     }
-                }
 
+                    DisplayMsg(LogType.Log, "Delay 300 (ms)..");
+                    System.Threading.Thread.Sleep(300);
+                    if (!FetchPwr(errorItem, freqMhz, antenna))
+                    {
+                        retryTimes++;
+                        DisplayMsg(LogType.Warning, "Under power threshold ");
+                        if (retryTimes > 3)
+                        {
+                            warning = $"Power under threahold failed retry 3 time";
+                            RemoveFailedItem();
+                            AddData(item, 1);
+                            isRxtunOK = false;
+                            return;
+                        }
+                        else
+                        {
+                            DisplayMsg(LogType.Log, $"TxPower Too low, try {retryTimes} time");
+                            this.ResetDect();
+                            goto RetryPwr;
+                        }
+                        //continue;
+                        //if (c < 3)
+                        //{
+                        //    warning = "";
+                        //    c++;
+                        //    goto retry;
+                        //}
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+
+                }
                 SendWithoutEnterAndChk(errorItem, PortType.SSH, "\r", "q) Quit", delayMs, timeOutMs);
                 SendWithoutEnterAndChk(errorItem, PortType.SSH, "u", "Press any key !", delayMs, timeOutMs);
                 SendWithoutEnterAndChk(errorItem, PortType.SSH, "\r", "q) Quit", delayMs, timeOutMs);
@@ -343,23 +432,29 @@ namespace MiniPwrSupply.LRG1
                 DisplayMsg(LogType.Exception, ex.Message);
                 AddData(errorItem, 1);
             }
+            //finally
+            //{
+            //    SendAndChk(PortType.SSH, "qqqqq\r\n", "root@", out res, 0, 3000);
+            //    SendAndChk(PortType.SSH, "\n", "root@", out res, 0, 600);
+            //    DisplayMsg(LogType.Log, "exit menu");
+            //}
         }
 
         private bool FetchPwr(string errorItem, double freqHz, Antenna antenna, bool avg = false)
         {
+            double pwr = -999;
+            double threshold = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "Pwr_Threshold", "-999"));
             try
             {
                 string useSpectrumSv = Func.ReadINI("Setting", "SpectrumServer", "Use", "0");
                 string serverIP = Func.ReadINI("Setting", "SpectrumServer", "ServerIP", "0");
                 string serverPort = Func.ReadINI("Setting", "SpectrumServer", "ServerPort", "0");
 
-                double pwr = -999;
                 int delayMs = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "FetchPwrDelayMs", "0"));
                 double spanHz = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "Pwr_Span_Hz", "0"));
                 double rbwHz = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "Pwr_RBW_Hz", "0"));
                 double vbwHz = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "Pwr_VBW_Hz", "0"));
                 double rlevDbm = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "Pwr_RLEV_dBm", "0"));
-                double threshold = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "Pwr_Threshold", "-999"));
                 double loss = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "Loss_" + antenna, "0"));
                 double att = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "Freq_Att", "0"));
                 double sweeptime = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "SweepTimeMs", "0"));
@@ -547,14 +642,26 @@ namespace MiniPwrSupply.LRG1
                         NIVisa nivisa = new NIVisa();
                         MessageBasedSession inst9000A = nivisa.Open_Session(Address);
 
-                        if (inst9000A == null)
+                        //if (inst9000A == null)
+                        //{
+                        //    DisplayMsg(LogType.Error, "N9000A Open_Session NG");
+                        //    status_ATS.AddData(errorItem + "_Pwr", "dB", -9999);
+                        //    nivisa.AGT_N9000A_Get_Marker(inst9000A, ref freqHz, ref pwr);
+                        //    MessageBox.Show("N9000A Spectrum無法控制, 請確認後再繼續測試");
+                        //    return false;
+                        //}
+                        if (inst9000A != null)
                         {
-                            DisplayMsg(LogType.Error, "N9000A Open_Session NG");
-                            status_ATS.AddData(errorItem + "_Pwr", "dB", -9999);
+                            nivisa.AGT_N9000A_Get_Marker(inst9000A, ref freqHz, ref pwr);
+                            DisplayMsg(LogType.Log, "Frquency (Hz) : " + freqHz.ToString());
+                            return true;
+                        }
+                        else
+                        {
+                            DisplayMsg(LogType.Log, "N9000A Open_Session NG");
                             MessageBox.Show("N9000A Spectrum無法控制, 請確認後再繼續測試");
                             return false;
                         }
-
                         DisplayMsg(LogType.Log, nivisa.Inst_Get_Info(inst9000A));
 
                         Thread.Sleep(delayMs);
@@ -630,6 +737,8 @@ namespace MiniPwrSupply.LRG1
             finally
             {
                 //ms2830a.SA.SetTrigger(CTRL.OFF);
+                DisplayMsg(LogType.Log, "Dect_TxPower: " + pwr.ToString());
+                DisplayMsg(LogType.Log, "Dect_TxPower Threshold: " + threshold.ToString());
             }
         }
 
@@ -1064,6 +1173,9 @@ namespace MiniPwrSupply.LRG1
             string res = "";
             string keyword = "root@OpenWrt:~# \r\n";
 
+            string respes = "Secondary CPC v4.3.0";  //will output v4.2.0 if FW < v1.0.0.0
+            string flag = WNC.API.Func.ReadINI("Setting", "OTA", "CPCDVer", respes);
+
             try
             {
                 DisplayMsg(LogType.Log, "=============== Start Thread Broadcast ===============");
@@ -1073,12 +1185,16 @@ namespace MiniPwrSupply.LRG1
                 DisplayMsg(LogType.Log, "Delay 5s...");
                 Thread.Sleep(5000); //一定要delay,不然下一步會error
                 SendAndChk(PortType.SSH, "logread -e cpcd", keyword, out res, 0, 5000);
-                if (!res.Contains("Daemon startup was successful"))
+                if (!res.Contains("Daemon startup was successful") || !res.Contains(flag))
                 {
-                    DisplayMsg(LogType.Log, "Enable CPCD fail");
+                    DisplayMsg(LogType.Log, $"Enable CPCD check: '{flag}' and 'Daemon startup was successful' FAIL");
+                    DisplayMsg(LogType.Log, @"Secondary CPC = v4.2.0 if FW<0.1.2.8");
+                    DisplayMsg(LogType.Log, @"Secondary CPC = v4.3.0 if FW>=0.1.2.8");
                     AddData(item, 1);
                     return;
                 }
+                DisplayMsg(LogType.Log, $"Enable CPCD check: '{flag}' and 'Daemon startup was successful' PASS");
+
 
                 //Enable OTBR agent
                 SendAndChk(PortType.SSH, "service wnc_otbr-agent start", keyword, out res, 0, 5000);
@@ -1143,6 +1259,9 @@ namespace MiniPwrSupply.LRG1
                 return;
             }
 
+            DisplayMsg(LogType.Log, $"broadcast_channel: '{broadcast_channel}'");
+            DisplayMsg(LogType.Log, $"broadcast_pan_id: '{broadcast_pan_id}'");
+
             string item = "ThreadScan";
             string res = "";
             string keyword = "root@OpenWrt:~# \r\n";
@@ -1154,6 +1273,8 @@ namespace MiniPwrSupply.LRG1
             int rssiCount = 3; //要抓幾次rssi
             List<double> rssi_val = new List<double>();
 
+            int CountRetrygetRSSI = 3;
+
             try
             {
                 DisplayMsg(LogType.Log, "=============== Start Thread Scan ===============");
@@ -1164,7 +1285,7 @@ namespace MiniPwrSupply.LRG1
                     AddData(item, 1);
                     return;
                 }
-
+            RetrygetRSSI: //Jason add RETRY to solve RSSI Check NG 2023/10/15
                 //start Thread scan
                 for (int i = 1; i <= rssiCount; i++)
                 {
@@ -1173,7 +1294,7 @@ namespace MiniPwrSupply.LRG1
                     channel = "";
                     rssi = 0;
 
-                    SendAndChk(PortType.GOLDEN_SSH, "ot-ctl scan", keyword, out res, 0, 10 * 1000);
+                    SendAndChk(PortType.GOLDEN_SSH, $"ot-ctl scan {broadcast_channel}", keyword, out res, 0, 10 * 1000);
                     if (res.Contains("connect session failed: No such file or directory"))
                     {
                         //Enable CPCD
@@ -1200,7 +1321,8 @@ namespace MiniPwrSupply.LRG1
                             return;
                         }
 
-                        SendAndChk(PortType.GOLDEN_SSH, "ot-ctl scan", "Done", out res, 0, 10 * 1000);
+                        //SendAndChk(PortType.GOLDEN_SSH, "ot-ctl scan", "Done", out res, 0, 10 * 1000);
+                        SendAndChk(PortType.GOLDEN_SSH, $"ot-ctl scan {broadcast_channel}", "Done", out res, 0, 10 * 1000);
                     }
 
                     /*
@@ -1225,6 +1347,20 @@ namespace MiniPwrSupply.LRG1
                                 DisplayMsg(LogType.Log, $"channel: {channel}");
                                 DisplayMsg(LogType.Log, $"rssi: {rssi}");
 
+                                /*if (string.IsNullOrEmpty(pan_id)|| string.IsNullOrEmpty(mac_addr)||string.IsNullOrEmpty(channel))
+                                {
+                                    if (CountRetrygetRSSI > 0)
+                                    {
+                                        DisplayMsg(LogType.Log, $"Cannot get RSSI Go to Re-try Get RSSI time: {CountRetrygetRSSI.ToString()}");  //Jason add RETRY to solve RSSI Check NG 2023/10/15
+                                        CountRetrygetRSSI--;
+                                        rssi_val.Clear();
+                                        goto RetrygetRSSI;
+                                    }
+
+                                    DisplayMsg(LogType.Log, $"Get RSSI Fail");
+                                    status_ATS.AddData("Thread_RSSI", "dBm", "-9999");
+                                }*/
+
                                 if (channel == broadcast_channel && pan_id == broadcast_pan_id)
                                 {
                                     rssi_val.Add(rssi);
@@ -1241,6 +1377,15 @@ namespace MiniPwrSupply.LRG1
                 if (rssi_val.Count != rssiCount)
                 {
                     DisplayMsg(LogType.Log, $"Rssi count {rssi_val.Count} fail");
+                    if (CountRetrygetRSSI > 0)
+                    {
+                        DisplayMsg(LogType.Log, $"Re-try To Get RSSI time {CountRetrygetRSSI.ToString()}");  //Jason add RETRY to solve RSSI Check NG 2023/10/15
+                        CountRetrygetRSSI--;
+                        rssi_val.Clear();
+                        goto RetrygetRSSI;
+                    }
+
+                    DisplayMsg(LogType.Log, $"Rssi count {rssi_val.Count} fail");
                     status_ATS.AddData("Thread_RSSI", "dBm", "-9999");
                     return;
                 }
@@ -1255,6 +1400,66 @@ namespace MiniPwrSupply.LRG1
             {
                 DisplayMsg(LogType.Exception, ex.ToString());
                 AddData(item, 1);
+            }
+        }
+
+        private void EthernetTest(int port_num)
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            int retry_cnt;
+            string item = "EthernetTest";
+            //string keyword = @"root@OpenWrt";
+            //string res = "";
+            // ================================================
+            //PCBA
+            //RF
+            //OTA
+            //FINAL
+            // ================================================
+            DisplayMsg(LogType.Log, "=============== Ethernet Test ===============");
+            retry_cnt = 0;
+            try
+            {
+                frmOK.Label = $"Sau khi kết nối dây mạng vào cổng LAN số {port_num}, vui lòng nhấn\"Xác nhận\"";
+                frmOK.ShowDialog();
+
+            LAN_Port_Test:
+                if (SendAndChk(PortType.SSH, "mt eth linkrate", $"port {port_num}: 2500M FD", 0, 3000))
+                {
+                    DisplayMsg(LogType.Log, $"Check LAN Port{port_num} pass");
+                    if (port_num == 5)
+                    {
+                        DisplayMsg(LogType.Log, "Check WAN Port pass");
+                    }
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, $"Check LAN Port{port_num} fail");
+                    if (retry_cnt++ < 3)
+                    {
+                        frmOK.Label = $"Vui lòng kiểm tra dây mạng đã được kết nối đúng vào cổng LAN số {port_num} chưa";
+                        frmOK.ShowDialog();
+                        DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
+                        Thread.Sleep(1000);
+                        goto LAN_Port_Test;
+                    }
+                    else
+                    {
+                        AddData($"Eth_LAN_Port{port_num}", 1);
+                        return;
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+                return;
             }
         }
         private void OTA_NFC()
@@ -1290,5 +1495,68 @@ namespace MiniPwrSupply.LRG1
                 AddData(item, 1);
             }
         }
+        private bool ResetDect()
+        {
+            bool IsResetOK = false;
+            string res = string.Empty;
+            string item = "Reset__Dect";
+            string keyword = "root@OpenWrt";
+            try
+            {
+                SendAndChk(PortType.SSH, "qqqqq\r\n", keyword, out res, 0, 2500);
+                //do
+                //{
+                //    //SendCommand(PortType.SSH, sCtrlZ, 2000); //SendKeys.SendWait("{^Z}");
+                //    if (SendAndChk(PortType.SSH, "qqqqq\r\n", keyword, out res, 0, 2000))
+                //    { break; }
+                //} while (ChkResponse(PortType.SSH, ITEM.NONE, keyword, out res, 3000));
+                //Reboot DECT
+                DisplayMsg(LogType.Log, "Reboot DECT");
+                SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
+                Thread.Sleep(1800);
+                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
+                DisplayMsg(LogType.Log, "Delay 3s...");
+                Thread.Sleep(2800);
+                IsResetOK = true;
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+            return IsResetOK;
+        }
+        private void enterMode()
+        {
+            string item = "enterMode";
+            string res = string.Empty;
+            bool result = false;
+            int delayMs = 3000;
+            try
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
+                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
+                        break;
+                    DisplayMsg(LogType.Log, "Delay 2s...");
+                    Thread.Sleep(2000);
+                }
+
+                if (!result)
+                {
+                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
+                    AddData(item, 1);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                warning = ">>>>> cmbs_tcx -comname ttyMSM2 -baud 460800 INVAILD";
+                return;
+            }
+        }
+
     }
 }
