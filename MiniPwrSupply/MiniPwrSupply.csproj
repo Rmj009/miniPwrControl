@@ -76,6 +76,7 @@
     </Compile>
     <Compile Include="LCS5\PCBA.cs" />
     <Compile Include="LCS5\RF.cs" />
+    <Compile Include="LMG1\Final.cs" />
     <Compile Include="LRG1\Final.cs" />
     <Compile Include="LRG1\OTA.cs" />
     <Compile Include="LRG1\PCBA.cs" />
@@ -115,7 +116,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Exception\" />
-    <Folder Include="LMG1\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
