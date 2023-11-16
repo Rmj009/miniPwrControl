@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using System.Diagnostics;
 //using WNC.API;
 using System.Runtime.CompilerServices;
+using System.Net.Security;
 
 namespace MiniPwrSupply.LRG1
 {
@@ -139,9 +140,8 @@ namespace MiniPwrSupply.LRG1
                 else if (Func.ReadINI("Setting", "Port", "RelayBoard", "Disable").ToUpper() == "ENABLE")
                 {
                     SwitchRelay(CTRL.ON);
-                    Thread.Sleep(8 * 60 * 1000);
+                    Thread.Sleep(5 * 1000);
                     SwitchRelay(CTRL.OFF);
-
                 }
                 else
                 {
@@ -173,29 +173,18 @@ namespace MiniPwrSupply.LRG1
                         CheckEthernetMAC();
                     }
                 }
-                #region D2 License
-                string keyword = "root@OpenWrt:~# \r\n";
-                string res = string.Empty;
-                SendAndChk(PortType.SSH, "mt boarddata", keyword, out res, 0, 5000);
-                SendAndChk(PortType.SSH, "/etc/init.d/vtspd start", keyword, out res, 0, 5000);
-                SendAndChk(PortType.SSH, "ps | grep ve_vtsp_main", keyword, out res, 0, 5000);
-                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
-                {
-                    //if (!res.Contains("/usr/bin/ve_vtsp_main"))
+                // ---------------------------------------
+                this.ChkD2License();
+                // ----------------------------------------
 
-                    if (!res.Contains("ve_vtsp_main"))
-                    {
-                        DisplayMsg(LogType.Log, "Check ve_vtsp_main fail, D2 License is incorrect");
-                        AddData("D2_License", 1);
-                    }
-                    else
-                    {
-                        DisplayMsg(LogType.Log, "Check ve_vtsp_main PASS, D2 License is correct");
-                        AddData("D2_License", 0);
-                    }
+                #region Ethernet test
+                if (isLoop == 0)
+                {
+                    this.EthernetTest(5);
+                    this.BatteryDetection();
                 }
-                SendAndChk(PortType.SSH, "/etc/init.d/vtspd stop", keyword, out res, 0, 5000);
                 #endregion
+
                 //DECT需透過uart
                 if (Func.ReadINI("Setting", "RF", "SkipDECT", "0") == "0")
                 {
@@ -432,10 +421,9 @@ namespace MiniPwrSupply.LRG1
                 // =================================
                 if (!isGolden)
                 {
-                    this.RemoveCalData(); //THIEM in accordance with breakdown
+                    this.RemoveCalData(PortType.SSH); //THIEM in accordance with breakdown
                 }
                 EnterWiFiTestMode(PortType.SSH);
-
                 //開始test前要關閉uart
                 //UartDispose(uart); //shall be removed , no Uart now
 
@@ -471,7 +459,7 @@ namespace MiniPwrSupply.LRG1
             }
             finally
             {
-                this.UartDispose(uart);
+                //this.UartDispose(uart);
             }
         }
         private void BLE_FTM_via_Bridge(RFTestItem testItem)
@@ -648,10 +636,6 @@ namespace MiniPwrSupply.LRG1
                 SendAndChk(PortType.UART, sCtrlC, keyword, out res, 500, 3000);
                 SendCommand(PortType.UART, "microcom /dev/ttyMSM1 -s 115200 -X", 2000);
                 Thread.Sleep(500);
-
-                //SendCommand(PortType.UART, "\n", 2000);
-                //SendCommand(PortType.UART, "\r\n", 2000);
-
                 if (!SendAndChk(PortType.UART, "\r\n", ">", out res, 0, 5000))
                 {
                     if (!SendAndChk(PortType.UART, "\r\n", ">", out res, 0, 5000)) //Jason Change follow PE & Ryan 2023/09/29
@@ -757,17 +741,15 @@ namespace MiniPwrSupply.LRG1
                 return;
             }
 
-            DisplayMsg(LogType.Log, "=============== DECT Test ===============");
-
-            string keyword = @"root@";
-            string res = "";
             string item = $"RF_{RFTestItem.DECT.ToString()}";
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
 
             try
             {
                 //開始DECT test前要關閉uart
-                UartDispose(uart);
-
+                // ==============================================
+                //UartDispose(uart);   //no UART any more
+                // ==============================================
                 int delay = Convert.ToInt32(Func.ReadINI("Setting", "RF", "DelaySec_DECT", "0"));
                 DisplayMsg(LogType.Log, $"Sleep {delay}s");
                 Thread.Sleep(delay * 1000);
@@ -775,11 +757,10 @@ namespace MiniPwrSupply.LRG1
                 string IQXelMW_IP = Func.ReadINI("Setting", "IP", "IQxelMW", "192.168.100.253");
                 string toolPath = Func.ReadINI("Setting", "RF", "ToolPath_DECT", @"D:\ATSuite_V11_0_2_DSPG_Hub_Pro_FP_V_1.2.0_WNC_LS04\Release");
                 string logPath = Path.Combine(toolPath, @"Log\Log_Current.txt");
-                int TimeOutSec = Convert.ToInt32(Func.ReadINI("Setting", "RF", "TimeOutSec_DECT", "180"));
+                int TimeOutSec = Convert.ToInt32(Func.ReadINI("Setting", "RF", "TimeOutSec_DECT", "300"));
 
                 DisplayMsg(LogType.Log, "DECT tool Path:" + toolPath);
                 DisplayMsg(LogType.Log, "DECT log Path:" + logPath);
-
                 // ping IQXel_MW => cancel by breakDown
                 //if (!telnet.Ping(IQXelMW_IP, 10 * 1000))
                 //{
@@ -787,7 +768,7 @@ namespace MiniPwrSupply.LRG1
                 //    AddData("PingIQXelMW", 1);
                 //    return;
                 //}
-
+                this.CheckDECTMode("None");
                 LitePoint litepoint = new LitePoint(toolPath + "\\ATSuite.exe", logPath);
                 if (litepoint.Start())
                     litepoint.WaitResult(TimeOutSec * 1000);
@@ -804,8 +785,6 @@ namespace MiniPwrSupply.LRG1
                 else
                 {
                     warning = "File " + logPath + " not exist";
-                    //MessageBox.Show("DEUBG NO LOG");
-                    DisplayMsg(LogType.Log, "====DEUBG NO LOG============================");
                     return;
                 }
                 if (CheckGoNoGo())
@@ -817,16 +796,12 @@ namespace MiniPwrSupply.LRG1
                     AddData(item, 1);
                 }
 
-                CheckDECTMode(PortType.UART, "None");
+
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, @"RF_DECT___" + ex.Message);
                 AddData(item, 1);
-            }
-            finally
-            {
-                UartDispose(uart);
             }
         }
         private void Kill_microcom()
@@ -1612,30 +1587,66 @@ namespace MiniPwrSupply.LRG1
 
                 DisplayMsg(LogType.Log, "Enter WiFi test mode");
                 DisplayMsg(LogType.Log, $"PC_IP : {PC_IP}");
+                // =========================================================================================
+                //SendAndChk(portType, "wifi down", keyword, 0, 30 * 1000);
+                //SendAndChk(portType, "rmmod ecm_wifi_plugin", keyword, 0, 3000);
+                //SendAndChk(portType, "rmmod monitor", keyword, 0, 10 * 1000);
+                //SendAndChk(portType, "rmmod wifi_3_0", keyword, 0, 10 * 1000);
+                //SendAndChk(portType, "rmmod qca_ol", keyword, 0, 3000);
+                //SendAndChk(portType, "insmod qca_ol testmode=1", keyword, 0, 5000);
+                //SendAndChk(portType, "insmod wifi_3_0", keyword, 0, 20 * 1000);
 
-                SendAndChk(portType, "wifi down", keyword, 0, 30 * 1000);
-                SendAndChk(portType, "rmmod ecm_wifi_plugin", keyword, 0, 3000);
-                SendAndChk(portType, "rmmod monitor", keyword, 0, 10 * 1000);
-                SendAndChk(portType, "rmmod wifi_3_0", keyword, 0, 10 * 1000);
-                SendAndChk(portType, "rmmod qca_ol", keyword, 0, 3000);
-                SendAndChk(portType, "insmod qca_ol testmode=1", keyword, 0, 5000);
-                SendAndChk(portType, "insmod wifi_3_0", keyword, 0, 20 * 1000);
+                ////diag_socket_app connect前要先打開QUTS並設定好
+                //SendAndChk(portType, $"diag_socket_app -a {PC_IP} &", "logging switched", out res, 0, 30 * 1000);
+                //if (!res.Contains("Successful connect to address:"))
+                //{
+                //    DisplayMsg(LogType.Log, $"Connect to {PC_IP} fail");
+                //    AddData(item, 1);
+                //    return;
+                //}
 
-                //diag_socket_app connect前要先打開QUTS並設定好
-                SendAndChk(portType, $"diag_socket_app -a {PC_IP} &", "logging switched", out res, 0, 30 * 1000);
-                if (!res.Contains("Successful connect to address:"))
+                //SendAndChk(portType, "/etc/init.d/ftm start", keyword, 0, 3000);
+                //SendAndChk(portType, "/usr/sbin/ftm -n -c /tmp/ftm.conf &", keyword, 0, 3000);
+
+                //DisplayMsg(LogType.Log, "Delay 3s...");
+                //System.Threading.Thread.Sleep(3000);
+                // ==============================================================
+                //   ==================  SAM involved ATH =====================
+                // ==============================================================
+                SendAndChk(portType, "rmmod ath11k_pci", keyword, 0, 30 * 1000);
+                SendAndChk(portType, "rmmod ath11k_ahb", keyword, 0, 3000);
+                SendAndChk(portType, "rmmod ath11k", keyword, 0, 10 * 1000);
+                SendAndChk(portType, "insmod ath11k ftm_mode=1 debug_mask=0x440", keyword, 0, 10 * 1000);
+                SendAndChk(portType, "insmod ath11k_pci", keyword, 0, 3000);
+                SendAndChk(portType, "insmod ath11k_ahb", keyword, 0, 5000);
+                SendAndChk(portType, "rmmod ath12k", keyword, 0, 10 * 1000);
+                SendAndChk(portType, "insmod ath12k.ko dyndbg=+p ftm_mode=1", keyword, 0, 20 * 1000);
+                SendAndChk(portType, $"diag_socket_app -a {PC_IP} &", keyword, out res, 3000, 30 * 1000);
+                if (!res.Contains("logging switched"))
                 {
-                    DisplayMsg(LogType.Log, $"Connect to {PC_IP} fail");
+                    //SendAndChk(portType, "\r\n", keyword, 0, 1000);
+                    DisplayMsg(LogType.Log, $"logging switched not exist failed");
                     AddData(item, 1);
                     return;
                 }
-
-                SendAndChk(portType, "/etc/init.d/ftm start", keyword, 0, 3000);
-                SendAndChk(portType, "/usr/sbin/ftm -n -c /tmp/ftm.conf &", keyword, 0, 3000);
-
+                //------------------------------------------------
+                SendCommand(portType, "\r\n", 1000);
+                //------------------------------------------------
+                //if (!res.Contains("Successful connect to address:"))
+                //{
+                //    DisplayMsg(LogType.Log, $"Connect to {PC_IP} fail");
+                //    AddData(item, 1);
+                //    return;
+                //}
+                SendAndChk(portType, "cp /etc/wifi/ftm.conf /tmp/", keyword, out res, 0, 3000);
+                SendAndChk(portType, "/usr/sbin/ftm -n -c /tmp/ftm.conf &", keyword, out res, 1000, 3000);
+                // ==============================================================
+                //   ==================  SAM involved ATH =====================
+                // ==============================================================
                 DisplayMsg(LogType.Log, "Delay 3s...");
                 System.Threading.Thread.Sleep(3000);
-
+                //MessageBox.Show("SAM stop");
+                //MessageBox.Show(res.ToString());
                 AddData(item, 0);
             }
             catch (Exception ex)
@@ -1739,30 +1750,29 @@ namespace MiniPwrSupply.LRG1
                 AddData(item, 1);
             }
         }
-        private void CheckDECTMode(PortType portType, string mode)
+        private void CheckDECTMode(string mode)
         {
             if (!CheckGoNoGo())
             {
                 return;
             }
-
             bool result = false;
             string res = "";
+            string keyword = "root@OpenWrt";
             string test_mode = "";
             string item = $"CheckDECTMode";
-            string keyword = "root@OpenWrt";
             int delayMs = 100;
             try
             {
-                DisplayMsg(LogType.Log, "Check DECT mode");
+                DisplayMsg(LogType.Log, " ============== Check DECT mode ==============");
 
                 for (int i = 0; i < 3; i++)
                 {
-                    SendCommand(portType, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                    if (result = ChkResponse(portType, ITEM.NONE, "Choose", out res, 3000))
+                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
+                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
                         break;
-                    DisplayMsg(LogType.Log, "Delay 2s...");
-                    Thread.Sleep(2000);
+                    DisplayMsg(LogType.Log, "Delay 5s...");
+                    Thread.Sleep(5000);
                 }
 
                 if (!result)
@@ -1773,8 +1783,9 @@ namespace MiniPwrSupply.LRG1
                 }
 
                 DisplayMsg(LogType.Log, "Transmitted 'x' to device");
-                uart.Write("x\r");
-                ChkResponse(portType, ITEM.NONE, "q) Quit", out res, 5000);
+                //uart.Write("x\r"); // no Uart any more
+                SSH_stream.Write("x\r");
+                ChkResponse(PortType.SSH, ITEM.NONE, "q) Quit", out res, 5000);
 
                 //check TestMode
                 Match m = Regex.Match(res, @"TestMode:\s+(?<dect_test_mode>.+)");
@@ -1803,14 +1814,7 @@ namespace MiniPwrSupply.LRG1
             finally
             {
                 //exit calibration menu
-                //for (int i = 0; i < 5; i++)
-                //{
-                //if (SendAndChk(PortType.SSH, "q\r\n", keyWord, out res, 0, 12000))
-                //{ break; }
-                SendAndChk(PortType.UART, "qqqq\r\n", keyword, out res, 0, 3000);
-                //if (SendAndChk(PortType.UART, "\r\n", keyword, out res, 0, 3000))
-                //{ return; }
-                //}
+                SendAndChk(PortType.SSH, "qqqqq\r\n", keyword, out res, 1000, 5000);
             }
         }
         private bool DECTAnalysisLog(string logpath)
@@ -1888,21 +1892,23 @@ namespace MiniPwrSupply.LRG1
                         usl = netport.getMiddleString(line, "(", "~").Trim();
                         lsl = netport.getMiddleString(line, "~", ")").Trim();
                     }
-                    // ==================================================== temporarily debug add 
-                    else if (line.Contains("\tTiming Accuracy ")) // Timing Accuracy
-                    {
-                        unit = Regex.Split(line, @"\s+")[4].Trim(); // unit
-                        item = itemPrefix + "_Freq_Offset_" + unit;
-                        value = Regex.Split(line, @"\s+")[3].Trim();
-                        usl = netport.getMiddleString(line, "(", "~").Trim();
-                        lsl = netport.getMiddleString(line, "~", ")").Trim();
-                    }
-                    // ====================================================
+                    ////=======================================================
+                    ////=======================================================
+                    //else if (line.Contains("\tTiming Accuracy ")) // Timing Accuracy
+                    //{
+                    //    unit = Regex.Split(line, @"\s+")[3].Trim(); // unit
+                    //    item = itemPrefix + "_Freq_Offset_" + unit;
+                    //    value = Regex.Split(line, @"\s+")[2].Trim();
+                    //    usl = netport.getMiddleString(line, "(", "~").Trim();
+                    //    lsl = netport.getMiddleString(line, "~", ")").Trim();
+                    //}
+                    ////=======================================================
+                    ////=======================================================
                     else if (line.Contains("\tFreq Offset ")) // Freq Offset
                     {
-                        unit = Regex.Split(line, @"\s+")[4].Trim(); // unit
+                        unit = Regex.Split(line, @"\s+")[3].Trim(); // unit
                         item = itemPrefix + "_Freq_Offset_" + unit;
-                        value = Regex.Split(line, @"\s+")[3].Trim();
+                        value = Regex.Split(line, @"\s+")[2].Trim();
                         usl = netport.getMiddleString(line, "(", "~").Trim();
                         lsl = netport.getMiddleString(line, "~", ")").Trim();
                     }
@@ -1959,29 +1965,84 @@ namespace MiniPwrSupply.LRG1
                 return false;
             }
         }
-        private void RemoveCalData()
+        private void RemoveCalData(PortType portType)
         {
             if (!CheckGoNoGo())
             {
                 return;
             }
+
             string keyword = "root@OpenWrt:~# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:~#"
             string item = "RemoveCalData";
+
             try
             {
                 DisplayMsg(LogType.Log, "Remove Calibration Data");
+
                 //SendAndChk(PortType.SSH, "rm /lib/firmware/IPQ5332/caldata.bin", keyword, 0, 3600);
                 //SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_1.bin", keyword, 0, 3600);
                 //SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_2.bin", keyword, 0, 3600);
-                SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_*.bin", keyword, 0, 3600);
-                SendAndChk(PortType.SSH, "dd of=/tmp/mac if=/dev/mmcblk0p21 bs=1 count=30", keyword, 0, 10 * 1000);
-                SendAndChk(PortType.SSH, "dd if=/dev/zero of=/dev/mmcblk0p21", keyword, 0, 10 * 1000);
-                SendAndChk(PortType.SSH, "dd if=/tmp/mac of=/dev/mmcblk0p21 bs=1 count=30", keyword, 0, 10 * 1000);
+                SendAndChk(portType, "rm /lib/firmware/qcn9224/caldata_*.bin", keyword, 0, 3600);
+
+                SendAndChk(portType, "dd of=/tmp/mac if=/dev/mmcblk0p21 bs=1 count=30", keyword, 0, 10 * 1000);
+                SendAndChk(portType, "dd if=/dev/zero of=/dev/mmcblk0p21", keyword, 0, 10 * 1000);
+                SendAndChk(portType, "dd if=/tmp/mac of=/dev/mmcblk0p21 bs=1 count=30", keyword, 0, 10 * 1000);
+                ////------------------------------------------------
+                //SendAndChk(portType, "\r\n", keyword, 0, 1000);
+                ////------------------------------------------------
                 AddData(item, 0);
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+        }
+        private void ChkD2License()
+        {
+            string item = "ChkD2License";
+            try
+            {
+                DisplayMsg(LogType.Log, $"================ {item} ================");
+                string keyword = "root@OpenWrt:~# \r\n";
+                string res = string.Empty;
+                int retryC = 0;
+            retryFlag:
+                SendAndChk(PortType.SSH, "mt boarddata", keyword, out res, 0, 5000);
+                Match m = Regex.Match(res, @"D2License\s*=\s*(?<D2License>.+)");
+                if (m.Success)
+                {
+                    string D2License = m.Groups["D2License"].Value.Trim();
+                    DisplayMsg(LogType.Log, "--------- Check" + D2License + "with SFCS ---------");
+                }
+                SendAndChk(PortType.SSH, "/etc/init.d/vtspd start", keyword, out res, 0, 5000);
+                SendAndChk(PortType.SSH, "ps | grep ve_vtsp_main", keyword, out res, 0, 5000);
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                {
+                    //if (!res.Contains("/usr/bin/ve_vtsp_main"))
+
+                    if (!res.Contains("ve_vtsp_main"))
+                    {
+                        while (retryC++ < 2)
+                        {
+                            DisplayMsg(LogType.Log, "Check ve_vtsp_main fail, D2 License is incorrect");
+                            SendAndChk(PortType.SSH, "/etc/init.d/vtspd stop", keyword, out res, 0, 5000);
+                            goto retryFlag;
+                        }
+                        AddData("D2_License", 1);
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, "Check ve_vtsp_main PASS, D2 License is correct");
+                        AddData("D2_License", 0);
+                    }
+                }
+                SendAndChk(PortType.SSH, "/etc/init.d/vtspd stop", keyword, out res, 0, 8000);
+
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "___" + ex.Message);
                 AddData(item, 1);
             }
         }
