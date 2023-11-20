@@ -77,6 +77,9 @@
     <Compile Include="LCS5\PCBA.cs" />
     <Compile Include="LCS5\RF.cs" />
     <Compile Include="LMG1\Final.cs" />
+    <Compile Include="LMG1\OTA.cs" />
+    <Compile Include="LMG1\PCBA.cs" />
+    <Compile Include="LMG1\RF.cs" />
     <Compile Include="LRG1\Final.cs" />
     <Compile Include="LRG1\OTA.cs" />
     <Compile Include="LRG1\PCBA.cs" />
