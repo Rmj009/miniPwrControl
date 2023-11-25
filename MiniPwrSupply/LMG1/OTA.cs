@@ -434,5 +434,6 @@ namespace MiniPwrSupply.LMG1
             }
             return IsFwGreater;
         }
+
     }
 }

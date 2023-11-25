@@ -92,6 +92,7 @@
     <Compile Include="Singleton\OperationHanlder.cs" />
     <Compile Include="Util\MessageBoxEx.cs" />
     <Compile Include="Util\UtilClass.cs" />
+    <Compile Include="Util\utilities.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>
