@@ -81,6 +81,7 @@
     <Compile Include="LMG1\PCBA.cs" />
     <Compile Include="LMG1\RF.cs" />
     <Compile Include="LRG1\Final.cs" />
+    <Compile Include="LRG1\FWswitch.cs" />
     <Compile Include="LRG1\OTA.cs" />
     <Compile Include="LRG1\PCBA.cs" />
     <Compile Include="LRG1\RF.cs" />
