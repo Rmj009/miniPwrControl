@@ -68,13 +68,15 @@
     <Compile Include="DoWuzhiCmd\RS232.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmd.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmdBase.cs" />
-    <Compile Include="Exception\ConnectHOME.cs" />
+    <Compile Include="_Exception\ConnectHOME.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="Instrument\EventLogHandler.cs" />
+    <Compile Include="Instrument\LitePoint.cs" />
     <Compile Include="LCS5\PCBA.cs" />
     <Compile Include="LCS5\RF.cs" />
     <Compile Include="LMG1\Final.cs" />

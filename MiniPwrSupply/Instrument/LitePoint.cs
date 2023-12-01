@@ -49,7 +49,7 @@ namespace MiniPwrSupply.Instrument
 
         public bool SetParameter(string ToolPath)
         {
-            Func.WriteINI(Path.GetDirectoryName(ToolPath), "123", "A", "B", "1");
+            //Func.WriteINI(Path.GetDirectoryName(ToolPath), "123", "A", "B", "1");
             return true;
         }
 

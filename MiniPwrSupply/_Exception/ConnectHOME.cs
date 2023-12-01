@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MiniPwrSupply.Exception
+namespace MiniPwrSupply._Exception
 {
     internal class ConnectHOME
     {
