@@ -68,6 +68,7 @@
     <Compile Include="DoWuzhiCmd\RS232.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmd.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmdBase.cs" />
+    <Compile Include="Exception\ConnectHOME.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -119,8 +120,6 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Exception\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
