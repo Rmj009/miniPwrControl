@@ -16,10 +16,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Management;
 
 namespace MiniPwrSupply.LMG1
 {
-    public class LMG1_OTA
+    public partial class LMG1_OTA
     {
         private enum Antenna
         {
@@ -31,6 +32,9 @@ namespace MiniPwrSupply.LMG1
         {
             try
             {
+                if (!ChkStation(status_ATS.txtPSN.Text))
+                    return;
+
                 if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
                 {
                     string txPin = Func.ReadINI("Setting", "IO_Board_Control", "Pin0", "0");
@@ -45,13 +49,12 @@ namespace MiniPwrSupply.LMG1
                 }
                 else
                 {
-                    frmOK.Label = "確認'網路線'已接上,\r\n請將DUT & Golden上電開機";
+                    frmOK.Label = "Vui lòng kiểm tra xem 'dây mạng' đã được kết nối,\nHãy bật nguồn cho DUT & Golden";
                     frmOK.ShowDialog();
                 }
                 DisplayMsg(LogType.Log, "Power on!!!");
 
                 ChkBootUp(PortType.SSH);
-
 
                 if (Func.ReadINI("Setting", "OTA", "SkipThread", "0") == "0")
                 {
@@ -114,7 +117,6 @@ namespace MiniPwrSupply.LMG1
                 AddData(item, 1);
             }
         }
-
         private void OTA_Thread()
         {
             if (!CheckGoNoGo())
@@ -124,26 +126,31 @@ namespace MiniPwrSupply.LMG1
 
             int retry = 1;
             string item = "Thread";
-            string res = "";
             string cmd = "";
+            string res = "";
             string broadcast_pan_id = "";
             string broadcast_channel = "";
 
             try
             {
                 DisplayMsg(LogType.Log, "=============== Thread ===============");
-
-            //這裡只有DUT要切換成DMP FW,陪測Golden需要手動切換一次就好
-            //Switch to DMP(dynamic multi-protocol) FW
-            Switch_DMP_FW:
-                if (this.SwitchDmpMode())
+                if (this.SwitchDmpMode("0.1.2.7")) // judge FW greater or smaller
                 {
-                    cmd = "bt_upgrade_utility -f /lib/firmware/efr32/rcp_no_encrypt_afh.gbl -p /dev/ttyMSM1";
+                    if (this.SwitchDmpMode("0.2.0.4"))
+                    {
+                        cmd = "bt_upgrade_utility -f /lib/firmware/efr32/rcp4.3.0_no_encrypt_afh_coex_noTxLimit.gbl -p /dev/ttyMSM1";
+                    }
+                    cmd = "bt_upgrade_utility -f /lib/firmware/efr32/rcp4.3.0_no_encrypt_afh.gbl -p /dev/ttyMSM1";
                 }
                 else
                 {
-                    cmd = "bt_upgrade_utility -f /lib/firmware/efr32/rcp4.3.0_no_encrypt_afh.gbl";
+                    cmd = "bt_upgrade_utility -f /lib/firmware/efr32/rcp_no_encrypt_afh.gbl -p /dev/ttyMSM1";
                 }
+            //這裡只有DUT要切換成DMP FW,陪測Golden需要手動切換一次就好
+            //Switch to DMP(dynamic multi-protocol) FW
+            //9/21/23 Frank update test plan change command to bt_upgrade_utility -f /lib/firmware/efr32/rcp_no_encrypt_afh.gbl -p /dev/ttyMSM1
+            Switch_DMP_FW:
+                //if (!SendAndChk(PortType.SSH, "bt_upgrade_utility -f /lib/firmware/efr32/rcp_no_encrypt_afh.gbl -p /dev/ttyMSM1", "Transfer completed successfully", out res, 0, 60 * 1000))
                 if (!SendAndChk(PortType.SSH, cmd, "Transfer completed successfully", out res, 0, 60 * 1000))
                 {
                     DisplayMsg(LogType.Log, "Switch DMP FW fail");
@@ -304,7 +311,8 @@ namespace MiniPwrSupply.LMG1
                     AddData(item, 1);
                     return;
                 }
-
+                int Rssi_retrycount = 0;
+            Rssi_retry:
                 //start Thread scan
                 for (int i = 1; i <= rssiCount; i++)
                 {
@@ -313,7 +321,8 @@ namespace MiniPwrSupply.LMG1
                     channel = "";
                     rssi = 0;
 
-                    SendAndChk(PortType.GOLDEN_SSH, "ot-ctl scan", keyword, out res, 0, 10 * 1000);
+                    SendAndChk(PortType.GOLDEN_SSH, $"ot-ctl scan {broadcast_channel}", keyword, out res, 0, 10 * 1000);
+                    //SendAndChk(PortType.GOLDEN_SSH, $"ot-ctl scan", keyword, out res, 0, 10 * 1000);
                     if (res.Contains("connect session failed: No such file or directory"))
                     {
                         //Enable CPCD
@@ -321,6 +330,17 @@ namespace MiniPwrSupply.LMG1
                         DisplayMsg(LogType.Log, "[Golden] Delay 5s...");
                         Thread.Sleep(5000); //一定要delay,不然下一步會error
                         SendAndChk(PortType.GOLDEN_SSH, "logread -e cpcd", keyword, out res, 0, 5000);
+
+                        string CPCD = Func.ReadINI("Setting", "Setting", "CPCD", "");
+
+                        if (!res.Contains(CPCD))
+                        {
+                            DisplayMsg(LogType.Log, "Check CPCD version fail fail");
+                            AddData(item, 1);
+                            return;
+                        }
+
+
                         if (!res.Contains("Daemon startup was successful"))
                         {
                             DisplayMsg(LogType.Log, "[Golden] Enable CPCD fail");
@@ -340,7 +360,8 @@ namespace MiniPwrSupply.LMG1
                             return;
                         }
 
-                        SendAndChk(PortType.GOLDEN_SSH, "ot-ctl scan", "Done", out res, 0, 10 * 1000);
+                        SendAndChk(PortType.GOLDEN_SSH, $"ot-ctl scan {broadcast_channel}", "Done", out res, 0, 10 * 1000);
+                        //SendAndChk(PortType.GOLDEN_SSH, $"ot-ctl scan", keyword, out res, 0, 10 * 1000);
                     }
 
                     /*
@@ -380,6 +401,13 @@ namespace MiniPwrSupply.LMG1
 
                 if (rssi_val.Count != rssiCount)
                 {
+                    if (Rssi_retrycount < 3)
+                    {
+                        DisplayMsg(LogType.Log, $"Retry RSSI time: {Rssi_retrycount}");
+                        Rssi_retrycount++;
+                        rssi_val.Clear();
+                        goto Rssi_retry;
+                    }
                     DisplayMsg(LogType.Log, $"Rssi count {rssi_val.Count} fail");
                     status_ATS.AddData("Thread_RSSI", "dBm", "-9999");
                     return;
@@ -397,7 +425,7 @@ namespace MiniPwrSupply.LMG1
                 AddData(item, 1);
             }
         }
-        private bool SwitchDmpMode()
+        private bool SwitchDmpMode(string _version)
         {
             if (!CheckGoNoGo())
             {
@@ -407,9 +435,9 @@ namespace MiniPwrSupply.LMG1
             string res = string.Empty;
             string FWversion = string.Empty;
             string item = $"SwitchDmpMode";
-            string keyword = @"root@OpenWrt";
+            string keyword = "root@OpenWrt:~# \r\n";
             DisplayMsg(LogType.Log, $"=============== {item} ===============");
-            Version targetVerison = new Version("1.0.0.0");
+            Version targetVerison = new Version(_version);
             //Version targetVerison = Version.Parse("1.0.0.0");
             try
             {
