@@ -1978,3 +1978,49 @@ namespace MiniPwrSupply.LMG1
             }
 
         }
+        private bool SwitchDmpMode(string _version)
+        {
+            if (!CheckGoNoGo())
+            {
+                return false;
+            }
+        retry:
+            bool IsFwGreater = false;
+            int retryMtInFo = 0;
+            string res = string.Empty;
+            string FWversion = string.Empty;
+            string item = $"SwitchDmpMode";
+            string keyword = "root@OpenWrt:~# \r\n";
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            Version targetVerison = new Version(_version);
+            //Version targetVerison = Version.Parse("1.0.0.0");
+            try
+            {
+                SendAndChk(PortType.SSH, "mt info", keyword, out res, 0, 3000);
+                Match m = Regex.Match(res, @"FW Version: (?<FWver>.+)");
+                if (m.Success)
+                {
+                    FWversion = m.Groups["FWver"].Value.Trim().Split('v')[1];
+                    DisplayMsg(LogType.Log, "DUT FWversion: " + FWversion);
+                }
+                Version FwVer = Version.Parse(FWversion);
+                if (FwVer.CompareTo(targetVerison) > 0)
+                {
+                    IsFwGreater = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, $"{item}=>" + ex.Message);
+                retryMtInFo++;
+                if (retryMtInFo > 2)
+                {
+                    AddData(item, 1);
+                    throw;
+                }
+                goto retry;
+            }
+            return IsFwGreater;
+        }
+    }
+}
