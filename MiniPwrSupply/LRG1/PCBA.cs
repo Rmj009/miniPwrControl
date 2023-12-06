@@ -17,6 +17,7 @@ using WNC.API;
 using NationalInstruments.VisaNS;
 using System.Net.Security;
 using System.Runtime.CompilerServices;
+using static System.Collections.Specialized.BitVector32;
 
 namespace ATS
 {
@@ -82,35 +83,39 @@ namespace ATS
         {
             if (useShield)
             {
-                fixture.ControlIO(Fixture.FixtureIO.IO_6, CTRL.ON);
-                fixture.ControlIO(Fixture.FixtureIO.IO_7, CTRL.ON);
-                fixture.ControlIO(Fixture.FixtureIO.IO_8, CTRL.ON);
+                fixture.ControlIO(Fixture.FixtureIO.IO_5, CTRL.ON); //USB
+                fixture.ControlIO(Fixture.FixtureIO.IO_6, CTRL.ON); //RJ11
             }
 
             try
             {
                 infor.ResetParam();
                 Net.NewNetPort newNetPort = new Net.NewNetPort();
-                #region create SMT file
-
-                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                if (Func.ReadINI("Setting", "Golden", "GoldenSN", "(*&^%$").Contains(status_ATS.txtPSN.Text))
                 {
-                    //SE_TODO: get infor from SFCS
+                    isGolden = true;
+                    DisplayMsg(LogType.Log, "Golden testing..." + status_ATS.txtPSN.Text);
+                }
+                else
+                    isGolden = false;
+
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && isGolden == false)
+                {
+                    #region Get Data From SFCS
                     SentPsnForGetMAC(status_ATS.txtPSN.Text.Trim());
+                    if (!CheckGoNoGo()) { return; }
                     for (int i = 0; i < 3; i++)
                     {
                         DisplayMsg(LogType.Log, "Delay 1s...");
                         Thread.Sleep(1000);
-
                         infor.SerialNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LRG1_SN");
                         infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
                         infor.FWver = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MFG_FW_17");
-
-                        infor.HWID = Func.ReadINI("Setting", "PCBA", "HWID", "1001");
-                        infor.HWver = Func.ReadINI("Setting", "PCBA", "HWver", "EVT2");
+                        infor.HWID = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@HW_ID_13");
+                        infor.HWver = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@HW_VER");
                         //Rena_20230803, add ble_ver and se_ver for BLE test
-                        infor.BLEver = Func.ReadINI("Setting", "PCBA", "BLEver", "v5.0.0-b108");
-                        infor.SEver = Func.ReadINI("Setting", "PCBA", "SEver", "0001020E");
+                        infor.BLEver = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@BLE_VER");
+                        infor.SEver = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@SE_VER");
                         infor.BaseMAC = MACConvert(infor.BaseMAC);
                         infor.WanMAC = MACConvert(infor.BaseMAC, 1);
                         if (infor.SerialNumber != "")
@@ -121,8 +126,11 @@ namespace ATS
                     DisplayMsg(LogType.Log, $"Get Base MAC From SFCS is: {infor.BaseMAC}");
                     DisplayMsg(LogType.Log, $"Get FWver From SFCS is: {infor.FWver}");
                     if (string.IsNullOrEmpty(infor.SerialNumber) || string.IsNullOrEmpty(infor.BaseMAC) || string.IsNullOrEmpty(infor.FWver)
-                       || infor.SerialNumber.Contains("Dut not have") || infor.BaseMAC.Contains("Dut not have") || infor.FWver.Contains("Dut not have"))
+                       || infor.SerialNumber.Contains("Dut not have") || infor.BaseMAC.Contains("Dut not have") || infor.FWver.Contains("Dut not have")
+                       || infor.HWID.Contains("Dut not have") || infor.HWver.Contains("Dut not have") || infor.BLEver.Contains("Dut not have") || infor.SEver.Contains("Dut not have")
+                       || string.IsNullOrEmpty(infor.HWID) || string.IsNullOrEmpty(infor.HWver) || string.IsNullOrEmpty(infor.BLEver) || string.IsNullOrEmpty(infor.SEver))
                     {
+                        DisplayMsg(LogType.Log, $"GET from SFCS -> Pls check with DMIS");
                         warning = "Get from SFCS FAIL";
                         return;
                     }
@@ -130,16 +138,25 @@ namespace ATS
                     string result = string.Empty;
                     result = infor.FWver.Substring(0, infor.FWver.Length - 9);
 
-                    DisplayMsg(LogType.Log, $"Get FWver trim is: LRG1_{result}");
-                    infor.FWver = "LRG1_" + result.ToLower();
+                    DisplayMsg(LogType.Log, $"Get FWver trim is: LRG1_ATH_{result}");
+                    infor.FWver = "LRG1_ATH_" + result.ToLower();
                     infor.DECTver = Func.ReadINI("Setting", "PCBA", "DECTver", "Version 04.13 - Build 19");
-                    DisplayMsg(LogType.Log, $"Get HWID From setting is: {infor.HWID}");
-                    DisplayMsg(LogType.Log, $"Get HWver From setting is: {infor.HWver}");
+
+                    infor.HWID = infor.HWID.Substring(0, infor.HWID.Length - 9); //1100Q23000001 -9 is trim Q23000001
+                    infor.HWver = infor.HWver.Substring(0, infor.HWver.Length - 9);  //ALPHAQ23000001 -9 is trim Q23000001
+
+                    //string firstChar = infor.HWver.Substring(0, 1);
+                    //string restOfChars = infor.HWver.Substring(1).ToLower();// TODO: change data to lower ALPHA to Apha
+                    //infor.HWver= firstChar + restOfChars;
+
+                    infor.BLEver = infor.BLEver.Substring(0, infor.BLEver.Length - 9).ToLower(); //V5.0.0Q23000001  -9 is trim Q23000001
+                    infor.SEver = infor.SEver.Substring(0, infor.SEver.Length - 9); //00010210Q23000001 -9 is trim Q23000001
+                    DisplayMsg(LogType.Log, $"Get HWID From SFCS is: {infor.HWID}");
+                    DisplayMsg(LogType.Log, $"Get HWver From SFCS is: {infor.HWver}");
                     DisplayMsg(LogType.Log, $"Get BaseMAC From SFCS is: {infor.BaseMAC}");
                     DisplayMsg(LogType.Log, $"Get WanMAC From SFCS is: {infor.WanMAC}");
-
-                    DisplayMsg(LogType.Log, $"Get BLEver From setting is: {infor.BLEver}");
-                    DisplayMsg(LogType.Log, $"Get SEver From setting is: {infor.SEver}");
+                    DisplayMsg(LogType.Log, $"Get BLEver From SFCS is: {infor.BLEver}");
+                    DisplayMsg(LogType.Log, $"Get SEver From SFCS is: {infor.SEver}");
                     if (infor.SerialNumber.Length == 18)
                     {
                         SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
@@ -153,69 +170,86 @@ namespace ATS
                         return;
                     }
 
+                    #endregion Get Data From SFCS
+
+                    #region Compare Setting With SFCS
+                    //--------------------------------------------Setting read---------------------------------------------------
+                    string stFWver = Func.ReadINI("Setting", "PCBA", "FWver", "LRG1_v1.0.2.0");
+                    string stHWID = Func.ReadINI("Setting", "PCBA", "HWID", "1100");
+                    string stHWver = Func.ReadINI("Setting", "PCBA", "HWver", "Alpha");
+                    string stBLEver = Func.ReadINI("Setting", "PCBA", "BLEver", "v5.0.0");
+                    string stSEver = Func.ReadINI("Setting", "PCBA", "SEver", "00010210");
+                    //--------------------------------------------Setting read---------------------------------------------------
+                    //--------------------------------------------Compare setting with SFCS---------------------------------------------------
+                    List<string> ItemNameList = new List<string> { "FW Version", "HWID", "HWVER", "BLEVER", "SEVER" };
+                    List<string> SettingItemList = new List<string> { stFWver, stHWID, stHWver, stBLEver, stSEver };
+                    List<string> SfcsItemList = new List<string> { infor.FWver, infor.HWID, infor.HWver, infor.BLEver, infor.SEver };
+                    for (int i = 0; i < SettingItemList.Count; i++)
+                    {
+                        if (SettingItemList[i] != SfcsItemList[i])
+                        {
+                            DisplayMsg(LogType.Log, $"Compare item '{ItemNameList[i]}' /Setting '{SettingItemList[i]}' with SFCS '{SfcsItemList[i]}' FAIL");
+                            warning = "Compare Setting With SFCS FAIL";
+                            return;
+                        }
+                        else
+                        {
+                            DisplayMsg(LogType.Log, $"Compare item '{ItemNameList[i]}' /Setting '{SettingItemList[i]}' with SFCS '{SfcsItemList[i]}' PASS");
+                        }
+                    }
+                    //--------------------------------------------Compare setting with SFCS---------------------------------------------------
+                    #endregion Compare Setting With SFCS
 
                     GetRFPIFromExcel(infor.BaseMAC);
                 }
                 else
                 {
-                    //DisplayMsg(LogType.Log, $"Test In engineer mode");
-                    //infor.SerialNumber = string.Empty;
-                    //infor.SerialNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LRG1_SN");
-                    //DisplayMsg(LogType.Log, $"Get SN From SFCS is: {infor.SerialNumber}");
-                    //if (infor.SerialNumber.Length == 18)
-                    //{
-                    //    /*SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                    //    //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
-                    //    status_ATS.SFCS_Data.PSN = infor.SerialNumber;
-                    //    status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;*/
-                    //}
-                    //else // if cannot get from sfcs will get from setting/ jason add 2023/09/27
-                    //{
-                    //    infor.SerialNumber = Func.ReadINI("Setting", "PCBA", "LRG1_SN_Sample", "");
-                    //    DisplayMsg(LogType.Log, $"Get SN 'LRG1_SN_Sample=' From Setting  is: {infor.SerialNumber}");
-                    //    if (string.IsNullOrEmpty(infor.SerialNumber) || infor.SerialNumber.Length != 18)
-                    //    {
-                    //        warning = "Get SN sample from setting fail";
-                    //        return;
-                    //    }
+                    #region Test In Eng Mode
+                    DisplayMsg(LogType.Log, $"Test In engineer mode or golden");
+                    infor.SerialNumber = string.Empty;
+                    infor.SerialNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LRG1_SN");
+                    DisplayMsg(LogType.Log, $"Get SN From SFCS is: {infor.SerialNumber}");
+                    if (infor.SerialNumber.Length == 18)
+                    {
+                        DisplayMsg(LogType.Log, $"Get SN '@LRG1_SN' From SFCS ok  is: {infor.SerialNumber}");
+                    }
+                    else // if cannot get from sfcs will get from setting/ jason add 2023/09/27
+                    {
+                        infor.SerialNumber = Func.ReadINI("Setting", "PCBA", "LRG1_SN_Sample", "");
+                        DisplayMsg(LogType.Log, $"Get SN 'LRG1_SN_Sample=' From Setting  is: {infor.SerialNumber}");
+                        if (string.IsNullOrEmpty(infor.SerialNumber) || infor.SerialNumber.Length != 18)
+                        {
+                            warning = "Get SN sample from setting fail";
+                            return;
+                        }
+                    }
+                    infor.BaseMAC = string.Empty;
+                    infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
+                    DisplayMsg(LogType.Log, $"Get MAC From SFCS is: {infor.BaseMAC}");
+                    if (infor.BaseMAC.Length == 12)
+                    {
+                        DisplayMsg(LogType.Log, $"Get MAC From SFCS OK");
+                    }
+                    else // if cannot get from sfcs will get from setting/ jason add 2023/09/27
+                    {
+                        infor.BaseMAC = Func.ReadINI("Setting", "PCBA", "MAC_Sample", "");
+                        DisplayMsg(LogType.Log, $"Get SN 'MAC_Sample=' From Setting  is: {infor.BaseMAC}");
+                        if (string.IsNullOrEmpty(infor.BaseMAC) || infor.BaseMAC.Length != 12)
+                        {
+                            warning = "Get MAC sample from setting fail";
+                            return;
+                        }
+                    }
 
-                    //    /* SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                    //     //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
-                    //     status_ATS.SFCS_Data.PSN = infor.SerialNumber;
-                    //     status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;*/
+                    infor.BaseMAC = MACConvert(infor.BaseMAC);
 
-                    //}
-
-                    //infor.BaseMAC = string.Empty;
-                    //if (forHQtest)
-                    //{
-                    //    infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
-                    //    DisplayMsg(LogType.Log, $"Get MAC From SFCS is: {infor.BaseMAC}");
-                    //}
-                    //if (infor.BaseMAC.Length == 12)
-                    //{
-                    //    DisplayMsg(LogType.Log, $"Get MAC From SFCS OK");
-                    //}
-                    //else // if cannot get from sfcs will get from setting/ jason add 2023/09/27
-                    //{
-                    //    infor.BaseMAC = Func.ReadINI("Setting", "PCBA", "MAC_Sample", "");
-                    //    DisplayMsg(LogType.Log, $"Get SN 'MAC_Sample=' From Setting  is: {infor.BaseMAC}");
-                    //    if (string.IsNullOrEmpty(infor.BaseMAC) || infor.BaseMAC.Length != 12)
-                    //    {
-                    //        warning = "Get MAC sample from setting fail";
-                    //        return;
-                    //    }
-                    //}
-
-                    //infor.BaseMAC = MACConvert(infor.BaseMAC);
-
-                    //SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                    ////SetTextBox(status_ATS.txtSP, infor.BaseMAC);
-                    //status_ATS.SFCS_Data.PSN = infor.SerialNumber;
-                    //status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;
+                    SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                    status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                    status_ATS.SFCS_Data.First_Line = infor.SerialNumber + "," + status_ATS.txtSP.Text;
 
                     //Rena_20230407 add for HQ test
-                    GetBoardDataFromExcel(status_ATS.txtPSN.Text);
+                    //GetBoardDataFromExcel(status_ATS.txtPSN.Text);
+                    GetRFPIFromExcel(infor.BaseMAC);
                     //Rena_20230803, add ble_ver and se_ver for BLE test
                     infor.BLEver = Func.ReadINI("Setting", "PCBA", "BLEver", "v5.0.0-b108");
                     infor.SEver = Func.ReadINI("Setting", "PCBA", "SEver", "0001020E");
@@ -227,14 +261,16 @@ namespace ATS
                     infor.DECTver = Func.ReadINI("Setting", "PCBA", "DECTver", "Version 04.13 - Build 19");
                     infor.BaseMAC = MACConvert(infor.BaseMAC);
                     infor.WanMAC = MACConvert(infor.BaseMAC, 1);
+                    #endregion Test In Eng Mode
                 }
 
-                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)
                 {
+                    DisplayMsg(LogType.Log, $"SN Input: '{status_ATS.txtPSN.Text}'");
                     if (!ChkStation(status_ATS.txtPSN.Text)) { return; }
                 }
 
-                #endregion
+                #region Power On
 
                 if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
                 {
@@ -247,7 +283,7 @@ namespace ATS
                 else if (Func.ReadINI("Setting", "Port", "RelayBoard", "Disable").ToUpper() == "ENABLE")
                 {
                     SwitchRelay(CTRL.ON);
-                    Thread.Sleep(3000);
+                    Thread.Sleep(1 * 1000);
                     SwitchRelay(CTRL.OFF);
                 }
                 else
@@ -256,66 +292,103 @@ namespace ATS
                     frmOK.ShowDialog();
                 }
                 DisplayMsg(LogType.Log, "Power on!!!");
+                #endregion Power On
 
+                if (!CheckGoNoGo()) { return; }
                 ChkBootUp(PortType.SSH);
-
-                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)
+                if (isLoop == 0)
                 {
+                    #region Ethenet Speed check
+                    if (!CheckGoNoGo()) { return; }
+                    if (Func.ReadINI("Setting", "PCBA", "SkipLANSPEED1", "0") == "0") { this.EthernetTest(1); }
+                    if (Func.ReadINI("Setting", "PCBA", "SkipLANSPEED2", "0") == "0") { this.EthernetTest(2); }
+                    if (Func.ReadINI("Setting", "PCBA", "SkipLANSPEED3", "0") == "0") { this.EthernetTest(3); }
+                    if (Func.ReadINI("Setting", "PCBA", "SkipLANSPEED4", "0") == "0") { this.EthernetTest(4); }
+                    if (Func.ReadINI("Setting", "PCBA", "SkipLANSPEED5", "0") == "0") { this.EthernetTest(5); }
+                    #endregion Ethenet Speed check
+                    if (!CheckGoNoGo()) { return; }
+                    this.ChkMacAddr();
+                }
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)
+                {
+                    if (!CheckGoNoGo()) { return; }
                     CheckFWVerAndHWID();
                 }
 
-
-                if (Func.ReadINI("Setting", "PCBA", "SkipNFC", "0") == "0")
-                {
-                    NFCTag();
-                }
+                //testplan removal
+                //if (Func.ReadINI("Setting", "PCBA", "SkipNFC", "0") == "0")
+                //{
+                //    NFCTag();
+                //}
 
                 if (Func.ReadINI("Setting", "PCBA", "SkipDECT", "0") == "0")
                 {
                     string rxtun = "";
+                    if (!CheckGoNoGo()) { return; }
                     Set_DECT_Full_Power();
-                    this.DECTCal(ref rxtun);
+                    DECTCal(ref rxtun);
                     infor.DECT_cal_rxtun = rxtun;
                     DisplayMsg(LogType.Log, "DECT_cal_rxtun: " + infor.DECT_cal_rxtun);
+
+                    //Set_DECT_ID();
+                    // Set_DECT_RFPI(); //Rena_20230803, EEProm Param Set RFPI
+                    // ===================================================================
+                    //this.EEProm_Set(); //testplan0922,    v. EEPROM set (PA2_COMP) //Thiem Liu
+                    // ===================================================================
                 }
+                if (!CheckGoNoGo()) { return; }
                 SLICTest_ByUsbModem();
 
-                //if (forHQtest || (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden))
+                if (forHQtest || (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden))
                 {
+                    if (!CheckGoNoGo()) { return; }
                     SetDUTInfo();
+                    if (!CheckGoNoGo()) { return; }
                     CheckDUTInfo();
                 }
 
                 if (isLoop == 0)
+                {
+                    if (!CheckGoNoGo()) { return; }
                     CheckLED();
+                }
 
+                if (!CheckGoNoGo()) { return; }
                 CheckPCIe();
 
                 if (isLoop == 0)
-                    WPSButton();
-
-                if (isLoop == 0)
-                    ResetButton();
-
-                USBTest();
-                //=================================
-                this.USB30(); // testplan 5.3.9
-                //=================================
-                if (isLoop == 0)
                 {
-                    this.EthernetTest(1);
-                    this.ChkMacAddr();
+                    if (!CheckGoNoGo()) { return; }
+                    WPSButton();
                 }
 
+                if (isLoop == 0)
+                {
+                    if (!CheckGoNoGo()) { return; }
+                    ResetButton();
+                }
+
+                if (useShield)
+                {
+                    fixture.ControlIO(Fixture.FixtureIO.IO_9, CTRL.ON); //For control USB Block
+                    Thread.Sleep(2000);
+                }
+                if (!CheckGoNoGo()) { return; }
+                USBTest();
+                //=================================
+                if (!CheckGoNoGo()) { return; }
+                this.USB30(); // testplan 5.3.9
+                //=================================         
+
+                if (!CheckGoNoGo()) { return; }
                 CurrentSensor();
 
+                if (!CheckGoNoGo()) { return; }
                 BleTest();
-
                 if (forHQtest)
                 {
                     WriteBoardDataToExcel(status_ATS.txtPSN.Text);
                 }
-
             }
             catch (Exception ex)
             {
@@ -375,23 +448,6 @@ namespace ATS
                     AddData(item, 1);
                     return;
                 }
-
-                //for (int i = 0; i < 3; i++)
-                //{
-                //    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                //    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
-                //        break;
-                //    DisplayMsg(LogType.Log, "Delay 2s...");
-                //    Thread.Sleep(2000);
-                //}
-
-                //if (!result)
-                //{
-                //    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
-                //    AddData(item, 1);
-                //    return;
-                //}
-
                 //s -> 2 -> 1 -> {RFPI value (5bytes)}
                 SendWithoutEnterAndChk(PortType.SSH, "s", "q => Return to Interface Menu", delayMs, timeOutMs);
                 SendWithoutEnterAndChk(PortType.SSH, "2", "q => Return", delayMs, timeOutMs);
@@ -440,7 +496,6 @@ namespace ATS
                 AddData(item, 1);
             }
         }
-
         private bool IsTftpd32Running()
         {
             Process[] processes = Process.GetProcessesByName("tftpd32");
@@ -579,27 +634,75 @@ namespace ATS
             DisplayMsg(LogType.Log, "=============== Check BootUp ===============");
             string keyword = @"root@";
             string item = "BootUp";
+            int countretry = 1;
+            /*string listbootupcolor = Func.ReadINI("Setting", "Camera", "LEDbootupListColor", "WHITE,BLUE,GREEN,RED"); //For RF only Use to check LED bootup
+            if (string.IsNullOrEmpty(listbootupcolor) || string.IsNullOrWhiteSpace(listbootupcolor)|| !listbootupcolor.Contains(","))
+            {
+                DisplayMsg(LogType.Log, $"Pls double check color List, Should is: [Camera] LEDbootupListColor=WHITE,BLUE,GREEN,RED");
+                warning = "Check Color List Fail";
+                return;
+            }*/
+
             try
             {
-                if (!ChkInitial(portType, keyword, 200000))
+                if (station == "RF")
                 {
-                    //check again
-                    if (SendAndChk(portType, "", keyword, 0, 3000))
+                Retryping:
+                    if (!telnet.Ping(sshInfo.ip, 120 * 1000))
                     {
-                        AddData(item, 0);
-                        return;
+                        DisplayMsg(LogType.Log, $"Ping {sshInfo.ip} fail.."); //Jason add for check LED bootup at RF station 2023/10/15            
+                        if (countretry > 0)
+                        {
+                            DisplayMsg(LogType.Log, $"Start check LED bootup");
+                            CheckLEDBootup("LED_BootUP", COLOR.WHITE, STAGE.ON, "item_1");
+                            countretry--;
+                            if (CheckGoNoGo()) { goto Retryping; } else { AddData(item, 1); return; }
+                        }
+                        else { AddData(item, 1); return; }
                     }
 
-                    AddData(item, 1);
-                    return;
+
+                    if (!ChkInitial(portType, keyword, 120 * 1000))
+                    {
+                        //check again
+                        if (SendAndChk(portType, "", keyword, 0, 3000))
+                        {
+                            AddData(item, 0);
+                            return;
+                        }
+
+                        AddData(item, 1);
+                        return;
+                    }
+                }
+                else
+                {
+                    if (!ChkInitial(portType, keyword, 200000))
+                    {
+                        //check again
+                        if (SendAndChk(portType, "", keyword, 0, 3000))
+                        {
+                            AddData(item, 0);
+                            return;
+                        }
+
+                        AddData(item, 1);
+                        return;
+                    }
                 }
 
-                AddData(item, 0);
+
+                if (CheckGoNoGo())
+                { AddData(item, 0); }
+                else { AddData(item, 1); return; }
+
+
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, ex.Message);
                 AddData(item, 1);
+                return;
             }
         }
         private void Set_DECT_Full_Power()
@@ -626,10 +729,12 @@ namespace ATS
                 for (int i = 0; i < 3; i++)
                 {
                     SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
+                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "q => Quit", out res, 3000))
+                    {
                         break;
-                    DisplayMsg(LogType.Log, "Delay 2s...");
-                    Thread.Sleep(2000);
+                    }
+                    DisplayMsg(LogType.Log, "Delay 3s...");
+                    Thread.Sleep(3000);
                 }
 
                 if (!result)
@@ -655,6 +760,7 @@ namespace ATS
                 else
                 {
                     AddData("DECT_Ver", 1);
+                    MessageBox.Show("If target version < Build 19, need to upgrade DECT FW follow by test plan 5.3.3"); // test plan 5.3.3
                     DisplayMsg(LogType.Log, "Check DECT version fail");
                     return;
                 }
@@ -762,7 +868,6 @@ namespace ATS
             }
             finally
             {
-                //// q to layer 1 for Reboot DECT
                 this.ResetDect();
             }
         }
@@ -808,7 +913,7 @@ namespace ATS
                 for (int i = 0; i < 3; i++)
                 {
                     SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
+                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "q => Quit", out res, 3000))
                         break;
                     DisplayMsg(LogType.Log, "Delay 2s...");
                     Thread.Sleep(2000);
@@ -896,9 +1001,10 @@ namespace ATS
                         AddData(item, 1);
                         return;
                     }
+                    DisplayMsg(LogType.Log, "FreqTarget: " + freqHz.ToString());
                     freqDeltaHz = outFreqHz - freqHz;
-                    DisplayMsg(LogType.Log, "freqDeltaHz: " + freqDeltaHz.ToString());
-                    DisplayMsg(LogType.Log, "freqHz: " + outFreqHz.ToString());
+                    DisplayMsg(LogType.Log, $"Frequency (Hz) '{outFreqHz.ToString()}' - FreqTarget '{freqHz.ToString()}' = FreqDeltaHz '{freqDeltaHz.ToString()}'");
+                    DisplayMsg(LogType.Log, "FreqDeltaHz: " + freqDeltaHz.ToString());
                     DisplayMsg(LogType.Log, "Tolerence: " + tolerance.ToString());
 
                     //Rena_20230414, disable for LRG1 HQ sample build
@@ -1002,23 +1108,15 @@ namespace ATS
                     { break; }
                 }
             } while (!SendAndChk(PortType.SSH, "\r\n", keyWord, out res, 0, 100));
-            //for (int i = 0; i < 5; i++)
-            //{
-            //if (SendAndChk(PortType.SSH, "q\r\n", keyWord, out res, 0, 12000))
-            //{ break; }
-            //SendAndChk(PortType.SSH, "qq\r\n", keyWord, out res, 0, 10000);
-            //if (SendAndChk(PortType.SSH, "\r\n", keyWord, out res, 0, 3000))
-            //{ break; }
-            //}
             try
             {
                 for (int i = 0; i < 3; i++)
                 {
                     SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", 0);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
+                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "q => Quit", out res, 3000))
                         break;
-                    DisplayMsg(LogType.Log, "Delay 2s...");
-                    Thread.Sleep(2000);
+                    DisplayMsg(LogType.Log, "Delay 3s...");
+                    Thread.Sleep(3000);
                 }
 
                 if (!result)
@@ -1044,6 +1142,8 @@ namespace ATS
             DisplayMsg(LogType.Log, "=============== Set DECT ID ===============");
             string item = "SetDECTID";
             string res = string.Empty;
+            string test_mode = string.Empty;
+            string mode = "None";              //DECT must be on TestMode: None
             try
             {
                 //bool result = false;
@@ -1060,6 +1160,27 @@ namespace ATS
                     return;
                 }
 
+                #region check DECT TestMode
+                DisplayMsg(LogType.Log, "=============== DECT must be on TestMode: None ===============");
+                Match m = Regex.Match(res, @"TestMode:\s+(?<dect_test_mode>.+)");
+                if (m.Success)
+                {
+                    test_mode = m.Groups["dect_test_mode"].Value.Trim();
+                }
+                DisplayMsg(LogType.Log, $"DECT test mode: {test_mode}");
+
+                if (string.Compare(test_mode, mode, true) == 0)
+                {
+                    DisplayMsg(LogType.Log, $"Check TestMode:{test_mode} pass");
+                    AddData(item, 0);
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, $"Check TestMode:{test_mode} fail");
+                    AddData(item, 1);
+                    return;
+                }
+                #endregion
                 DisplayMsg(LogType.Log, $"Write '21' to ssh");
                 SSH_stream.WriteLine("21");
                 if (!ChkResponse(PortType.SSH, ITEM.NONE, "Enter Length (dec. max 512):", out res, timeOutMs))
@@ -1090,15 +1211,14 @@ namespace ATS
                 {
                     DisplayMsg(LogType.Log, "Check 'CURRENT VALUE: 0f eb 09' fail");
                     AddData(item, 1);
+                    return;
                 }
                 else
                 {
                     DisplayMsg(LogType.Log, "Check 'CURRENT VALUE: 0f eb 09' pass");
                     AddData(item, 0);
                 }
-                // ===============================================================
                 // ==================== BACK MAIN MENU ===========================
-                // ===============================================================
                 this.exitMode();
                 //=================================================================
                 this.Set_DECT_RFPI(); //Rena_20230803, EEProm Param Set RFPI
@@ -1111,6 +1231,12 @@ namespace ATS
             }
             finally
             {
+                //Rena_20230414, for HQ sample build
+                if (forHQtest)
+                {
+                    frmOK.Label = "請移除探針";
+                    frmOK.ShowDialog();
+                }
                 //exit calibration mode
                 this.exitMode();
             }
@@ -1190,7 +1316,6 @@ namespace ATS
                 DisplayMsg(LogType.Log, "Write ' ' to ssh");
                 SSH_stream.WriteLine(" ");
                 ChkResponse(PortType.SSH, ITEM.NONE, "q => Return to Interface Menu", out res, 120 * 1000);
-
                 DisplayMsg(LogType.Log, "Write 'q' to ssh");
                 SSH_stream.Write("q");
                 ChkResponse(PortType.SSH, ITEM.NONE, "q => Quit", out res, 5000);
@@ -1267,6 +1392,7 @@ namespace ATS
                 double rlevDbm = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "RefLevelDb", "0"));
                 double SweepTimeMs = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "SweepTimeMs", "0"));
                 double att = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "Attenuation", "0"));
+                double trigerlevel = Convert.ToDouble(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "TriggerLevelDbm", "-40"));
                 if (Convert.ToInt16(Func.ReadINI("Setting", "MS2830A", "Gpib", "-1")) != -1)
                 {
                     #region MS2830A
@@ -1278,6 +1404,11 @@ namespace ATS
                     ms2830a.SA.SetRefLevel(rlevDbm);
                     ms2830a.SA.SetCenterFreq(freqMhz);
                     ms2830a.SA.SetAttenuation(att);
+                    //DisplayMsg(LogType.Log, $"Start Set Trigger Lever (Read in setting is:'{trigerlevel}')");//Jason add as PE required
+                    //ms2830a.SA.SetTriggerLevel(trigerlevel);
+                    //Thread.Sleep(200);
+                    //DisplayMsg(LogType.Log, $"Set OFF Trigger'");
+                    //ms2830a.SA.SetTrigger(CTRL.OFF);
                     return true;
                     #endregion
                 }
@@ -1324,7 +1455,7 @@ namespace ATS
                     string section = string.Empty;
                     int delayMs = Convert.ToInt32(Func.ReadINI("Setting", "DECT_SignalAnalyzer", "FetchFrequencyDelayMs", "0"));
                     ms2830a.SA.FetchFrequency(delayMs, ref freqHz);
-                    DisplayMsg(LogType.Log, "Frquency (Hz) : " + freqHz.ToString());
+                    //DisplayMsg(LogType.Log, "Frquency (Hz) : " + freqHz.ToString());
 
                     //freqMhz = freqMhz * 1000000;
                     //freq = freq - freqMhz;
@@ -1425,7 +1556,6 @@ namespace ATS
                 return false;
             }
         }
-
         private void SetDUTInfo()
         {
             if (!CheckGoNoGo())
@@ -1460,8 +1590,10 @@ namespace ATS
                     AddData(item, 1);
                     return;
                 }
-
-                //Partition data formatting Ext4 Partition
+                //================================================================================
+                this.LoadBinaries();
+                //================================================================================
+                //5.3.4 Partition data formatting Ext4 Partition
                 DisplayMsg(LogType.Cmd, $"Write 'mkfs.ext4 /dev/mmcblk0p32' to ssh");
                 SSH_stream.WriteLine("mkfs.ext4 /dev/mmcblk0p32");
                 Thread.Sleep(10 * 1000); //TODO: 第一次做&重複做的flow不同,待優化
@@ -1483,49 +1615,15 @@ namespace ATS
                 }
                 SendAndChk(PortType.SSH, "mkdir /mnt/test", keyword, out res, 0, 3000);
                 SendAndChk(PortType.SSH, "mount -t ext4 /dev/mmcblk0p32 /mnt/test", keyword, out res, 0, 3000);
-                SendAndChk(PortType.SSH, "echo test123 > /mnt/test/file;sync", keyword, out res, 0, 3000);
-
-                // =================================
-                // [5.3.4] Remove gen_board_data.py
-                // =================================
-                /* #region replace_py
-                 int index = 0;
-                 bool MD5_check = false;
-                 //Rena_20230714, replace gen_board_data.py(暫時做法,之後MFG FW進版後就不需要了)
-                 //put gen_board_data.py in default_image_backup folder
-                 if (!File.Exists(Path.Combine(defaults_img_path, "gen_board_data.py")))
-                 {
-                     DisplayMsg(LogType.Log, $"File '{Path.Combine(defaults_img_path, "gen_board_data.py")}' doesn't exist");
-                     AddData(item, 1);
-                     return;
-                 }
-                 SendAndChk(PortType.SSH, $"tftp -gr gen_board_data.py {PC_IP}", keyword, out res, 0, 5000);
-                 SendAndChk(PortType.SSH, "mv gen_board_data.py /lib/gen_board_data.py", keyword, out res, 0, 5000);
-                 while (index++ < 5)
-                 {
-                     SendAndChk(PortType.SSH, "md5sum /lib/gen_board_data.py", keyword, out res, 0, 5000);
-                     if (res.Contains(py_md5sum))
-                     {
-                         MD5_check = true;
-                         DisplayMsg(LogType.Log, "gen_board_data.py MD5 check pass");
-                         break;
-                     }
-                     else
-                     {
-                         DisplayMsg(LogType.Log, "gen_board_data.pyMD5 check fail");
-                         Thread.Sleep(1000);
-                     }
-                 }
-                 if (!MD5_check)
-                 {
-                     AddData(item, 1);
-                     return;
-                 }
-                 #endregion*/
-
+                //===============================================================================================
+                SendAndChk(PortType.SSH, "mount | grep /dev/mmcblk0p32", keyword, out res, 0, 3000);
+                //SendAndChk(PortType.SSH, "echo test123 > /mnt/test/file;sync", keyword, out res, 0, 3000);
+                //===============================================================================================
+                this.FilesystemEncryption(true);
+                //================================================================================
                 //SE_TODO: get wifi_password, admin_password, wlan_ssid from SFCS
                 //如果已經寫過SFCS有紀錄,就讀出SFCS的值後帶入,如果沒寫過就用renew
-                //HQ sample build都直接用renew,生產時請SE修改
+                //HQ sample build都直接用renew, 生產時請SE修改
                 SFCS_Query _sfcsQuery = new SFCS_Query();
                 ATS_Template.SFCS_ATS_2_0.ATS ss = new ATS_Template.SFCS_ATS_2_0.ATS();
                 string WiFi_SSID_ToWrite = string.Empty;
@@ -1543,6 +1641,7 @@ namespace ATS
                 //Generate Board data
                 //BaseMAC & DECT_rfpi are capital letters
                 SendAndChk(PortType.SSH, $"gen_board_data.sh {SerialNumber} {infor.HWver} {infor.BaseMAC.ToUpper()} {infor.DECT_rfpi.ToUpper()} {infor.DECT_cal_rxtun} {WiFi_PWD_ToWrite} {Admin_PWD_ToWrite} {WiFi_SSID_ToWrite}", keyword, out res, 0, 10000);
+                //SendAndChk(PortType.SSH, $"gen_board_data.sh 2305000099 PVT1 E8:C7:CF:AF:46:60 03.03.B0.01.D8 77 renew renew renew", "", out res, 0, 10000);
                 if (!res.Contains(keyword) || res.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     DisplayMsg(LogType.Log, "Generate board data fail");
@@ -1552,13 +1651,14 @@ namespace ATS
                 //Generate D2 License Key
                 cmd = $"echo \"{infor.License_key}\" > /tmp/defaults/D2License.key";
                 SendAndChk(PortType.SSH, cmd, keyword, 0, 5000);
-                if (!SendAndChk(PortType.SSH, "cat /tmp/defaults/D2License.key", infor.License_key, out res, 0, 5000))
-                {
-                    DisplayMsg(LogType.Log, "Generate D2 License Key fail");
-                    AddData(item, 1);
-                    return;
-                }
-
+                //  ======================================= test plan remove this part =======================================
+                //if (!SendAndChk(PortType.SSH, "cat /tmp/defaults/D2License.key", infor.License_key, out res, 0, 5000))
+                //{
+                //    DisplayMsg(LogType.Log, "Generate D2 License Key fail");
+                //    AddData(item, 1);
+                //    return;
+                //}
+                // ===========================================================================================================
                 //Write data into DUT
                 SendAndChk(PortType.SSH, "gen_squashfs.sh", "No such file or directory", "4096 bytes (4.0KB) copied", out res, 0, 40000);
                 if (!res.Contains("100.00%") || res.Contains("No such file or directory"))
@@ -1568,13 +1668,24 @@ namespace ATS
                     return;
                 }
 
-                if (!SendAndChk(PortType.SSH, "ls /tmp", "defaults.img", out res, 0, 5000))
+                //if (!SendAndChk(PortType.SSH, "ls /tmp", "defaults.img", out res, 0, 5000))
+                //{
+                //    DisplayMsg(LogType.Log, "Can't find /tmp/defaults.img");
+                //    AddData(item, 1);
+                //  return;
+                //}
+                // ------------------------6-3 package into image file----------------------------------------
+                if (!SendAndChk(PortType.SSH, "dd if=/tmp/defaults.img of=/dev/mapper/defaults", "root@OpenWrt", out res, 0, 5000))
                 {
-                    DisplayMsg(LogType.Log, "Can't find /tmp/defaults.img");
+                    DisplayMsg(LogType.Log, "");
                     AddData(item, 1);
                     return;
                 }
-
+                SendAndChk(PortType.SSH, "sync", keyword, out res, 0, 5000);
+                // ------------------------7. Secure Boot Transition ---------------------------------------
+                this.SecureBootTransition();
+                MessageBox.Show("UPLOAD board data all items and D2Liscence to SFCS");
+                // ----------------------------------------------------------------
                 //backup defaults.img
                 if (Directory.Exists(defaults_img_path))
                 {
@@ -1601,7 +1712,6 @@ namespace ATS
                 SendAndChk(PortType.SSH, "cd ~", keyword, out res, 0, 3000);
             }
         }
-
         private void CheckDUTInfo()
         {
             if (!CheckGoNoGo())
@@ -1622,37 +1732,48 @@ namespace ATS
 
             try
             {
-                SendAndChk(PortType.SSH, "verify_boarddata.sh", keyword, out res, 0, 5000);
-
+                for (int i = 0; i < 3; i++)
+                {
+                    SendAndChk(PortType.SSH, "mt boarddata", keyword, out res, 0, 6000);
+                    if (res.Contains("D2License"))
+                    {
+                        break;
+                    }
+                }
                 //serial_number=+119746+2333000129
                 if (!res.Contains($"serial_number={infor.SerialNumber}"))
                 {
                     DisplayMsg(LogType.Log, "Check serial_number fail");
                     AddData(item, 1);
+                    return;
                 }
                 //hw_ver=EVT1
                 if (!res.Contains($"hardware_version={infor.HWver}"))
                 {
                     DisplayMsg(LogType.Log, "Check hw_ver fail");
                     AddData(item, 1);
+                    return;
                 }
                 //mac_base=E8:C7:CF:AF:46:28
                 if (!res.Contains($"mac_base={infor.BaseMAC.ToUpper()}"))
                 {
                     DisplayMsg(LogType.Log, "Check mac_base fail");
                     AddData(item, 1);
+                    return;
                 }
                 //dect_identity_rfpi=03.6C.D3.A9.38
                 if (!res.Contains($"dect_identity_rfpi={infor.DECT_rfpi.ToUpper()}"))
                 {
                     DisplayMsg(LogType.Log, "Check dect_identity_rfpi fail");
                     AddData(item, 1);
+                    return;
                 }
                 //dect_rf_calibration_rxtun=77
                 if (!res.Contains($"dect_rf_calibration_rxtun={infor.DECT_cal_rxtun}"))
                 {
                     DisplayMsg(LogType.Log, "Check dect_rf_calibration_rxtun fail");
                     AddData(item, 1);
+                    return;
                 }
 
                 //SE_TODO: 如果已經寫過SFCS有紀錄,就讀出SFCS的值後檢查,如果沒寫過就讀出後上拋SFCS
@@ -1669,6 +1790,7 @@ namespace ATS
                     {
                         DisplayMsg(LogType.Log, "Check wifi_password fail");
                         AddData(item, 1);
+                        return;
                     }
                 }
                 else
@@ -1677,6 +1799,7 @@ namespace ATS
                     {
                         DisplayMsg(LogType.Log, "Check wifi_password fail");
                         AddData(item, 1);
+                        return;
                     }
                 }
 
@@ -1694,6 +1817,7 @@ namespace ATS
                     {
                         DisplayMsg(LogType.Log, "Check admin_password fail");
                         AddData(item, 1);
+                        return;
                     }
                 }
                 else
@@ -1702,6 +1826,7 @@ namespace ATS
                     {
                         DisplayMsg(LogType.Log, "Check admin_password fail");
                         AddData(item, 1);
+                        return;
                     }
                 }
 
@@ -1719,6 +1844,7 @@ namespace ATS
                     {
                         DisplayMsg(LogType.Log, "Check wlan_ssid fail");
                         AddData(item, 1);
+                        return;
                     }
                 }
                 else
@@ -1727,6 +1853,7 @@ namespace ATS
                     {
                         DisplayMsg(LogType.Log, "Check wlan_ssid fail");
                         AddData(item, 1);
+                        return;
                     }
                 }
                 //Rena_20230717,依客戶要求EVT3-2 wlan_ssid改為EE-XXXXXX
@@ -1734,6 +1861,15 @@ namespace ATS
                 {
                     DisplayMsg(LogType.Log, "Check WiFi_SSID prefix 'EE-' fail");
                     AddData(item, 1);
+                    return;
+                }
+                //Verify D2 License 
+                //  --------------------------- capture D2License by mt boraddata ---------------------------
+                if (!res.Contains(infor.License_key))
+                {
+                    DisplayMsg(LogType.Log, "Check D2 License Key fail");
+                    AddData(item, 1);
+                    return;
                 }
 
                 //以下為固定值確認
@@ -1744,16 +1880,9 @@ namespace ATS
                 {
                     DisplayMsg(LogType.Log, "Check board data fail");
                     AddData(item, 1);
+                    return;
                 }
 
-                //Verify D2 License 
-                //if (!SendAndChk(PortType.SSH, "cat /tmp/defaults/D2License.key", infor.License_key, out res, 0, 5000))
-                SendAndChk(PortType.SSH, "cat /tmp/defaults/D2License.key", keyword, out res, 0, 5000);
-                if (!res.Contains(infor.License_key))
-                {
-                    DisplayMsg(LogType.Log, "Check D2 License Key fail");
-                    AddData(item, 1);
-                }
 
                 //Rena_20230717 add
                 /*SendAndChk(PortType.SSH, "/etc/init.d/vtspd start", keyword, out res, 0, 5000);
@@ -1786,6 +1915,7 @@ namespace ATS
             {
                 DisplayMsg(LogType.Exception, ex.ToString());
                 AddData(item, 1);
+                return;
             }
         }
         private string CalculateMD5ofString(string str)
@@ -1925,7 +2055,6 @@ namespace ATS
                 return false;
             }
         }
-
         private string MACConvert(string mac, int param = 0)
         {
             try
@@ -1946,32 +2075,52 @@ namespace ATS
                 return "error";
             }
         }
-
         private void EthernetTest(int port_num)
         {
             if (!CheckGoNoGo())
             {
                 return;
             }
-
             int retry_cnt;
             string item = "EthernetTest";
-            //string keyword = @"root@OpenWrt";
-            //string res = "";
-            // ================================================
-            //PCBA
-            //RF
-            //OTA
-            //FINAL
-            // ================================================
-            DisplayMsg(LogType.Log, "=============== Ethernet Test ===============");
+            DisplayMsg(LogType.Log, $"=============== Ethernet {port_num.ToString()} Test ===============");
             retry_cnt = 0;
             try
             {
-                frmOK.Label = $"Sau khi kết nối dây mạng vào cổng LAN số {port_num}, vui lòng nhấn\"Xác nhận\"";
-                frmOK.ShowDialog();
+            //frmOK.Label = $"Sau khi kết nối dây mạng vào cổng LAN số {port_num}, vui lòng nhấn\"Xác nhận\"";
+            //frmOK.ShowDialog();
 
             LAN_Port_Test:
+                //if(station=="RF"&& port_num==2) // Jason add follow new  test plan 20231110
+                //{
+                //    if (SendAndChk(PortType.SSH, "mt eth linkrate", $"port {port_num}: 1000M FD", 0, 3000))
+                //    {
+                //        DisplayMsg(LogType.Log, $"Check LAN Port{port_num} pass");
+                //        if (port_num == 5)
+                //        {
+                //            DisplayMsg(LogType.Log, "Check WAN Port pass");
+                //        }
+                //    }
+                //    else
+                //    {
+                //        DisplayMsg(LogType.Log, $"Check LAN Port{port_num} fail");
+                //        if (retry_cnt++ < 3)
+                //        {
+                //            frmOK.Label = $"Vui lòng kiểm tra dây mạng đã được kết nối đúng vào cổng LAN số {port_num} chưa";
+                //            frmOK.ShowDialog();
+                //            DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
+                //            Thread.Sleep(1000);
+                //            goto LAN_Port_Test;
+                //        }
+                //        else
+                //        {
+                //            AddData($"Eth_LAN_Port{port_num}", 1);
+                //            return;
+                //        }
+                //    }
+                //}
+                //else
+                //{
                 if (SendAndChk(PortType.SSH, "mt eth linkrate", $"port {port_num}: 2500M FD", 0, 3000))
                 {
                     DisplayMsg(LogType.Log, $"Check LAN Port{port_num} pass");
@@ -1985,8 +2134,8 @@ namespace ATS
                     DisplayMsg(LogType.Log, $"Check LAN Port{port_num} fail");
                     if (retry_cnt++ < 3)
                     {
-                        frmOK.Label = $"Vui lòng kiểm tra dây mạng đã được kết nối đúng vào cổng LAN số {port_num} chưa";
-                        frmOK.ShowDialog();
+                        //frmOK.Label = $"Vui lòng kiểm tra dây mạng đã được kết nối đúng vào cổng LAN số {port_num} chưa";
+                        //frmOK.ShowDialog();
                         DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
                         Thread.Sleep(1000);
                         goto LAN_Port_Test;
@@ -1997,6 +2146,7 @@ namespace ATS
                         return;
                     }
                 }
+                //}
                 //WAN Port
                 //if (!ToTest_WanPort) // test bind to WAN only
                 //{
@@ -2033,9 +2183,9 @@ namespace ATS
             {
                 DisplayMsg(LogType.Exception, ex.Message);
                 AddData(item, 1);
+                return;
             }
         }
-
         private void ChkMacAddr()
         {
             if (!CheckGoNoGo())
@@ -2109,28 +2259,36 @@ namespace ATS
             try
             {
                 DisplayMsg(LogType.Log, "=============== Check Ethernet MAC ===============");
+                infor.BaseMAC = MACConvert(infor.BaseMAC);
                 DisplayMsg(LogType.Log, $"Base MAC Get from SFCS: {infor.BaseMAC}");
-                formattedBaseMAC = InsertColon(infor.BaseMAC);
-                DisplayMsg(LogType.Log, $"Base MAC Convert: {formattedBaseMAC}");
-                if (formattedBaseMAC.Length != 17 || formattedBaseMAC.Length != infor.WanMAC.Length) { DisplayMsg(LogType.Log, "Leng mac fail"); return; }
+                //formattedBaseMAC = InsertColon(infor.BaseMAC);
+                //DisplayMsg(LogType.Log, $"Base MAC Convert: {formattedBaseMAC}");
+                //if(formattedBaseMAC.Length != 17||formattedBaseMAC.Length!=infor.WanMAC.Length) { DisplayMsg(LogType.Log, "Leng mac fail"); return; }
+
                 SendAndChk(PortType.SSH, "ifconfig | grep eth", keyword, out res, 0, 5000);
-                if (Regex.IsMatch(res, $"eth0.+HWaddr {formattedBaseMAC}") && Regex.IsMatch(res, $"eth1.+HWaddr {formattedBaseMAC}") &&
-                    Regex.IsMatch(res, $"eth2.+HWaddr {formattedBaseMAC}") && Regex.IsMatch(res, $"eth3.+HWaddr {formattedBaseMAC}") &&
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && isGolden == false)
+                {
+                    if (Regex.IsMatch(res, $"eth0.+HWaddr {infor.BaseMAC}") && Regex.IsMatch(res, $"eth1.+HWaddr {infor.BaseMAC}") &&
+                    Regex.IsMatch(res, $"eth2.+HWaddr {infor.BaseMAC}") && Regex.IsMatch(res, $"eth3.+HWaddr {infor.BaseMAC}") &&
                     Regex.IsMatch(res, $"eth4.+HWaddr {infor.WanMAC}"))
-                {
-                    DisplayMsg(LogType.Log, "Check eth0~eth4 MAC Address pass");
-                    AddData(item, 0);
+                    {
+                        DisplayMsg(LogType.Log, "Check eth0~eth4 MAC Address pass");
+                        AddData(item, 0);
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, "Check eth0~eth4 MAC Address fail");
+                        AddData(item, 1);
+                        return;
+                    }
                 }
-                else
-                {
-                    DisplayMsg(LogType.Log, "Check eth0~eth4 MAC Address fail");
-                    AddData(item, 1);
-                }
+                else { DisplayMsg(LogType.Log, "ENG MODE or is Golden Mode, Skipped check with SFCS"); }
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, ex.Message);
                 AddData(item, 1);
+                return;
             }
         }
         private void CurrentSensor()
@@ -2183,91 +2341,6 @@ namespace ATS
         }
         private void BleTest()
         {
-            /*if (!CheckGoNoGo())
-            {
-                return;
-            }
-
-            string item = "BleTest";
-            string keyword = @"root@OpenWrt";
-            string res = "";
-            string ble_addr = "";
-            string ble_ver = "";
-            string se_ver = "";
-
-
-            try
-            {
-                DisplayMsg(LogType.Log, "=============== BLE Test ===============");
-                //Rena_20230803, add ble_ver and se_ver for BLE test
-                //Check BLE version
-                //[I] Bluetooth stack booted: v5.0.0-b108
-                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_fw_upgrade/value", keyword, out res, 0, 5000);
-                SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/ble_rst/value", keyword, out res, 0, 5000);
-                Thread.Sleep(300);
-                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_rst/value;sync;sync", keyword, out res, 0, 5000);
-                SendAndChk(PortType.SSH, "bt_host_empty -u /dev/ttyMSM1 -v", keyword, out res, 0, 5000);
-                Match m = Regex.Match(res, "Bluetooth stack booted: (?<BLE_ver>.+)");
-                if (m.Success)
-                {
-                    ble_ver = m.Groups["BLE_ver"].Value.Trim();
-                }
-                DisplayMsg(LogType.Log, $"SFCS BLEver: {infor.BLEver}");
-                DisplayMsg(LogType.Log, "BLE version: " + ble_ver);
-                if (ble_ver == "" || string.Compare(infor.BLEver, ble_ver) != 0)
-                {
-                    DisplayMsg(LogType.Log, "Check BLE version fail");
-                    AddData(item, 1);
-                }
-                status_ATS.AddDataRaw("LRG1_BLE_Version", ble_ver, ble_ver, "000000");
-
-                //check security element version
-                //[I] SE FW version: 0001020E
-                m = Regex.Match(res, "SE FW version: (?<SE_ver>.+)");
-                if (m.Success)
-                {
-                    se_ver = m.Groups["SE_ver"].Value.Trim();
-                }
-                DisplayMsg(LogType.Log, $"SFCS SEver: {infor.SEver}");
-                DisplayMsg(LogType.Log, "SE version: " + se_ver);
-                if (se_ver == "" || string.Compare(infor.SEver, se_ver) != 0)
-                {
-                    DisplayMsg(LogType.Log, "Check security element version fail");
-                    AddData(item, 1);
-                }
-
-                status_ATS.AddDataRaw("LRG1_SE_Version", se_ver, se_ver, "000000");
-
-                //BLE mac是來料就設定好了的,不需寫入,只要讀取後上拋SFCS
-                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_fw_upgrade/value;echo 0 > /sys/class/gpio/ble_rst/value;usleep 300000;echo 1 > /sys/class/gpio/ble_rst/value", "#", out res, 0, 10000);
-
-
-                SendAndChk(PortType.SSH, "bt_host_empty -u /dev/ttyMSM1", "Started advertising", out res, 0, 10000);
-                Match m = Regex.Match(res, @"Bluetooth public device address: (?<ble_addr>[\:\w]{17})");
-                if (m.Success)
-                {
-                    ble_addr = m.Groups["ble_addr"].Value;
-                    DisplayMsg(LogType.Log, "BLE address: " + ble_addr);
-                    infor.BleMAC = ble_addr; //Rena_20230522, for HQ sample test flow
-                    AddData(item, 0);
-                    status_ATS.AddDataRaw("LRG1_BLE_MAC", ble_addr.Trim().Replace(":", ""), ble_addr.Trim().Replace(":", ""), "000000");
-                }
-                else
-                {
-                    DisplayMsg(LogType.Log, "Check BLE address fail");
-                    AddData(item, 1);
-                }
-
-                //send ctrl+c
-                SendCommand(PortType.SSH, sCtrlC, 500);
-                ChkResponse(PortType.SSH, ITEM.NONE, keyword, out res, 3000);
-            }
-            catch (Exception ex)
-            {
-                DisplayMsg(LogType.Exception, ex.Message);
-                AddData(item, 1);
-            }*/
-
             if (!CheckGoNoGo())
             {
                 return;
@@ -2287,25 +2360,61 @@ namespace ATS
                 //Rena_20230803, add ble_ver and se_ver for BLE test
                 //Check BLE version
                 //[I] Bluetooth stack booted: v5.0.0-b108
-                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_fw_upgrade/value", keyword, out res, 0, 5000);
-                SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/ble_rst/value", keyword, out res, 0, 5000);
+                //SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_fw_upgrade/value", keyword, out res, 0, 5000);
+                //SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/ble_rst/value", keyword, out res, 0, 5000);
+                //DisplayMsg(LogType.Log, @"Delay 3s UP for BLE reset time");
+                //Thread.Sleep(3 * 1000);
+                //SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_rst/value;sync;sync", keyword, out res, 0, 5000);
+                //Thread.Sleep(3 * 1000);
+                //SendAndChk(PortType.SSH, "bt_host_empty -u /dev/ttyMSM1 -v", keyword, out res, 0, 5000);
+                //Thread.Sleep(2 * 1000);
+                //---------------------------- ATH FW --------------------------------------
+                SendAndChk(PortType.SSH, "gpioset gpiochip0 23=1", keyword, out res, 0, 5000);
+                SendAndChk(PortType.SSH, "gpioset gpiochip0 19=0", keyword, out res, 0, 5000);
                 DisplayMsg(LogType.Log, @"Delay 3s UP for BLE reset time");
                 Thread.Sleep(3 * 1000);
-                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/ble_rst/value;sync;sync", keyword, out res, 0, 5000);
+                SendAndChk(PortType.SSH, "gpioset gpiochip0 19=1", keyword, out res, 0, 5000);
                 Thread.Sleep(3 * 1000);
-                SendAndChk(PortType.SSH, "bt_host_empty -u /dev/ttyMSM1 -v", keyword, out res, 0, 5000);
+                int countbleread = 2;
+            RetryreadBLEver:
+                if (!SendAndChk(PortType.SSH, "bt_host_empty -u /dev/ttyMSM1 -v", keyword, out res, 0, 5000))
+                {
+                    AddData(item, 1);
+                    return;
+                }
+
                 Thread.Sleep(2 * 1000);
                 Match m = Regex.Match(res, "Bluetooth stack booted: (?<BLE_ver>.+)");
                 if (m.Success)
                 {
                     ble_ver = m.Groups["BLE_ver"].Value.Trim();
                 }
+                else
+                {
+                    DisplayMsg(LogType.Log, $"Get BLE FAIL goto re-try -> switch to FAC FW"); // Jason add follow PE Aki 20231123 if already in CUS FW set cmd switch to FAC then check again
+                    if (countbleread > 0)
+                    {
+                        if (!SendAndChk(PortType.SSH, "bt_upgrade_utility -p /dev/ttyMSM1 -f /lib/firmware/efr32/bt_ncp_afh_se.gbl", keyword, out res, 0, 40000))
+                        {
+                            AddData(item, 1);
+                            return;
+                        }
+                        goto RetryreadBLEver;
+                    }
+                    else
+                    {
+                        AddData(item, 1);
+                        return;
+                    }
+                }
                 DisplayMsg(LogType.Log, $"SFCS BLEver: {infor.BLEver}");
-                DisplayMsg(LogType.Log, "BLE version: " + ble_ver);
+                ble_ver = ble_ver.Substring(0, ble_ver.Length - 5).ToLower();
+                DisplayMsg(LogType.Log, "DUT BLE version: " + ble_ver);
                 if (ble_ver == "" || string.Compare(infor.BLEver, ble_ver) != 0)
                 {
                     DisplayMsg(LogType.Log, "Check BLE version fail");
                     AddData(item, 1);
+                    return;
                 }
 
                 //check security element version
@@ -2321,8 +2430,8 @@ namespace ATS
                 {
                     DisplayMsg(LogType.Log, "Check security element version fail");
                     AddData(item, 1);
+                    return;
                 }
-
                 //check mac
                 //BLE mac是來料就設定好了的,不需寫入,只要讀取後上拋SFCS
                 //[I] Bluetooth public device address: E8:E0:7E:E4:DE:B7
@@ -2336,6 +2445,7 @@ namespace ATS
                 {
                     DisplayMsg(LogType.Log, "Check BLE MAC fail");
                     AddData(item, 1);
+                    return;
                 }
 
                 if (CheckGoNoGo())
@@ -2400,6 +2510,7 @@ namespace ATS
                 {
                     DisplayMsg(LogType.Log, "Check NFC field detection pin - low fail");
                     AddData(item, 1);
+                    return;
                 }
             }
             catch (Exception ex)
@@ -2525,6 +2636,7 @@ namespace ATS
                     if (frmYN.no)
                     {
                         AddData(test_item, 1);
+                        return;
                     }
                     else
                     {
@@ -2547,31 +2659,54 @@ namespace ATS
 
             try
             {
-                DisplayMsg(LogType.Log, "=============== LED Test ===============");
+                DisplayMsg(LogType.Log, "=============== LED W/G/R/B Test ===============");
 
                 //LED_White_On
-                LED_Control("LED_White", "w", CTRL.ON);
-                LED_Control("LED_White", "w", CTRL.OFF);
+                string lEDtestPoint = Func.ReadINI("Setting", "LEDTestPoint", "WhiteP", "item_1");
+                DisplayMsg(LogType.Log, $"Current White LED test Point in setting: '{lEDtestPoint}'");
+
+                Led_Test("LED", "w", COLOR.WHITE, STAGE.ON, lEDtestPoint);
+                Led_Test("LED", "w", COLOR.WHITE, STAGE.OFF, lEDtestPoint);
+                //LED_Control("LED_White", "w", CTRL.ON);
+                //LED_Control("LED_White", "w", CTRL.OFF);
 
                 //LED1_Green
-                LED_Control("LED_Green", "g", CTRL.ON);
-                LED_Control("LED_Green", "g", CTRL.OFF);
+                lEDtestPoint = Func.ReadINI("Setting", "LEDTestPoint", "GreenP", "item_2");
+                DisplayMsg(LogType.Log, $"Current Green LED test Point in setting: '{lEDtestPoint}'");
+
+                Led_Test("LED", "g", COLOR.GREEN, STAGE.ON, lEDtestPoint);
+                Led_Test("LED", "g", COLOR.GREEN, STAGE.OFF, lEDtestPoint);
+
+                //LED_Control("LED_Green", "g", CTRL.ON);
+                //LED_Control("LED_Green", "g", CTRL.OFF);
 
                 //LED1_Red
-                LED_Control("LED_Red", "r", CTRL.ON);
-                LED_Control("LED_Red", "r", CTRL.OFF);
+                lEDtestPoint = Func.ReadINI("Setting", "LEDTestPoint", "RedP", "item_2");
+                DisplayMsg(LogType.Log, $"Current Red LED test Point in setting: '{lEDtestPoint}'");
+
+                Led_Test("LED", "r", COLOR.RED, STAGE.ON, lEDtestPoint);
+                Led_Test("LED", "r", COLOR.RED, STAGE.OFF, lEDtestPoint);
+
+                //LED_Control("LED_Red", "r", CTRL.ON);
+                //LED_Control("LED_Red", "r", CTRL.OFF);
 
                 //LED1_Blue
-                LED_Control("LED_Blue", "b", CTRL.ON);
-                LED_Control("LED_Blue", "b", CTRL.OFF);
+                lEDtestPoint = Func.ReadINI("Setting", "LEDTestPoint", "BlueP", "item_2");
+                DisplayMsg(LogType.Log, $"Current Blue LED test Point in setting: '{lEDtestPoint}'");
+
+                Led_Test("LED", "b", COLOR.BLUE, STAGE.ON, lEDtestPoint);
+                Led_Test("LED", "b", COLOR.BLUE, STAGE.OFF, lEDtestPoint);
+
+                //LED_Control("LED_Blue", "b", CTRL.ON);
+                //LED_Control("LED_Blue", "b", CTRL.OFF);
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, ex.ToString());
                 AddData("LED", 1);
+                return;
             }
         }
-
         private void CheckPCIe()
         {
             if (!CheckGoNoGo())
@@ -2586,16 +2721,6 @@ namespace ATS
                 DisplayMsg(LogType.Log, "=============== Check WiFi 2.4G PCIe Interface ===============");
                 int Counttimer = 0;
             retryPCIE:
-                //========================================================================================
-                //result = SendAndChk(item, PortType.SSH, "lspci -s 0002:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x1 (ok)", 2000, 3000);
-                //result &= SendAndChk(item, PortType.SSH, "lspci -s 0002:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x1 (downgraded)", 2000, 3000);
-                //DisplayMsg(LogType.Log, "Check WiFi 6G PCIe Interface");
-                //result &= SendAndChk(item, PortType.SSH, "lspci -s 0003:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
-                //result &= SendAndChk(item, PortType.SSH, "lspci -s 0003:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
-                //DisplayMsg(LogType.Log, "Check WiFi 5G PCIe Interface");
-                //result &= SendAndChk(item, PortType.SSH, "lspci -s 0004:00:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
-                //result &= SendAndChk(item, PortType.SSH, "lspci -s 0004:01:00.0 -vv | grep Speed", "LnkSta:\tSpeed 8GT/s (ok), Width x2 (ok)", 2000, 3000);
-                //=========================================================================================
                 //===== Audrey consoldiate cmd based on testplan
                 SendAndChk(PortType.SSH, "lspci -vv | grep \"LnkSta:\"", "#", out res, 2000, 80000);
                 if (res.Contains(keyword))
@@ -2644,8 +2769,19 @@ namespace ATS
                 bool released = false;
                 for (int i = 0; i < 3; i++)
                 {
-                    frmOK.Label = "Nhấn và giữ nút WPS, sau đó nhấn\"Xác nhận\"";
-                    frmOK.ShowDialog();
+                    if (useShield)
+                    {
+                        fixture.ControlIO(Fixture.FixtureIO.IO_9, CTRL.ON);
+                        Thread.Sleep(2000);
+                        //fixture.ControlIO(Fixture.FixtureIO.IO_9, CTRL.OFF);
+                        //Thread.Sleep(500);
+                    }
+                    else
+                    {
+                        frmOK.Label = "Nhấn và giữ nút WPS, sau đó nhấn\"Xác nhận\"";
+                        frmOK.ShowDialog();
+                    }
+
 
                     SendAndChk(PortType.SSH, "mt gpio dump all", keyword, out res, 0, 3000);
                     if (res.Contains("WPS: low"))
@@ -2654,8 +2790,16 @@ namespace ATS
                         DisplayMsg(LogType.Log, "Check WPS Button pressed ok");
                     }
 
-                    frmOK.Label = "Nhả nút WPS, sau đó nhấn\"Xác nhận\"";
-                    frmOK.ShowDialog();
+                    if (useShield)
+                    {
+                        fixture.ControlIO(Fixture.FixtureIO.IO_9, CTRL.OFF);
+                        Thread.Sleep(500);
+                    }
+                    else
+                    {
+                        frmOK.Label = "Nhả nút WPS, sau đó nhấn\"Xác nhận\"";
+                        frmOK.ShowDialog();
+                    }
 
                     SendAndChk(PortType.SSH, "mt gpio dump all", keyword, out res, 0, 3000);
                     if (res.Contains("WPS: high"))
@@ -2674,6 +2818,7 @@ namespace ATS
                 {
                     DisplayMsg(LogType.Log, "Check WPS button fail");
                     AddData(item, 1);
+                    return;
                 }
                 #endregion
             }
@@ -2681,6 +2826,7 @@ namespace ATS
             {
                 DisplayMsg(LogType.Exception, ex.ToString());
                 AddData(item, 1);
+                return;
             }
         }
         private void ResetButton()
@@ -2704,8 +2850,19 @@ namespace ATS
                 bool released = false;
                 for (int i = 0; i < 3; i++)
                 {
-                    frmOK.Label = "Nhấn và giữ nút Reset, sau đó nhấn \"Xác nhận\"";
-                    frmOK.ShowDialog();
+                    if (useShield)
+                    {
+                        fixture.ControlIO(Fixture.FixtureIO.IO_8, CTRL.ON);
+                        Thread.Sleep(2000);
+                        //fixture.ControlIO(Fixture.FixtureIO.IO_8, CTRL.OFF);
+                        //Thread.Sleep(500);
+                    }
+                    else
+                    {
+                        frmOK.Label = "Nhấn và giữ nút Reset, sau đó nhấn \"Xác nhận\"";
+                        frmOK.ShowDialog();
+                    }
+
 
                     SendAndChk(PortType.SSH, "mt gpio dump all", keyword, out res, 0, 3000);
                     if (res.Contains("RESET: low"))
@@ -2714,8 +2871,19 @@ namespace ATS
                         DisplayMsg(LogType.Log, "Check Reset Button pressed ok");
                     }
 
-                    frmOK.Label = "Nhả nút Reset, sau đó nhấn\"Xác nhận\"";
-                    frmOK.ShowDialog();
+                    if (useShield)
+                    {
+                        //fixture.ControlIO(Fixture.FixtureIO.IO_8, CTRL.ON);
+                        //Thread.Sleep(2000);
+                        fixture.ControlIO(Fixture.FixtureIO.IO_8, CTRL.OFF);
+                        Thread.Sleep(500);
+                    }
+                    else
+                    {
+                        frmOK.Label = "Nhả nút Reset, sau đó nhấn\"Xác nhận\"";
+                        frmOK.ShowDialog();
+                    }
+
 
                     SendAndChk(PortType.SSH, "mt gpio dump all", keyword, out res, 0, 3000);
                     if (res.Contains("RESET: high"))
@@ -2734,28 +2902,32 @@ namespace ATS
                 {
                     DisplayMsg(LogType.Log, "Check Reset button fail");
                     AddData(item, 1);
+                    return;
                 }
                 #endregion
 
                 //When using standard adaptor, the AC_ALARM is low.
                 //When using customized adaptor or power supply, the AC_ALARM is high.
+                //Battery detection
                 DisplayMsg(LogType.Log, "=============== Battery Detection ===============");
                 item = "BatteryDetection";
                 if (res.Contains("AC_ALARM: low"))
                 {
                     AddData(item, 0);
-                    DisplayMsg(LogType.Log, "got AC_ALARM: low => Battery detection Pass");
+                    DisplayMsg(LogType.Log, "Found out 'AC_ALARM: low' => Battery detection Pass");
                 }
                 else
                 {
                     AddData(item, 1);
                     DisplayMsg(LogType.Log, "Battery detection fail");
+                    return;
                 }
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, ex.ToString());
                 AddData(item, 1);
+                return;
             }
         }
         private void USBTest()
@@ -2771,7 +2943,7 @@ namespace ATS
 
             try
             {
-                DisplayMsg(LogType.Log, "=============== USB3.0 Test ===============");
+                DisplayMsg(LogType.Log, "=============== USB Test ===============");
 
                 if (isLoop == 0)
                 {
@@ -2786,6 +2958,7 @@ namespace ATS
                     AddData(item, 1);
                     return;
                 }
+                SendCommand(PortType.SSH, "ls /mnt/", 1000);
                 for (int i = 0; i < 3; i++)
                 {
                     SendAndChk(PortType.SSH, "mount | grep \"/mnt\"", keyword, out res, 0, 10000);
@@ -2930,8 +3103,6 @@ namespace ATS
                 ChkResponse(PortType.SSH, ITEM.NONE, keyword, out res, 3000);
             }
         }
-
-
         bool CheckNvram(string data, string keyword)
         {
             if (!CheckGoNoGo())
@@ -3007,10 +3178,6 @@ namespace ATS
                 //check ring via UsbModem
                 retry_cnt = 3;
             retry:
-
-                //com1.LogFile = "myModem.txt";
-                //com1.AutoLog = true;
-
                 if (com1.WaitFor("RING", 40))
                 {
                     DisplayMsg(LogType.Log, "Check 'RING' pass");
@@ -3217,7 +3384,6 @@ namespace ATS
                 ChkResponse(port, ITEM.NONE, "@", out res, 3000);
             }
         }
-
         bool SendCMD(SerialPort port, string cmd, string keyword, int delay, int timeout)
         {
             try
@@ -3260,7 +3426,7 @@ namespace ATS
         }
         private void CheckFWVerAndHWID()
         {
-            if (!CheckGoNoGo() || isGolden)
+            if (!CheckGoNoGo())
             {
                 return;
             }
@@ -3285,26 +3451,7 @@ namespace ATS
 
                 DisplayMsg(LogType.Log, "DUT FWversion: " + FWversion);
 
-                if (Convert.ToInt32(Func.ReadINI("Setting", "CheckInfo", "FWvercheckbysetting", "0")) == 1)
-                {
-
-                    DisplayMsg(LogType.Log, "Current Setting Check enable [CheckInfo] FWvercheckbysetting=1 ");
-                    string settingfwver = string.Empty;
-                    settingfwver = Func.ReadINI("Setting", "CheckInfo", "FWver", "XXXX");
-                    DisplayMsg(LogType.Log, "Setting FW version:" + settingfwver);
-                    if (string.Compare(FWversion, settingfwver, true) == 0)
-                    {
-                        AddData(item, 0);
-                        DisplayMsg(LogType.Log, "Check FW Version with setting PASS");
-                        status_ATS.AddDataRaw("LRG1_MFG_FW_VER", FWversion, FWversion, "000000");
-                    }
-                    else
-                    {
-                        AddData(item, 1);
-                        DisplayMsg(LogType.Log, "Check FW Version with setting fail");
-                    }
-                }
-                else
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)
                 {
                     DisplayMsg(LogType.Log, "Current Check with SFCS");
                     DisplayMsg(LogType.Log, "SFCS_FWversion:" + infor.FWver);
@@ -3316,10 +3463,68 @@ namespace ATS
                     }
                     else
                     {
-                        AddData(item, 1);
+                        //AddData(item, 1);
+                        warning = "Wrong FW";
                         DisplayMsg(LogType.Log, "Check FW Version with SFCS fail");
+                        return;
                     }
                 }
+                else
+                {
+                    //DisplayMsg(LogType.Log, "Current Setting Check enable [CheckInfo] FWvercheckbysetting=1 ");
+                    string settingfwver = string.Empty;
+                    settingfwver = Func.ReadINI("Setting", "PCBA", "FWver_", "LRG1_ATH_v1.0.0.1");
+                    // settingfwver = Func.ReadINI("Setting", "CheckInfo", "FWver", "XXXX");
+                    DisplayMsg(LogType.Log, "Setting FW version:" + settingfwver);
+                    if (string.Compare(FWversion, settingfwver, true) == 0)
+                    {
+                        AddData(item, 0);
+                        DisplayMsg(LogType.Log, "Check FW Version with setting PASS");
+                        status_ATS.AddDataRaw("LRG1_MFG_FW_VER", FWversion, FWversion, "000000");
+                        return;
+                    }
+                    else
+                    {
+                        AddData(item, 1);
+                        DisplayMsg(LogType.Log, "Check FW Version with setting fail");
+                        return;
+                    }
+                }
+
+                //if (Convert.ToInt32(Func.ReadINI("Setting", "CheckInfo", "FWvercheckbysetting", "0"))== 1)
+                //{
+
+                //    DisplayMsg(LogType.Log, "Current Setting Check enable [CheckInfo] FWvercheckbysetting=1 ");
+                //    string settingfwver = string.Empty;
+                //    settingfwver = Func.ReadINI("Setting", "CheckInfo", "FWver", "XXXX");
+                //    DisplayMsg(LogType.Log, "Setting FW version:" + settingfwver);
+                //    if (string.Compare(FWversion, settingfwver, true) == 0)
+                //    {
+                //        AddData(item, 0);
+                //        DisplayMsg(LogType.Log, "Check FW Version with setting PASS");
+                //        status_ATS.AddDataRaw("LRG1_MFG_FW_VER", FWversion, FWversion, "000000");
+                //    }
+                //    else
+                //    {
+                //        AddData(item, 1);
+                //        DisplayMsg(LogType.Log, "Check FW Version with setting fail");
+                //    }
+                //}else
+                //{
+                //    DisplayMsg(LogType.Log, "Current Check with SFCS");
+                //    DisplayMsg(LogType.Log, "SFCS_FWversion:" + infor.FWver);
+                //    if (string.Compare(FWversion, infor.FWver, true) == 0)
+                //    {
+                //        AddData(item, 0);
+                //        DisplayMsg(LogType.Log, "Check FW Version With SFCS PASS");
+                //        status_ATS.AddDataRaw("LRG1_MFG_FW_VER", FWversion, FWversion, "000000");
+                //    }
+                //    else
+                //    {
+                //        AddData(item, 1);
+                //        DisplayMsg(LogType.Log, "Check FW Version with SFCS fail");
+                //    }
+                //}
 
                 //check HW ID
                 item = "ChkHWID";
@@ -3333,19 +3538,38 @@ namespace ATS
                 DisplayMsg(LogType.Log, "HWID: " + HWID);
                 DisplayMsg(LogType.Log, "SFCS_HWID:" + infor.HWID);
 
-
-                if (string.Compare(HWID, infor.HWID, true) == 0)
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)
                 {
-                    AddData(item, 0);
-                    DisplayMsg(LogType.Log, "Check HW ID PASS");
-                    status_ATS.AddDataRaw("LRG1_HW_ID", HWID, HWID, "000000");
+
+                    if (string.Compare(HWID, infor.HWID, true) == 0)
+                    {
+                        AddData(item, 0);
+                        DisplayMsg(LogType.Log, "Check HW ID with SFCS PASS");
+                        status_ATS.AddDataRaw("LRG1_HW_ID", HWID, HWID, "000000");
+                    }
+                    else
+                    {
+                        AddData(item, 1);
+                        DisplayMsg(LogType.Log, "Check HW ID with SFCS fail");
+                        return;
+                    }
                 }
                 else
                 {
-                    AddData(item, 1);
-                    DisplayMsg(LogType.Log, "Check HW ID fail");
+                    string stHWID = Func.ReadINI("Setting", "PCBA", "HWID", "1100");
+                    if (string.Compare(HWID, infor.HWID, true) == 0)
+                    {
+                        AddData(item, 0);
+                        DisplayMsg(LogType.Log, "Check HW ID with setting PASS");
+                        status_ATS.AddDataRaw("LRG1_HW_ID", HWID, HWID, "000000");
+                    }
+                    else
+                    {
+                        AddData(item, 1);
+                        DisplayMsg(LogType.Log, "Check HW ID with setting fail");
+                        return;
+                    }
                 }
-
             }
             catch (Exception ex)
             {
@@ -3353,29 +3577,30 @@ namespace ATS
                 AddData(item, 1);
             }
         }
-
         private bool Camera()
         {
             try
             {
-                if (File.Exists("d:/getSMT"))
-                    File.Delete("d:/getSMT");
-                if (File.Exists("d:/OK"))
-                    File.Delete("d:/OK");
+                if (File.Exists("c:/getColor"))
+                    File.Delete("c:/getColor");
+                if (File.Exists("c:/OKColor"))
+                    File.Delete("c:/OKColor");
                 if (File.Exists(sExeDirectory + "\\cam_result.ini"))
                     File.Delete(sExeDirectory + "\\cam_result.ini");
-                DisplayMsg(LogType.Log, "Delay 2s..");
+                DisplayMsg(LogType.Log, "Delay 2s..and creat file 'c:/getColor'");
                 Thread.Sleep(2000);
-                File.Create("d:/getSMT").Close();
+                File.Create("c:/getColor").Close();
                 DateTime dt = DateTime.Now;
-                while (!File.Exists("d:/OK"))
+                while (!File.Exists("c:/OKColor"))
                 {
+                    DisplayMsg(LogType.Log, "Wait file exits 'c:/OKColor'");
                     if (dt.AddMinutes(1) < DateTime.Now)
                     {
                         return false;
                     }
                     Thread.Sleep(500);
                 }
+                DisplayMsg(LogType.Log, "Check file 'c:/OKColor' ok!");
                 status_ATS.AddLog("camera path：" + sExeDirectory);
                 return true;
             }
@@ -3487,9 +3712,12 @@ namespace ATS
             }
             string item = "USB3p0";
             string res = string.Empty;
+            string keyword = "root@OpenWrt:~#";
+            string cmd = "[-f /sys/bus/usb/devices/1-1/speed ] && cat /sys/bus/usb/devices/1-1/speed || cat /sys/bus/usb/devices/2-1/speed";
             try
             {
-                if (!SendAndChk(PortType.SSH, "cat /sys/bus/usb/devices/2-1/speed", "5000", out res, 0, 3000))
+                SendAndChk(PortType.SSH, cmd, keyword, out res, 0, 3000);
+                if (!res.Contains("5000"))
                 {
                     DisplayMsg(LogType.Log, "check usb speed fail");
                     AddData(item, 1);
@@ -3513,17 +3741,22 @@ namespace ATS
                 SendAndChk(PortType.SSH, "qqqqq\r\n", keyword, out res, 0, 2500);
                 //do
                 //{
-                //    //SendCommand(PortType.SSH, sCtrlZ, 2000); //SendKeys.SendWait("{^Z}");
                 //    if (SendAndChk(PortType.SSH, "qqqqq\r\n", keyword, out res, 0, 2000))
                 //    { break; }
                 //} while (ChkResponse(PortType.SSH, ITEM.NONE, keyword, out res, 3000));
                 //Reboot DECT
                 DisplayMsg(LogType.Log, "Reboot DECT");
-                SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
-                Thread.Sleep(1800);
-                SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "gpioset gpiochip0 50=0", keyword, out res, 0, 3000);
+                DisplayMsg(LogType.Log, "Delay 4s...");
+                Thread.Sleep(4000);
+                SendAndChk(PortType.SSH, "gpioset gpiochip0 50=1", keyword, out res, 0, 3000);
                 DisplayMsg(LogType.Log, "Delay 3s...");
-                Thread.Sleep(2800);
+                Thread.Sleep(3000);
+                //SendAndChk(PortType.SSH, "echo 0 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
+                //Thread.Sleep(1800);
+                //SendAndChk(PortType.SSH, "echo 1 > /sys/class/gpio/dect_rst/value", keyword, out res, 0, 3000);
+                //DisplayMsg(LogType.Log, "Delay 3s...");
+                //Thread.Sleep(2800);
                 IsResetOK = true;
             }
             catch (Exception ex)
@@ -3532,6 +3765,509 @@ namespace ATS
                 AddData(item, 1);
             }
             return IsResetOK;
+        }
+        private void BatteryDetection()
+        {
+            string item = "Battery Detection";
+            //string keyword = @"root@OpenWrt";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string res = string.Empty;
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            try
+            {
+                SendAndChk(PortType.SSH, "mt gpio dump all", keyword, out res, 0, 3000);
+                DisplayMsg(LogType.Log, $"Check {res}");
+                //if (res.Contains("AC_ALARM: low"))
+                //{
+                //    DisplayMsg(LogType.Log, $"Check {res}");
+                //}
+                //else if (res.Contains("AC_ALARM: high"))
+                //{
+                //    DisplayMsg(LogType.Log, $"Check {res}");
+                //}
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+            }
+        }
+        private void LoadBinaries()
+        {
+            string item = "Load required Binaries";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string res = string.Empty;
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            try
+            {
+                //this.DownloadFilesRequired();
+                this.DownloadDisgue();
+                //this.DownloadAllConfigs();
+                SendAndChk(PortType.SSH, "chmod 777 /tmp/filesystem_encryption.sh", "", out res, 0, 3000);
+                SendAndChk(PortType.SSH, "chmod 777 /tmp/secure_boot_transition.sh", "", out res, 0, 3000);
+                SendAndChk(PortType.SSH, "chmod 777 /tmp/qualcomm.sh", "", out res, 0, 3000);
+                this.DownloadDisgue2();
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+            }
+            finally
+            {
+                SendAndChk(PortType.SSH, "cd ~", keyword, out res, 0, 3000);
+            }
+        }
+        public void DownloadDisgue()
+        {
+            string item = "Download Files Required";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string res = string.Empty;
+            string md5sum_secDat = WNC.API.Func.ReadINI("Setting", "PCBA", "secDat", "30af4b549a3233ccaf7c6e6d9342447f");
+            string fscrypt_context = WNC.API.Func.ReadINI("Setting", "PCBA", "fscrypt_context", "003e19d329ac299d425c20a653facc76");
+            string cmnlib64_mdt = WNC.API.Func.ReadINI("Setting", "PCBA", "cmnlib64_mdt", "7f6b21b3386d1dbcc85975195a3a9f1d");
+            string cmnlib64_b06 = WNC.API.Func.ReadINI("Setting", "PCBA", "cmnlib64_b06", "d878f75c3b9bf86753598fa7efe309ce");
+            string fuseprov_b08 = WNC.API.Func.ReadINI("Setting", "PCBA", "fuseprov_b08", "a5bf2b24af9c4ef18739627fb91bd978");
+            string fuseprov_mdt = WNC.API.Func.ReadINI("Setting", "PCBA", "fuseprov_mdt", "6e5ab46437f6cc19ff7853304bd918fb");
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            try
+            {
+                SendAndChk(PortType.SSH, "cp /overlay1/* /tmp/", "", out res, 0, 3000);
+
+                SendAndChk(PortType.SSH, "md5sum /tmp/sec.dat", keyword, out res, 0, 3000);
+                if (!res.Contains(md5sum_secDat))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+
+                SendAndChk(PortType.SSH, "md5sum /tmp/fscrypt_context", keyword, out res, 0, 3000);
+                if (!res.Contains(fscrypt_context))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+
+                SendAndChk(PortType.SSH, "md5sum /tmp/cmnlib64.mdt", keyword, out res, 0, 3000);
+                if (!res.Contains(cmnlib64_mdt))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+                SendAndChk(PortType.SSH, "md5sum /tmp/cmnlib64.b06", keyword, out res, 0, 3000);
+                if (!res.Contains(cmnlib64_b06))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+                SendAndChk(PortType.SSH, "md5sum /tmp/fuseprov.b08", keyword, out res, 0, 3000);
+                if (!res.Contains(fuseprov_b08))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+                SendAndChk(PortType.SSH, "md5sum /tmp/fuseprov.mdt", keyword, out res, 0, 3000);
+                if (!res.Contains(fuseprov_mdt))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+            }
+
+        }
+        public void DownloadDisgue2()
+        {
+            string item = "Download All Configs";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string res = string.Empty;
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            try
+            {
+                SendAndChk(PortType.SSH, "mkdir /tmp/config", "", out res, 0, 3000);
+                SendAndChk(PortType.SSH, "cp /overlay1/config/* /tmp/config", "", out res, 0, 3000);
+                SendAndChk(PortType.SSH, "ls /tmp/config", "", out res, 0, 3000);
+
+                //SendAndChk(PortType.SSH, "chmod 777 secure_boot_transition.sh", "", out res, 0, 3000);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+            }
+
+        }
+        private void DownloadFilesRequired()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+            string item = "Download Files Required";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string sIP = WNC.API.Func.ReadINI("Setting", "PCBA", "sIP", "10.166.251.1");
+            string etherMac = WNC.API.Func.ReadINI("Setting", "PCBA", "ethermac", "C0:18:50:F9:AA:12");
+            string serverIP = WNC.API.Func.ReadINI("Setting", "PCBA", "serverIP", "10.169.100.108"); //Server from Revees provide. & DMIS & RD handle
+            string UserNameSV = WNC.API.Func.ReadINI("Setting", "PCBA", "UserNameSV", "lxg1");
+            string PWSV = WNC.API.Func.ReadINI("Setting", "PCBA", "PWSV", "wnc000000");
+            // ---------------------------------------------------------------------------------------------------------------
+            string md5sum_secDat = WNC.API.Func.ReadINI("Setting", "PCBA", "secDat", "30af4b549a3233ccaf7c6e6d9342447f");
+            string fscrypt_context = WNC.API.Func.ReadINI("Setting", "PCBA", "fscrypt_context", "003e19d329ac299d425c20a653facc76");
+            string cmnlib64_mdt = WNC.API.Func.ReadINI("Setting", "PCBA", "cmnlib64_mdt", "7f6b21b3386d1dbcc85975195a3a9f1d");
+            string cmnlib64_b06 = WNC.API.Func.ReadINI("Setting", "PCBA", "cmnlib64_b06", "d878f75c3b9bf86753598fa7efe309ce");
+            string fuseprov_b08 = WNC.API.Func.ReadINI("Setting", "PCBA", "fuseprov_b08", "a5bf2b24af9c4ef18739627fb91bd978");
+            string fuseprov_mdt = WNC.API.Func.ReadINI("Setting", "PCBA", "fuseprov_mdt", "6e5ab46437f6cc19ff7853304bd918fb");
+            if (station == "Final")
+            {
+                sIP = WNC.API.Func.ReadINI("Setting", "Final", "sIP", "10.166.251.1");
+                etherMac = WNC.API.Func.ReadINI("Setting", "Final", "ethermac", "C0:18:50:F9:AA:12");
+                serverIP = WNC.API.Func.ReadINI("Setting", "Final", "serverIP", "10.169.100.108"); //Server from Revees provide. & DMIS & RD handle
+                UserNameSV = WNC.API.Func.ReadINI("Setting", "Final", "UserNameSV", "lxg1");
+                PWSV = WNC.API.Func.ReadINI("Setting", "Final", "PWSV", "wnc000000");
+            }
+            string res = string.Empty;
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            DisplayMsg(LogType.Log, $"sIP in Setting: {sIP}");
+            DisplayMsg(LogType.Log, $"serverIP in Setting: {serverIP}");
+            DisplayMsg(LogType.Log, $"UserNameSV in Setting: {UserNameSV}");
+            DisplayMsg(LogType.Log, $"PWSV in Setting: {PWSV}");
+            try
+            {
+                #region IO2 Off
+                if (Func.ReadINI("Setting", "IO_Board_Control2", "IO_Control_2", "0") == "1")
+                {
+                    string txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin0", "0");
+                    string rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin1", "1");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin2", "2");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin3", "3");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin4", "4");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin5", "5");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin6", "6");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin7", "7");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
+                    DisplayMsg(LogType.Log, rev_message);
+                }
+                else
+                {
+                    frmOK.Label = $"Rút Dây Mạng ra khỏi cổng LAN số 0 'ETH0', vui lòng nhấn\"Xác nhận\"";
+                    frmOK.ShowDialog();
+                }
+                #endregion IO2 Off
+                SendAndChk(PortType.SSH, "brctl delif br-lan eth0", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, $"ifconfig eth0 ${sIP}", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "ifconfig eth0 down", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, $"ifconfig eth0 hw ether {etherMac}", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "ifconfig eth0 up", keyword, out res, 0, 3000);
+                #region IO2 On
+                if (Func.ReadINI("Setting", "IO_Board_Control2", "IO_Control_2", "0") == "1")
+                {
+                    string txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin0", "0");
+                    string rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin1", "1");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin2", "2");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin3", "3");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin4", "4");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin5", "5");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin6", "6");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+
+                    txPin = Func.ReadINI("Setting", "IO_Board_Control2", "Pin7", "7");
+                    rev_message = "";
+                    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+                    DisplayMsg(LogType.Log, rev_message);
+                }
+                else
+                {
+                    frmOK.Label = $"Rút Dây Mạng ra khỏi cổng LAN số 0 'ETH0', vui lòng nhấn\"Xác nhận\"";
+                    frmOK.ShowDialog();
+                }
+                #endregion IO2 On
+                SendAndChk(PortType.SSH, $"scp {UserNameSV}@{serverIP}:/home/lxg1/BT_LRG1/*  /tmp/", keyword, out res, 0, 15000);
+                SendAndChk(PortType.SSH, $"{PWSV}", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "ls /tmp", keyword, out res, 0, 3000);
+                // ------------------------------------------------------------------------
+                SendAndChk(PortType.SSH, "md5sum /tmp/sec.dat", keyword, out res, 0, 3000);
+                if (!res.Contains(md5sum_secDat))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+                else { DisplayMsg(LogType.Log, @"Check MD5 'sec.dat' Pass /is '30af4b549a3233ccaf7c6e6d9342447f'"); }
+                SendAndChk(PortType.SSH, "md5sum /tmp/fscrypt_context", keyword, out res, 0, 3000);
+                if (!res.Contains(fscrypt_context))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+                else { DisplayMsg(LogType.Log, @"Check MD5 'fscrypt_context' Pass /is '003e19d329ac299d425c20a653facc76'"); }
+
+                SendAndChk(PortType.SSH, "md5sum /tmp/cmnlib64.mdt", keyword, out res, 0, 3000);
+                if (!res.Contains(cmnlib64_mdt))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+                else { DisplayMsg(LogType.Log, @"Check MD5 'cmnlib64.mdt' Pass /is '7f6b21b3386d1dbcc85975195a3a9f1d'"); }
+                SendAndChk(PortType.SSH, "md5sum /tmp/cmnlib64.b06", keyword, out res, 0, 3000);
+                if (!res.Contains(cmnlib64_b06))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+                else { DisplayMsg(LogType.Log, @"Check MD5 'cmnlib64.b06' Pass /is 'd878f75c3b9bf86753598fa7efe309ce'"); }
+                SendAndChk(PortType.SSH, "md5sum /tmp/fuseprov.b08", keyword, out res, 0, 3000);
+                if (!res.Contains(fuseprov_b08))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+                else { DisplayMsg(LogType.Log, @"Check MD5 'fuseprov.b08' Pass /is 'a5bf2b24af9c4ef18739627fb91bd978'"); }
+                SendAndChk(PortType.SSH, "md5sum /tmp/fuseprov.mdt", keyword, out res, 0, 3000);
+                if (!res.Contains(fuseprov_mdt))
+                {
+                    DisplayMsg(LogType.Log, @"md5sum >>> NG");
+                    AddData(item, 1);
+                }
+                else { DisplayMsg(LogType.Log, @"Check MD5 'fuseprov.mdt' Pass /is '6e5ab46437f6cc19ff7853304bd918fb'"); }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+            }
+        }
+        private void DownloadAllConfigs()
+        {
+            string item = "Download All Configs";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string serverIP = WNC.API.Func.ReadINI("Setting", "PCBA", "serverIP", "10.169.100.108");
+            string UserNameSV = WNC.API.Func.ReadINI("Setting", "PCBA", "UserNameSV", "lxg1");
+            string PWSV = WNC.API.Func.ReadINI("Setting", "PCBA", "PWSV", "wnc000000");
+            string res = string.Empty;
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            try
+            {
+                SendAndChk(PortType.SSH, "mkdir /tmp/config", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, $"scp {UserNameSV}@{serverIP}:/home/lxg1/BT_LRG1/config/*  /tmp/config/", keyword, out res, 0, 15000);
+                SendAndChk(PortType.SSH, $"{PWSV}", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "ls /tmp/config", keyword, out res, 0, 3000);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+                return;
+            }
+        }
+        private void FilesystemEncryption(bool NeeedErase)
+        {
+            string item = "Filesystem Encryption";
+            string keyword = "root@OpenWrt:~#";
+            string serverIP = WNC.API.Func.ReadINI("Setting", "PCBA", "IP", "");
+            string res = string.Empty;
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            try
+            {
+                if (NeeedErase)
+                {
+                    SendAndChk(PortType.SSH, "dd if=/dev/zero of=/dev/mmcblk0p33", keyword, out res, 0, 3000);
+                }
+                SendAndChk(PortType.SSH, $"umount /dev/mmcblk0p32", "root@OpenWrt:/tmp", out res, 0, 3000);
+                SendAndChk(PortType.SSH, $"cd /tmp", "root@OpenWrt:/tmp", out res, 0, 5000);
+                for (int i = 0; i < 3; i++)
+                {
+                    SendAndChk(PortType.SSH, "./filesystem_encryption.sh -c config/sh40j.json", keyword, out res, 0, 6000);
+                    if (res.Contains("SUCCESS"))
+                    {
+                        DisplayMsg(LogType.Log, @"Filesystem_Encryption_SUCCESS");
+                        return;
+                    }
+                    Thread.Sleep(500);
+                }
+                DisplayMsg(LogType.Log, item + @" >>> NG");
+                AddData(item, 1);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+            }
+            finally
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    if (SendAndChk(PortType.SSH, $"cd ~", keyword, out res, 500, 3000))
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        private void SecureBootTransition()
+        {
+            string item = "Secure Boot Transition";
+            string keyword = "root@OpenWrt:/tmp#";
+            string serverIP = WNC.API.Func.ReadINI("Setting", "PCBA", "IP", "");
+            string res = string.Empty;
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            try
+            {
+                SendAndChk(PortType.SSH, "cd /tmp", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "./secure_boot_transition.sh -c config/sh40j.json", keyword, out res, 0, 6000);
+                if (!res.Contains("Fuse blow Done"))
+                {
+                    AddData(item, 1);
+                }
+                // ===================== SSH wont show, only show on Successfully in Uart ==========================
+                //if (!res.Contains("Successfully loaded app and services"))
+                //{
+                //    DisplayMsg(LogType.Log, @"---- loaded invaild -----");
+                //    AddData(item, 1);
+                //    return;
+                //}
+                DisplayMsg(LogType.Log, @"Enable fuse and QSApp binaries");
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+            }
+            finally
+            {
+                do
+                {
+                    if (SendAndChk(PortType.SSH, "cd /", "root@OpenWrt", out res, 0, 5000))
+                    {
+                        break;
+                    }
+                } while (!SendAndChk(PortType.SSH, "cd /", "root@OpenWrt", out res, 0, 5000));
+            }
+        }
+        private void Led_Test(string item, string cmd, COLOR color, STAGE stage, string cameraItem)
+        {
+            if (!CheckGoNoGo()) { return; }
+            string keyword = "#";
+            string res = "";
+            COLOR newcolor = color;
+            switch (stage)
+            {
+                case STAGE.ON:
+                    if (!SendAndChk(PortType.SSH, $"mt led set {cmd} 255", keyword, out res, 0, 10000)) { AddData("item", 1); return; }
+                    break;
+                case STAGE.OFF:
+                    if (!SendAndChk(PortType.SSH, $"mt led set {cmd} 0", keyword, 0, 10000)) { AddData("item", 1); return; }
+                    newcolor = COLOR.BLACK;
+                    break;
+                default:
+                    break;
+            }
+
+            DisplayMsg(LogType.Log, $"============ LED Test start '{item}_{color}_{stage}' ============");
+
+            if (useCamera)
+            {
+                string cameraResult = "";
+                if (Camera())
+                {
+
+                    if (CheckCameraResult($"{cameraItem}", $"{newcolor.ToString().ToLower()}", out cameraResult))
+                    {
+                        AddData($"{item}_{color}_{stage}", 0);
+                    }
+                    else
+                    {
+                        AddData($"{item}_{color}_{stage}", 1);
+                        return;
+                    }
+
+                }
+                else
+                {
+                    if (Process.GetProcessesByName("camera").Length > 0)
+                    {
+                        warning = "Camera is running but use camera fail!!";
+                        return;
+                    }
+                    else
+                    {
+                        warning = "Using camera fail because Camera is not running!!";
+                        return;
+                    }
+
+                }
+            }
+            else
+            {
+                if (DialogResult.No == MessageBox.Show($"Check if {item} {color} is {stage}?", "Led Test", MessageBoxButtons.YesNo))
+                {
+                    DisplayMsg(LogType.Log, $"Selected No");
+                    AddData($"{item}_{color}_{stage}", 1);
+                    return;
+                }
+                DisplayMsg(LogType.Log, $"Selected Yes");
+                AddData($"{item}_{color}_{stage}", 0);
+            }
         }
 
     }
