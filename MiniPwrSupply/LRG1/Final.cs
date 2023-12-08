@@ -9,10 +9,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
-//using WNC.API;
-//using EasyLibrary;
-using System.Net.Security;
-using System.Runtime.CompilerServices;
+using WNC.API;
+using EasyLibrary;
+using CH_RD;
 
 namespace MiniPwrSupply.LRG1
 {
@@ -22,6 +21,17 @@ namespace MiniPwrSupply.LRG1
         {
             try
             {
+                if (useShield)
+                {
+                    fixture.ControlIO(Fixture.FixtureIO.IO_1, CTRL.ON);
+                    fixture.ControlIO(Fixture.FixtureIO.IO_2, CTRL.ON);
+                    fixture.ControlIO(Fixture.FixtureIO.IO_3, CTRL.ON);
+                    fixture.ControlIO(Fixture.FixtureIO.IO_4, CTRL.ON);
+                    fixture.ControlIO(Fixture.FixtureIO.IO_5, CTRL.ON);
+                    fixture.ControlIO(Fixture.FixtureIO.IO_6, CTRL.ON);
+                    fixture.ControlIO(Fixture.FixtureIO.IO_7, CTRL.ON);
+                    //fixture.ControlIO(Fixture.FixtureIO.IO_8, CTRL.ON); 
+                }
                 infor.ResetParam();
                 OpenTftpd32(Application.StartupPath);
                 SFCS_Query _sfcsQuery = new SFCS_Query();
@@ -216,17 +226,13 @@ namespace MiniPwrSupply.LRG1
                     frmOK.Label = "Đảm bảo đã kết nối 'USB 3.0 flash drive và điện thoại SLIC', và 'dây mạng' đã được cắm vào cổng LAN màu vàng số 1, xin vui lòng bật nguồn và nhấn nút nguồn để khởi động";
                     frmOK.ShowDialog();
                 }
-
                 DisplayMsg(LogType.Log, "Power on!!!");
-
                 if (!CheckGoNoGo()) { return; }
                 ChkBootUp(PortType.SSH);
-
                 // For EngMode
                 // ===========
                 // remove mt boarddata and do the cmd in CheckBoardData() function
                 // ===========
-
                 //-------------------------------------------------------------------------------------
                 if (infor.SerialNumber.Length == 18)
                 {
@@ -241,14 +247,12 @@ namespace MiniPwrSupply.LRG1
                     warning = "Get SN from SFCS fail";
                     return;
                 }
-
                 if (Func.ReadINI("Setting", "Golden", "GoldenSN", "(*&^%$").Contains(status_ATS.txtPSN.Text))
                 {
                     isGolden = true;
                     DisplayMsg(LogType.Log, "Golden testing..." + status_ATS.txtPSN.Text);
                 }
                 else { isGolden = false; }
-
                 if (isLoop == 0)
                 {
                     #region Ethenet Speed check
@@ -259,17 +263,14 @@ namespace MiniPwrSupply.LRG1
                     if (Func.ReadINI("Setting", "Final", "SkipLANSPEED4", "0") == "0") { this.EthernetTest(4); }
                     if (Func.ReadINI("Setting", "Final", "SkipLANSPEED5", "0") == "0") { this.EthernetTest(5); }
                     #endregion Ethenet Speed check
-                    //this.ChkMacAddr();
+                    this.ChkMacAddr();
                 }
+                this.BatteryDetection();
                 if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)
                 {
                     if (!CheckGoNoGo()) { return; }
                     CheckFWVerAndHWID();
                 }
-                //==========================================================================================================
-                //==========================================================================================================
-                //==========================================================================================================
-
                 /*#region Check dect RX turn data
                 string res = string.Empty;
                 string DectRXturnSFCS = string.Empty;
@@ -307,77 +308,73 @@ namespace MiniPwrSupply.LRG1
                     DisplayMsg(LogType.Log, $"Compare Dect RXturn in DUT: {dect_rf_calibration_rxtunDUT} with RXturn in SFCS: {DectRXturnSFCS} Pass ");
                     AddData("rxtun", 0);
                 }
-
                 #endregion Check dect RX turn data*/
-
+                if (!CheckGoNoGo()) { return; }
                 CheckDECTValue(); //Rena_20230804, Check DECT RXTUN and RFPI
+                if (!CheckGoNoGo()) { return; }
                 CheckBoardData();
-
                 if (isLoop == 0)
                 {
                     NFCTag_withReaderTool();
                 }
-
-                if (isLoop == 0) //this.VerifyPA2_Comp();
-                {
-                    EthernetTest(3);
-                }
-                // --------------------------
-                this.BatteryDetection();
-                // --------------------------
-
-                //CheckEthernetMAC();
-
+                if (!CheckGoNoGo()) { return; }
+                CheckEthernetMAC();
                 if (isLoop == 0)
                 {
                     CheckLED();
                 }
-
-                if (!isGolden)
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && isGolden == false)
                 {
+                    if (!CheckGoNoGo()) { return; }
                     CheckWiFiCalData(PortType.SSH);
                 }
-
+                else { DisplayMsg(LogType.Log, "ENG mode or is golden skipped Check Calibration data"); }
+                if (!CheckGoNoGo()) { return; }
                 CheckPCIe();
-
+                if (!CheckGoNoGo()) { return; }
                 if (isLoop == 0)
                     WPSButton();
-
+                if (!CheckGoNoGo()) { return; }
                 if (isLoop == 0)
                     ResetButton();
-
-                //SLICTest_ByUsbModem();  //SLICTest();
-
+                if (!CheckGoNoGo()) { return; }
+                SLICTest_ByUsbModem();  //SLICTest();
+                if (useShield)
+                {
+                    fixture.ControlIO(Fixture.FixtureIO.IO_9, CTRL.ON); //For control USB Block
+                    Thread.Sleep(2000);
+                }
+                if (!CheckGoNoGo()) { return; }
+                this.D2License();
+                if (!CheckGoNoGo()) { return; }
                 USBTest();
-                //=================================
-                //this.USB20(); // testplan 8.3.9
-                //=================================
-
+                if (!CheckGoNoGo()) { return; }
+                this.USB20(); // testplan 8.3.9
+                if (!CheckGoNoGo()) { return; }
                 CurrentSensor();
-
                 //use tool to check calibration data
-                if (!CheckGoNoGo())
+                if (!CheckGoNoGo()) { return; }
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && isGolden == false)
                 {
-                    return;
-                }
-                //infor.BaseMAC = string.Empty;
-                infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
-                if (string.IsNullOrEmpty(infor.BaseMAC) || infor.BaseMAC.Contains("Dut not have")) { warning = "Get SFCS MAC Fail"; return; }
-                //infor.BaseMAC = MACConvert(infor.BaseMAC);
-                DisplayMsg(LogType.Log, $"Get Base MAC From SFCS is: {infor.BaseMAC}");
-                MessageBox.Show("JASON need tweak the corresponding BaseMAC");
-                var fResult = CH_RD.Check.FinalCheck(out res, new string[] { project, infor.BaseMAC });//JASON need chk this
-                if (!fResult)
-                {
+                    infor.BaseMAC = string.Empty;
+                    infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
+                    if (string.IsNullOrEmpty(infor.BaseMAC) || infor.BaseMAC.Contains("Dut not have")) { warning = "Get SFCS MAC Fail"; return; }
+                    DisplayMsg(LogType.Log, $"Get Base MAC From SFCS is: {infor.BaseMAC}");
+                    var fResult = CH_RD.Check.FinalCheck(out res, new string[] { "LRG1", infor.BaseMAC });
                     DisplayMsg(LogType.Log, res);
-                    AddData("CheckCalDataCH", 1);
+                    if (!fResult)
+                    {
+                        DisplayMsg(LogType.Log, res);
+                        AddData("CheckCalDataCH", 1);
+                        return;
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, res);
+                        AddData("CheckCalDataCH", 0);
+                    }
                 }
-                else
-                {
-                    DisplayMsg(LogType.Log, res);
-                    AddData("CheckCalDataCH", 0);
-                }
-
+                else { DisplayMsg(LogType.Log, "ENG mode or is golden skipped Check"); }
                 //Rena_20230720, remove /test/file
                 if (CheckGoNoGo())
                 {
@@ -515,11 +512,9 @@ namespace MiniPwrSupply.LRG1
             string RFPI_val = infor.DECT_rfpi.Replace(".", "").ToUpper(); //格式為 0303B009B0
             bool check_RXTUN = false;
             bool check_RFPI = false;
-
             /*string DectRXturnSFCS = string.Empty;
             if (!_sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LGR1_RXTURN", ref DectRXturnSFCS)) { DisplayMsg(LogType.Log, "Failed to get LGR1_RXTURN get from SFCS"); AddData("rxtun", 1); return; }
             DisplayMsg(LogType.Log, "SFCS LGR1_RXTURN: " + DectRXturnSFCS);*/
-
             try
             {
                 bool result = false;
@@ -543,6 +538,38 @@ namespace MiniPwrSupply.LRG1
                     DisplayMsg(LogType.Log, "Enter DECT MENU fail");
                     AddData(item, 1);
                     return;
+                }
+                #region Verify PA2_COMP
+                item = "Verify PA2_COMP";
+                DisplayMsg(LogType.Log, $"====== {item} =======");
+                SendWithoutEnterAndChk(item, PortType.SSH, "s", "q => Return to Interface Menu", delayMs, timeOutMs);
+                result = SendWithoutEnterAndChk(PortType.SSH, "1", "q => Return", out res, delayMs, timeOutMs);
+                SendWithoutEnterAndChk(PortType.SSH, "6\r\n", "", out res, 1000, timeOutMs);
+                SendWithoutEnterAndChk(PortType.SSH, "178\r\n", "", out res, 500, timeOutMs);
+                SendWithoutEnterAndChk(PortType.SSH, "1\r\n", "Press Any Key!", out res, 2000, timeOutMs);
+                DisplayMsg(LogType.Log, @"------ Judge Data whether = A0 -------");
+                if (!res.Contains("A0"))
+                {
+                    DisplayMsg(LogType.Log, "Verify PA2_COMP Fail");
+                    AddData(item, 1);
+                }
+                //if (!res.Contains("Enter Location 178"))
+                //{
+                //    DisplayMsg(LogType.Log, "Verify PA2_COMP Fail");
+                //    AddData(item, 1);
+                //}
+                //if (!res.Contains("Enter Length 1"))
+                //{
+                //    DisplayMsg(LogType.Log, "Verify PA2_COMP Fail");
+                //    AddData(item, 1);
+                //}
+                #endregion
+                for (int i = 0; i < 5; i++)
+                {//back to main menu
+                    if (SendAndChk(PortType.SSH, "q", "Choose Option", out res, 100, 3500))
+                    {
+                        break;
+                    }
                 }
                 #region Verify DECT RXTUN and RFPI
                 SendWithoutEnterAndChk(PortType.SSH, "x", "q) Quit", out res, delayMs, timeOutMs);
@@ -577,50 +604,6 @@ namespace MiniPwrSupply.LRG1
                     AddData(item, 1);
                 }
                 #endregion
-                for (int i = 0; i < 5; i++)
-                {//back to main menu
-                    if (SendAndChk(PortType.SSH, "q", "Choose Option", out res, 100, 3500))
-                    {
-                        break;
-                    }
-                }
-                #region Verify PA2_COMP
-                DisplayMsg(LogType.Log, @"====== Verify PA2_COMP =======");
-                SendWithoutEnterAndChk(item, PortType.SSH, "s", "q => Return to Interface Menu", delayMs, timeOutMs);
-                result = SendWithoutEnterAndChk(PortType.SSH, "1", "q => Return", out res, delayMs, timeOutMs);
-                do
-                {
-                    DisplayMsg(LogType.Log, "Write 6 to ssh");
-                    SendWithoutEnterAndChk(PortType.SSH, "6\r\n", "Press", out res, delayMs, 3000);
-                    DisplayMsg(LogType.Log, @"Will not show anything after 6\r");
-                    if (res.Contains("Press"))
-                    {
-                        break;
-                    }
-                } while (!res.Contains("Press Any Key"));
-                SSH_stream.Write("r");
-                SSH_stream.WriteLine("178");
-                SendWithoutEnterAndChk(PortType.SSH, "1", "Press Any Key!", out res, delayMs, timeOutMs);
-                //=====================================================
-                //               Judge Data whether = A0
-                DisplayMsg(LogType.Log, @"------ Judge Data whether = A0 -------");
-                if (!res.Contains("A0"))
-                {
-                    DisplayMsg(LogType.Log, "Verify PA2_COMP Fail");
-                    AddData(item, 1);
-                }
-                if (!res.Contains("Enter Location 178"))
-                {
-                    DisplayMsg(LogType.Log, "Verify PA2_COMP Fail");
-                    AddData(item, 1);
-                }
-                if (!res.Contains("Enter Length 1"))
-                {
-                    DisplayMsg(LogType.Log, "Verify PA2_COMP Fail");
-                    AddData(item, 1);
-                }
-
-                #endregion
 
             }
             catch (Exception ex)
@@ -636,7 +619,7 @@ namespace MiniPwrSupply.LRG1
                 //SendAndChk(PortType.SSH, "qqqqq", keyword, out res, 0, 5000);
                 for (int i = 0; i < 5; i++)
                 {
-                    if (SendAndChk(PortType.SSH, "qqqq", "root@OpenWrt:~#", out res, 0, 3600))
+                    if (SendAndChk(PortType.SSH, "qqqqqq", "root@OpenWrt:~#", out res, 0, 3600))
                         break;
                 }
             }
@@ -663,6 +646,7 @@ namespace MiniPwrSupply.LRG1
             string keyword = "root@OpenWrt:~# \r\n";
             string item = "ChkDUTInfo";
             string res = "";
+            bool forHQ = false;
 
             try
             {
@@ -685,33 +669,68 @@ namespace MiniPwrSupply.LRG1
                     return;
                 }
                 // =============================================================================
-                // /dev/mmcblk0p32 on /mnt/test type ext4 (rw,relatime)
-                this.secureBootDownloadfilesRequired();
-                this.DownloadFilesRequired();
+                if (forHQ)
+                {
+                    this.secureBootDownloadfilesRequired();
+                }
+                else
+                {
+                    this.DownloadFilesRequired();
+                }
                 this.FilesystemEncryption(false);
                 // ========================================================================
 
                 //check Board data
-                SendAndChk(PortType.SSH, "mt boarddata", keyword, out res, 0, 5000);
-                //serial_number = +119746 + 2333000129
-                if (!res.Contains($"serial_number={infor.SerialNumber}"))
+                for (int i = 0; i < 3; i++)
                 {
-                    DisplayMsg(LogType.Log, "Check serial_number fail");
-                    AddData(item, 1);
+                    SendAndChk(PortType.SSH, "mt boarddata", keyword, out res, 0, 8000);
+                    if (res.Contains("D2License"))
+                    {
+                        break;
+                    }
                 }
-                //hw_ver=EVT1
-                if (!res.Contains($"hardware_version={infor.HWver}"))
+                if (forHQ)
                 {
-                    DisplayMsg(LogType.Log, "Check hw_ver fail");
-                    AddData(item, 1);
+                    //serial_number = +119746 + 2333000129
+                    if (!res.Contains($"serial_number={infor.SerialNumber}"))
+                    {
+                        DisplayMsg(LogType.Log, "Check serial_number fail");
+                        AddData(item, 1);
+                    }
+                    //hw_ver=EVT3
+                    if (!res.Contains($"hardware_version={infor.HWver}"))
+                    {
+                        DisplayMsg(LogType.Log, "Check hw_ver fail");
+                        AddData(item, 1);
+                    }
+                    //mac_base=E8:C7:CF:AF:46:28
                 }
-                //mac_base=E8:C7:CF:AF:46:28
-                DisplayMsg(LogType.Log, $"mac_base get SFCS: {infor.BaseMAC}");
-                string formattedBaseMAC = string.Empty;
-                // =============================== 8.3.9 D2 License ==================================
-                SendAndChk(PortType.SSH, "/etc/init.d/vtspd start", keyword, out res, 0, 5000);
-                SendAndChk(PortType.SSH, "ps | grep ve_vtsp_main", keyword, out res, 0, 5000);
-                // ===================================================================================
+                else
+                {
+                    DisplayMsg(LogType.Log, $"mac_base get SFCS: {infor.BaseMAC}");
+                    string formattedBaseMAC = string.Empty;
+                    if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && isGolden == false)
+                    {
+                        List<string> ItemNameList = new List<string> { "SN", "HW Version", "Base MAC", "DECT RFPI", "DECT RX TURN", "WiFi PWD", "Admin PWD", "WiFi SSID" };
+                        List<string> SfcsItemList = new List<string> { $"serial_number={infor.SerialNumber}", $"hardware_version={infor.HWver}", MACConvert(infor.BaseMAC), infor.DECT_rfpi.ToUpper(), infor.DECT_cal_rxtun
+                    ,infor.WiFi_PWD,infor.Admin_PWD,infor.WiFi_SSID };
+                        for (int i = 0; i < ItemNameList.Count; i++)
+                        {
+                            if (!res.Contains(SfcsItemList[i]))
+                            {
+                                DisplayMsg(LogType.Log, $"Check '{ItemNameList[i]}': DUT with SFCS '{SfcsItemList[i]}' FAIL");
+                                AddData(item, 1);
+                                return;
+                            }
+                            else
+                            {
+                                DisplayMsg(LogType.Log, $"Check '{ItemNameList[i]}': DUT '{SfcsItemList[i]}' with SFCS '{SfcsItemList[i]}' PASS");
+                            }
+                        }
+                    }
+                    else { DisplayMsg(LogType.Log, "ENG mode skipped check with SFCS"); }
+                }
+
                 //formattedBaseMAC = InsertColon(infor.BaseMAC);
                 //DisplayMsg(LogType.Log, $"mac_base Convert: {formattedBaseMAC}");
                 //if (formattedBaseMAC.Length != 17 || formattedBaseMAC.Length != infor.WanMAC.Length) { DisplayMsg(LogType.Log, "Leng mac fail"); return; }
@@ -858,6 +877,18 @@ namespace MiniPwrSupply.LRG1
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, ex.Message);
+                //status_ATS.AddDataLog(type.ToString(), NG);
+                /*#region Retry
+                //if (!CheckGoNoGo() && !retry)
+                {
+                    //retry = true;
+                    DisplayMsg(LogType.Log, "Retry Wifi preseting...");
+                    RemoveFailedItem();
+                    warning = string.Empty;
+                    goto retry;
+                }
+                #endregion*/
+                //AddData("PreSetting_ RF_enable_all_wifi", 1);
                 warning = "Enable WIFI Fail";
                 return false;
             }
@@ -993,7 +1024,6 @@ namespace MiniPwrSupply.LRG1
                     keyword = "root@OpenWrt:/# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:/#"
                 else
                     keyword = "root@OpenWrt:~# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:~#"
-                //MessageBox.Show(keyword);
                 DisplayMsg(LogType.Log, "=============== Check WiFi Cal Data ===============");
                 DisplayMsg(LogType.Log, "BaseMAC: " + infor.BaseMAC);
 
@@ -1039,15 +1069,13 @@ namespace MiniPwrSupply.LRG1
                         wifi_6g_md5 = line.Split(' ')[1].Trim();
                     }
                 }
-
-                DisplayMsg(LogType.Log, $"WiFi 2G MAC: '{wifi_2g_mac}'");
-                DisplayMsg(LogType.Log, $"WiFi 5G MAC: '{wifi_5g_mac}'");
-                DisplayMsg(LogType.Log, $"WiFi 6G MAC: '{wifi_6g_mac}'");
-
-                DisplayMsg(LogType.Log, $"WiFi 2G MD5: '{wifi_2g_md5}'");
-                DisplayMsg(LogType.Log, $"WiFi 5G MD5: '{wifi_5g_md5}'");
-                DisplayMsg(LogType.Log, $"WiFi 6G MD5: '{wifi_6g_md5}'");
-
+                //  already shown by res
+                //DisplayMsg(LogType.Log, $"WiFi 2G MAC: '{wifi_2g_mac}'");
+                //DisplayMsg(LogType.Log, $"WiFi 5G MAC: '{wifi_5g_mac}'");
+                //DisplayMsg(LogType.Log, $"WiFi 6G MAC: '{wifi_6g_mac}'");
+                //DisplayMsg(LogType.Log, $"WiFi 2G MD5: '{wifi_2g_md5}'");
+                //DisplayMsg(LogType.Log, $"WiFi 5G MD5: '{wifi_5g_md5}'");
+                //DisplayMsg(LogType.Log, $"WiFi 6G MD5: '{wifi_6g_md5}'");
                 if (string.IsNullOrEmpty(wifi_2g_mac) || string.IsNullOrEmpty(wifi_5g_mac) || string.IsNullOrEmpty(wifi_6g_mac) || string.IsNullOrEmpty(wifi_2g_md5)
                     || string.IsNullOrEmpty(wifi_5g_md5) || string.IsNullOrEmpty(wifi_6g_md5))
                 {
@@ -1266,9 +1294,19 @@ namespace MiniPwrSupply.LRG1
             try
             {
                 DisplayMsg(LogType.Log, "=============== NFC ===============");
+                if (useShield)
+                {
+                    //fixture.ControlIO(Fixture.FixtureIO.IO_9, CTRL.ON); // Need PE check NFC
+                    //Thread.Sleep(2000);
+                    //fixture.ControlIO(Fixture.FixtureIO.IO_9, CTRL.OFF);
+                    //Thread.Sleep(500);
+                }
+                else
+                {
+                    frmOK.Label = "Đặt NFC vào sản phầm rồi nhấn ok để test";
+                    frmOK.ShowDialog();
+                }
 
-                frmOK.Label = "Đặt NFC vào sản phầm rồi nhấn ok để test";
-                frmOK.ShowDialog();
 
                 //read UID with ACR122U NFC reader
                 myCmd = new CommandConsole();
@@ -1339,12 +1377,14 @@ namespace MiniPwrSupply.LRG1
                 {
                     DisplayMsg(LogType.Log, "Check NFC field detection pin - low fail");
                     AddData(item, 1);
+                    return;
                 }
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, ex.ToString());
                 AddData(item, 1);
+                return;
             }
             finally
             {
@@ -1408,9 +1448,11 @@ namespace MiniPwrSupply.LRG1
 
             string item = "USB2p0";
             string res = string.Empty;
+            string cmd = "[-f /sys/bus/usb/devices/1-1/speed ] && cat /sys/bus/usb/devices/1-1/speed || cat /sys/bus/usb/devices/2-1/speed";
+            // "cat /sys/bus/usb/devices/1-1/speed"
             try
             {
-                if (!SendAndChk(PortType.SSH, "cat /sys/bus/usb/devices/1-1/speed", "480", out res, 0, 3000))
+                if (!SendAndChk(PortType.SSH, cmd, "480", out res, 0, 3000))
                 {
                     DisplayMsg(LogType.Log, "check usb speed fail");
                     AddData(item, 1);
@@ -1450,11 +1492,36 @@ namespace MiniPwrSupply.LRG1
             }
             catch (Exception ex)
             {
-                DisplayMsg(LogType.Log, ex.Message + "__>>>check usb speed fail");
+                DisplayMsg(LogType.Log, item + "_NG\r\n" + ex.Message);
+                AddData(item, 1);
+            }
+        }
+        public void D2License()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+            string keyword = "";
+            string res = "";
+            string item = "8.3.9 D2 License";
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            try
+            {
+                SendAndChk(PortType.SSH, "/etc/init.d/vtspd start", keyword, out res, 0, 5000);
+                SendAndChk(PortType.SSH, "ps | grep ve_vtsp_main", keyword, out res, 0, 6000);
+                if (!res.Contains("root"))
+                {
+                    AddData(item, 1);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Log, item + "_NG\r\n" + ex.Message);
                 AddData(item, 1);
             }
         }
 
     }
 }
-
