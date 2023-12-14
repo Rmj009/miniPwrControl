@@ -9,9 +9,3 @@ C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\Min
 C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.csproj.CoreCompileInputs.cache
 C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.exe
 C:\Users\quant\repos\Wuzhi_powersupply\minipwrsupply\MiniPwrSupply\obj\Debug\MiniPwrSupply.pdb
-C:\Users\kouki\source\repos\Linux_Thiem\WuZhiPwrControl\MiniPwrSupply\obj\Debug\MiniPwrSupply.csproj.AssemblyReference.cache
-C:\Users\kouki\source\repos\Linux_Thiem\WuZhiPwrControl\MiniPwrSupply\obj\Debug\MiniPwrSupply.csproj.SuggestedBindingRedirects.cache
-C:\Users\kouki\source\repos\Linux_Thiem\WuZhiPwrControl\MiniPwrSupply\obj\Debug\MiniPwrSupply.Form1.resources
-C:\Users\kouki\source\repos\Linux_Thiem\WuZhiPwrControl\MiniPwrSupply\obj\Debug\MiniPwrSupply.Properties.Resources.resources
-C:\Users\kouki\source\repos\Linux_Thiem\WuZhiPwrControl\MiniPwrSupply\obj\Debug\MiniPwrSupply.csproj.GenerateResource.cache
-C:\Users\kouki\source\repos\Linux_Thiem\WuZhiPwrControl\MiniPwrSupply\obj\Debug\MiniPwrSupply.csproj.CoreCompileInputs.cache

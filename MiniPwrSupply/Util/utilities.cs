@@ -8,14 +8,14 @@ using System.Threading.Tasks;
 
 namespace MiniPwrSupply.Util
 {
-    class Util.Utilities
+    class ATSUtil
     {
         private bool SwitchDmpMode()
         {
-            if (!CheckGoNoGo())
-            {
-                return false;
-            }
+            //if (!CheckGoNoGo())
+            //{
+            //    return false;
+            //}
             bool IsFwGreater = false;
             string res = string.Empty;
             string FWversion = string.Empty;
@@ -35,7 +35,7 @@ namespace MiniPwrSupply.Util
                     //string a = FWversion.Split('v')[1];
                 }
                 Version FwVer = Version.Parse(FWversion);
-                IsFwGreater = FwVer.CompareTo(targetVerison) > 0 ? true : false
+                IsFwGreater = FwVer.CompareTo(targetVerison) > 0 ? true : false;
                 //if (FwVer.CompareTo(targetVerison) > 0)
                 //{
                 //    IsFwGreater = true;

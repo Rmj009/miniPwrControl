@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RFTestTool.Util
+namespace ATS.Util
 {
     public class MSG
     {
