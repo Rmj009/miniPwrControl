@@ -69,6 +69,7 @@
     <Compile Include="DoWuzhiCmd\WuzhiCmd.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmdBase.cs" />
     <Compile Include="LMG1\FWswitch.cs" />
+    <Compile Include="Util\IUtil.cs" />
     <Compile Include="_Exception\ConnectHOME.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>

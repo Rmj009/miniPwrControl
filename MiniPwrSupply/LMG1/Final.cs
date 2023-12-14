@@ -12,6 +12,8 @@ using System.Windows.Forms;
 using WNC.API;
 using EasyLibrary;
 using System.Security.Cryptography;
+using static System.Collections.Specialized.BitVector32;
+using System.Runtime.CompilerServices;
 
 namespace MiniPwrSupply.LMG1
 {
@@ -109,64 +111,64 @@ namespace MiniPwrSupply.LMG1
                 }
                 else
                 {
-                    //bool get_excel_data=true;    
-                    //if (!get_excel_data)
-                    //{
-                    //#region Check SN base on format
-                    //if (infor.SerialNumber.Length == 18)
-                    //{
-                    //    bool SN_check = CheckSN(infor.SerialNumber);
-                    //    if (SN_check)
-                    //    {
-                    //        SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                    //        //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
-                    //        status_ATS.SFCS_Data.PSN = infor.SerialNumber;
-                    //        status_ATS.SFCS_Data.First_Line = infor.SerialNumber;
-                    //    }
-                    //    else
-                    //    {
-                    //        DisplayMsg(LogType.Log, $"Get SN from SFCS fail: {infor.SerialNumber}");
-                    //        get_excel_data = true;
-                    //    }
-
-                    //}
-                    //else
-                    //{
-                    //    DisplayMsg(LogType.Log, $"Get SN from SFCS fail: {infor.SerialNumber}");
-                    //    get_excel_data = true;
-
-                    //}
-                    //#endregion Check SN base on format
-                    //infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
-                    //if (string.IsNullOrEmpty(infor.BaseMAC))
-                    //{
-                    //    DisplayMsg(LogType.Log, $"Get BaseMAC from SFCS fail: {infor.BaseMAC}");
-                    //    get_excel_data = true;
-                    //}
-
-                    //if (get_excel_data)
+                    bool get_excel_data = true;
+                    if (!get_excel_data)
                     {
-                        GetBoardDataFromExcel1();
+                        #region Check SN base on format
+                        if (infor.SerialNumber.Length == 18)
+                        {
+                            bool SN_check = CheckSN(infor.SerialNumber);
+                            if (SN_check)
+                            {
+                                SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                                //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                                status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                                status_ATS.SFCS_Data.First_Line = infor.SerialNumber;
+                            }
+                            else
+                            {
+                                DisplayMsg(LogType.Log, $"Get SN from SFCS fail: {infor.SerialNumber}");
+                                get_excel_data = true;
+                            }
+
+                        }
+                        else
+                        {
+                            DisplayMsg(LogType.Log, $"Get SN from SFCS fail: {infor.SerialNumber}");
+                            get_excel_data = true;
+
+                        }
+                        #endregion Check SN base on format
+                        infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
+                        if (string.IsNullOrEmpty(infor.BaseMAC))
+                        {
+                            DisplayMsg(LogType.Log, $"Get BaseMAC from SFCS fail: {infor.BaseMAC}");
+                            get_excel_data = true;
+                        }
+
+                        if (get_excel_data)
+                        {
+                            GetBoardDataFromExcel1();
+                        }
+                        infor.FWver = Func.ReadINI("Setting", "Final", "FWver", "0.2.0.5");
+                        infor.HWver = Func.ReadINI("Setting", "Final", "HWver", "EVT2-3");
+                        infor.HWID = Func.ReadINI("Setting", "Final", "HWID", "0002");
+                        infor.BLEver = Func.ReadINI("Setting", "Final", "BLEver", "v5.0.0-b108");
+                        infor.SEver = Func.ReadINI("Setting", "Final", "SEver", "00010206");
+                        infor.Chipver = Func.ReadINI("Setting", "Final", "Chipver", "0x0001023D");
+                        infor.CalData_MD5 = Func.ReadINI("Setting", "Final", "CalData_MD5", "");
+                        _sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LMG1_CalDataMD5", ref infor.CalData_MD5);
+                        infor.CalData_MD5 = infor.CalData_MD5.ToUpper();
+                        DisplayMsg(LogType.Log, "CalData_MD5 is:" + infor.CalData_MD5);
+
+                        infor.HWver_for_Board = Func.ReadINI("Setting", "Final", "HWver_for_Board", "EVT2-3");
+
+                        infor.BaseMAC = MACConvert(infor.BaseMAC);
+
                     }
-                    infor.FWver = Func.ReadINI("Setting", "Final", "FWver", "0.2.0.5");
-                    infor.HWver = Func.ReadINI("Setting", "Final", "HWver", "EVT2-3");
-                    infor.HWID = Func.ReadINI("Setting", "Final", "HWID", "0002");
-                    infor.BLEver = Func.ReadINI("Setting", "Final", "BLEver", "v5.0.0-b108");
-                    infor.SEver = Func.ReadINI("Setting", "Final", "SEver", "00010206");
-                    infor.Chipver = Func.ReadINI("Setting", "Final", "Chipver", "0x0001023D");
-                    infor.CalData_MD5 = Func.ReadINI("Setting", "Final", "CalData_MD5", "");
-                    _sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LMG1_CalDataMD5", ref infor.CalData_MD5);
-                    infor.CalData_MD5 = infor.CalData_MD5.ToUpper();
-                    DisplayMsg(LogType.Log, "CalData_MD5 is:" + infor.CalData_MD5);
-
-                    infor.HWver_for_Board = Func.ReadINI("Setting", "Final", "HWver_for_Board", "EVT2-3");
-
-                    infor.BaseMAC = MACConvert(infor.BaseMAC);
-
-                    //    }
                 }
-                //if (!ChkStation(status_ATS.txtPSN.Text))
-                //    return;
+                if (!ChkStation(status_ATS.txtPSN.Text))
+                    return;
 
                 #endregion
 
@@ -193,43 +195,97 @@ namespace MiniPwrSupply.LMG1
                     }
 
                 }
-
                 DisplayMsg(LogType.Log, "Power on!!!");
+                #region on power button
 
+                DisplayMsg(LogType.Log, $"Delay {Convert.ToInt32(WNC.API.Func.ReadINI(Application.StartupPath, "Setting", "TimeOut", "DelayPower", "1000"))}ms");
+                Thread.Sleep(Convert.ToInt32(WNC.API.Func.ReadINI(Application.StartupPath, "Setting", "TimeOut", "DelayPower", "1000")));
+                string cameraResult = "";
+                int n = 0;
+            retryBTN:
+                if (Camera())
+                {
+                    if (CheckCameraResult($"item_1", $"black", out cameraResult))
+                    {
+                        if (fixture.useFixture)
+                        {
+                            fixture.ControlIO(Fixture.FixtureIO.IO_5, CTRL.ON);
+                            fixture.ControlIO(Fixture.FixtureIO.IO_5, CTRL.OFF);
+                        }
+                        else
+                        {
+                            frmOK.Label = "DUT chưa lên nguồn, hãy bật nguồn sau đó nhấn [OK]";
+                            frmOK.ShowDialog();
+                        }
+                    }
+                    if (Camera())
+                    {
+                        if (CheckCameraResult($"item_1", $"black", out cameraResult))
+                        {
+                            if (fixture.useFixture)
+                            {
+                                n++;
+                                if (n < 3)
+                                {
+                                    DisplayMsg(LogType.Log, "Retry -->");
+                                    goto retryBTN;
+                                }
+                            }
+                            else
+                            {
+                                frmOK.Label = "DUT chưa lên nguồn, hãy bật nguồn sau đó nhấn [OK]";
+                                frmOK.ShowDialog();
+                            }
+                        }
+                    }
+                }
+                #endregion
+                if (!CheckGoNoGo()) return;
                 ChkBootUp(PortType.SSH);
                 if (!CheckGoNoGo()) { return; }
                 CheckFWVerAndHWID();
                 if (!CheckGoNoGo()) { return; }
                 // ---------------------------------
-                //this.DownloadFilesRequired(); // require verify by VN
-                //this.DownloadAllConfigs();
-                this.DownloadDisgue();
-                this.DownloadDisgue2();
+                if (this.ChkSecurityBootStatus()) // Security boot should be enabled in this status.
+                {
+                    this.DownloadFilesRequired(true); // require verify by VN
+                    this.DownloadAllConfigs();
+                }
+                //this.DownloadDisgue(true);
+                //this.DownloadDisgue2();
+                if (!CheckGoNoGo()) { return; }
                 this.FilesystemEncryption(false);
                 // ---------------------------------
                 CheckBoardData();
                 if (!CheckGoNoGo()) { return; }
-                //EthernetTest(false);
+                if (Func.ReadINI("Setting", "Setting", "SkipEthernet", "0") == "0")
+                {
+                    EthernetTest(false);
+                }
                 if (!CheckGoNoGo()) { return; }
                 CheckEthernetMAC();
-
                 if (isLoop == 0)
-                    CheckLED();
-
+                {
+                    CheckLEDAuto();
+                }
                 if (!CheckGoNoGo()) { return; }
-                //CheckWiFiCalData();
-                CheckWiFiCalData(IsFinal_staion: true);
+                CheckWiFiCalData(IsFinal_staion: true); //CheckWiFiCalData();
                 if (!CheckGoNoGo()) { return; }
                 CheckPCIe();
                 if (!CheckGoNoGo()) { return; }
                 if (isLoop == 0)
+                {
                     WPSButton();
+                }
                 if (!CheckGoNoGo()) { return; }
                 if (isLoop == 0)
+                {
                     ResetButton();
+                }
                 if (!CheckGoNoGo()) { return; }
                 CurrentSensor();
-
+                if (!CheckGoNoGo()) { return; }
+                this.ArtChksum();
                 //Rena_20230808, Do FinalCheck
                 if (!CheckGoNoGo()) { return; }  //Jason add check gonogo to skipped next test item if got failure 2023/10/07
                 DisplayMsg(LogType.Log, "=============== FinalCheck ===============");// old code if check gonogo ok will test check cal -> is bug. already fixed 2023/10/07
@@ -862,8 +918,106 @@ namespace MiniPwrSupply.LMG1
                 warning = "Scan barcode by camera fail";
             }
         }
+        public void Chkboarddata()
+        {
+            bool P1_linkrate;
+            bool P2_linkrate;
+            string keyword = "root@OpenWrt:~# \r\n";
+            string item = "831_1_Chkboarddata";
+            string res = "";
+            int retry_cnt;
+            try
+            {
+            LAN_Port_Test:
+                P1_linkrate = false;
+                P2_linkrate = false;
+                retry_cnt = 0;
+                SendAndChk(PortType.SSH, "mt info", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "mt eth linkrate", keyword, out res, 0, 5000);
+                if (res.Contains("port 1: 2500M FD"))
+                {
+                    P1_linkrate = true;
+                    DisplayMsg(LogType.Log, "Check LAN Port1 pass");
+                }
+                if (res.Contains("port 2: 2500M FD"))
+                {
+                    P2_linkrate = true;
+                    DisplayMsg(LogType.Log, "Check LAN Port2 pass");
+                }
 
+                if (!P1_linkrate || !P2_linkrate)
+                {
+                    DisplayMsg(LogType.Log, $"Check LAN Port1 & Port2 fail");
+                    if (retry_cnt++ < 3)
+                    {
+                        frmOK.Label = "Vui lòng kiểm tra xem dây mạng của LAN Port1 và Port2 đã được kết nối đúng chưa";
+                        frmOK.ShowDialog();
+                        DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
+                        Thread.Sleep(1000);
+                        goto LAN_Port_Test;
+                    }
+                    else
+                    {
+                        if (!P1_linkrate)
+                            AddData("Eth_LAN_Port1", 1);
+                        if (!P2_linkrate)
+                            AddData("Eth_LAN_Port2", 1);
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+            }
+        }
 
-
+        public bool ChkSecurityBootStatus()
+        {
+            bool isEnable = false;
+            string res = "";
+            string item = "ChkSecurityBootStatus";
+            string keyword = "root@OpenWrt:~# \r\n";
+            try
+            {
+                SendAndChk(PortType.SSH, "cat /sys/devices/system/qfprom/qfprom0/authenticate", keyword, out res, 0, 3000);
+                if (!res.Contains("1"))
+                {
+                    DisplayMsg(LogType.Log, @"Secure boot not enable in Final station");
+                    AddData(item, 1);
+                    return isEnable;
+                }
+                isEnable = true;
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+            }
+            return isEnable;
+        }
+        public void ArtChksum()
+        {
+            string res = "";
+            string item = "ArtChksum";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string cmd = "md5sum /dev/mmcblk0p18";
+            string chksum = "48402356e3589c3e606e31e020ed678b";
+            try
+            {
+                SendAndChk(PortType.SSH, cmd, keyword, out res, 0, 5000);
+                if (!res.Contains(chksum))
+                {
+                    DisplayMsg(LogType.Log, @"ArtChksum NG in Final station");
+                    AddData(item, 1);
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "____" + ex.Message);
+                AddData(item, 1);
+            }
+        }
     }
 }
