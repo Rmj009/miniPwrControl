@@ -21,141 +21,141 @@ namespace MiniPwrSupply.LMG1
             try
             {
                 infor.ResetParam();
-                #region create SMT file
-                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
-                {
+                //#region create SMT file
+                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                //{
 
-                    SFCS_Query _sfcsQuery = new SFCS_Query();
-                    ATS_Template.SFCS_ATS_2_0.ATS ss = new ATS_Template.SFCS_ATS_2_0.ATS();
-                    bool combine = false;
-                    int snLength = Convert.ToInt32(Func.ReadINI("Setting", "Match", "SN_Length", "11"));
-                    string snStartwith = Func.ReadINI("Setting", "Match", "SN_Start", "T");
-                    GetFromSfcs("@LRG1_SN", out infor.SerialNumber);
-                    GetFromSfcs("@MAC", out infor.BaseMAC);
-                    //SE_TODO: get infor from SFCS
-                    //GetFromSfcs("@LRG1_SN", out infor.SerialNumber); // Jason add get from SFCS
-                    DisplayMsg(LogType.Log, "Get SN From SFCS is:" + infor.SerialNumber);
-                    #region Check SN base on format
-                    if (infor.SerialNumber.Length == 18)
-                    {
-                        bool SN_check = CheckSN(infor.SerialNumber);
-                        if (SN_check)
-                        {
-                            SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                            status_ATS.SFCS_Data.PSN = infor.SerialNumber;
-                            status_ATS.SFCS_Data.First_Line = infor.SerialNumber;
+                //    SFCS_Query _sfcsQuery = new SFCS_Query();
+                //    ATS_Template.SFCS_ATS_2_0.ATS ss = new ATS_Template.SFCS_ATS_2_0.ATS();
+                //    bool combine = false;
+                //    int snLength = Convert.ToInt32(Func.ReadINI("Setting", "Match", "SN_Length", "11"));
+                //    string snStartwith = Func.ReadINI("Setting", "Match", "SN_Start", "T");
+                //    GetFromSfcs("@LRG1_SN", out infor.SerialNumber);
+                //    GetFromSfcs("@MAC", out infor.BaseMAC);
+                //    //SE_TODO: get infor from SFCS
+                //    //GetFromSfcs("@LRG1_SN", out infor.SerialNumber); // Jason add get from SFCS
+                //    DisplayMsg(LogType.Log, "Get SN From SFCS is:" + infor.SerialNumber);
+                //    #region Check SN base on format
+                //    if (infor.SerialNumber.Length == 18)
+                //    {
+                //        bool SN_check = CheckSN(infor.SerialNumber);
+                //        if (SN_check)
+                //        {
+                //            SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                //            status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                //            status_ATS.SFCS_Data.First_Line = infor.SerialNumber;
 
-                            int count = 0;
-                        Recombine:
-                            CreatePsnFile();
-                            if (!ChkCombine())
-                            {
-                                if (count < 3)
-                                {
-                                    count++;
-                                    goto Recombine;
-                                }
-                                warning = "Combine fail";
-                                return;
-                            }
-                        }
-                        else { warning = "SN Check Not Meet target"; return; }
+                //            int count = 0;
+                //            Recombine:
+                //            CreatePsnFile();
+                //            if (!ChkCombine())
+                //            {
+                //                if (count < 3)
+                //                {
+                //                    count++;
+                //                    goto Recombine;
+                //                }
+                //                warning = "Combine fail";
+                //                return;
+                //            }
+                //        }
+                //        else { warning = "SN Check Not Meet target"; return; }
 
-                    }
-                    else { warning = "Get SN from SFCS fail"; return; }
+                //    }
+                //    else { warning = "Get SN from SFCS fail"; return; }
 
-                    #endregion Check SN base on format
+                //    #endregion Check SN base on format
 
-                    #region Get Data from SFCS & Comapre with setting
+                //    #region Get Data from SFCS & Comapre with setting
 
-                    /*                    string CustFW_FW_boardVer = Func.ReadINI("Setting", "FWSwitch", "CustFW_FW_boardVer", "");
-                                        CustFW_FW_boardVer=char.ToUpper(CustFW_FW_boardVer[0]) + CustFW_FW_boardVer.Substring(1);
-                                        string SFCS_CustFW = "";*/
+                //    /*                    string CustFW_FW_boardVer = Func.ReadINI("Setting", "FWSwitch", "CustFW_FW_boardVer", "");
+                //                        CustFW_FW_boardVer=char.ToUpper(CustFW_FW_boardVer[0]) + CustFW_FW_boardVer.Substring(1);
+                //                        string SFCS_CustFW = "";*/
 
-                    string HW_VERSION_FOR_BOARD_CPN = Func.ReadINI("Setting", "FirehoseFW", "HWver_for_Board", "");
+                //    string HW_VERSION_FOR_BOARD_CPN = Func.ReadINI("Setting", "FirehoseFW", "HWver_for_Board", "");
 
-                    string[] Inform_infor = new string[] { "HWver_for_Board" };
+                //    string[] Inform_infor = new string[] { "HWver_for_Board" };
 
-                    //MP
-                    //string[] CPN = new string[] { "@HW_VERSION_BOARD_12" };
-                    //EPR
-                    string partNumber = string.Empty;
-                    partNumber = GetPartNumber(status_ATS.SFCS_Data.PSN);
-                    DisplayMsg(LogType.Log, "partNumber is:" + partNumber);
-                    string[] CPN = new string[] { "@HW_VERSION_BOARD_12" };
-
-
-                    if (partNumber == "57.LMG11.003")
-                    {
-                        CPN = new string[] { "@HW_VERSION_BOARD_12" };
-                    }
-                    if (partNumber == "57.LMG11.002")
-                    {
-                        CPN = new string[] { "@HW_VERSION_FOR_BOARD" };
-                    }
-
-                    Compare_SFCS_Setting(Inform_infor, "FWSwitch", CPN);
+                //    //MP
+                //    //string[] CPN = new string[] { "@HW_VERSION_BOARD_12" };
+                //    //EPR
+                //    string partNumber = string.Empty;
+                //    partNumber = GetPartNumber(status_ATS.SFCS_Data.PSN);
+                //    DisplayMsg(LogType.Log, "partNumber is:" + partNumber);
+                //    string[] CPN = new string[] { "@HW_VERSION_BOARD_12" };
 
 
-                    GetFromSfcs("@INDIGO_SW_VER", out infor.FWver_Cust);
-                    DisplayMsg(LogType.Log, "Get SFCS_CustFW From SFCS is:" + infor.FWver_Cust);
+                //    if (partNumber == "57.LMG11.003")
+                //    {
+                //        CPN = new string[] { "@HW_VERSION_BOARD_12" };
+                //    }
+                //    if (partNumber == "57.LMG11.002")
+                //    {
+                //        CPN = new string[] { "@HW_VERSION_FOR_BOARD" };
+                //    }
 
-                    string CustFW_FW_boardVer = Func.ReadINI("Setting", "FWSwitch", "CustFW_FW_boardVer", "");
-                    CustFW_FW_boardVer = CustFW_FW_boardVer.ToUpper();
-                    if (CustFW_FW_boardVer.Contains(infor.FWver_Cust))
-                    {
-                        DisplayMsg(LogType.Log, "Get SFCS_CustFW between setting and SFCS PASS");
-                        DisplayMsg(LogType.Log, "SFCS_CustFW From SFCS is:" + infor.FWver_Cust);
-                        DisplayMsg(LogType.Log, "SFCS_CustFW From setting is:" + CustFW_FW_boardVer);
-                    }
-                    else
-                    {
-                        warning = $"Get SFCS_CustFW between setting and SFCS Fail!";
-                        DisplayMsg(LogType.Log, "SFCS_CustFW From SFCS is:" + infor.FWver_Cust);
-                        DisplayMsg(LogType.Log, "SFCS_CustFW From setting is:" + CustFW_FW_boardVer);
+                //    Compare_SFCS_Setting(Inform_infor, "FWSwitch", CPN);
 
-                        return;
-                    }
 
-                    /*                    string pattern = @"^.{6}"; // Lấy 6 ký tự đầu tiên từ chuỗi
-                                        Match match = Regex.Match(infor.FWver_Cust, pattern);
-                                        if (match.Success)
-                                        {
-                                            infor.FWver_Cust = match.Value;
-                                            if (CustFW_FW_boardVer.Contains(match.Value))
-                                            {
-                                                DisplayMsg(LogType.Log, $"Setting CustFW processed is: {CustFW_FW_boardVer}");
-                                                DisplayMsg(LogType.Log, $"SFCS CustFW is: {infor.FWver_Cust}");
-                                                DisplayMsg(LogType.Log, $"Compare CustFW between SFCS & Setting file Pass");
-                                            }
-                                            else
-                                            {
-                                                DisplayMsg(LogType.Log, $"Setting CustFW processed is: {CustFW_FW_boardVer}");
-                                                DisplayMsg(LogType.Log, $"SFCS CustFW is: {infor.FWver_Cust}");
-                                                DisplayMsg(LogType.Log, $"Compare CustFW between SFCS & Setting file fail");
-                                            }
-                                        }
-                    */
-                    DisplayMsg(LogType.Log, "Get Base MAC From SFCS is:" + infor.BaseMAC);
-                    DisplayMsg(LogType.Log, "Get HWver From SFCS is:" + infor.HWver_for_Board);
-                    infor.BaseMAC = MACConvert(infor.BaseMAC);
-                    DisplayMsg(LogType.Log, "Base MAC Convert" + infor.BaseMAC);
-                    DisplayMsg(LogType.Log, "Get SFCS_CustFW From SFCS is:" + infor.FWver_Cust);
-                    #endregion Get Data from SFCS & Comapre with setting
+                //    GetFromSfcs("@INDIGO_SW_VER", out infor.FWver_Cust);
+                //    DisplayMsg(LogType.Log, "Get SFCS_CustFW From SFCS is:" + infor.FWver_Cust);
 
-                }
-                else
-                {
-                    //Rena_20230407 add for HQ test
-                    GetBoardDataFromExcel1();
-                    infor.HWver_for_Board = Func.ReadINI("Setting", "FWSwitch", "HWver_for_Board", "EVT1");
-                    infor.FWver_Cust = Func.ReadINI("Setting", "FWSwitch", "FWver_Cust", "XXXXXXXX");
-                    infor.HWver_Cust = Func.ReadINI("Setting", "FWSwitch", "HWver_Cust", "FUT");
-                }
-                if (!ChkStation(status_ATS.txtPSN.Text))
-                    return;
+                //    string CustFW_FW_boardVer = Func.ReadINI("Setting", "FWSwitch", "CustFW_FW_boardVer", "");
+                //    CustFW_FW_boardVer = CustFW_FW_boardVer.ToUpper();
+                //    if (CustFW_FW_boardVer.Contains(infor.FWver_Cust))
+                //    {
+                //        DisplayMsg(LogType.Log, "Get SFCS_CustFW between setting and SFCS PASS");
+                //        DisplayMsg(LogType.Log, "SFCS_CustFW From SFCS is:" + infor.FWver_Cust);
+                //        DisplayMsg(LogType.Log, "SFCS_CustFW From setting is:" + CustFW_FW_boardVer);
+                //    }
+                //    else
+                //    {
+                //        warning = $"Get SFCS_CustFW between setting and SFCS Fail!";
+                //        DisplayMsg(LogType.Log, "SFCS_CustFW From SFCS is:" + infor.FWver_Cust);
+                //        DisplayMsg(LogType.Log, "SFCS_CustFW From setting is:" + CustFW_FW_boardVer);
 
-                #endregion
+                //        return;
+                //    }
+
+                //    /*                    string pattern = @"^.{6}"; // Lấy 6 ký tự đầu tiên từ chuỗi
+                //                        Match match = Regex.Match(infor.FWver_Cust, pattern);
+                //                        if (match.Success)
+                //                        {
+                //                            infor.FWver_Cust = match.Value;
+                //                            if (CustFW_FW_boardVer.Contains(match.Value))
+                //                            {
+                //                                DisplayMsg(LogType.Log, $"Setting CustFW processed is: {CustFW_FW_boardVer}");
+                //                                DisplayMsg(LogType.Log, $"SFCS CustFW is: {infor.FWver_Cust}");
+                //                                DisplayMsg(LogType.Log, $"Compare CustFW between SFCS & Setting file Pass");
+                //                            }
+                //                            else
+                //                            {
+                //                                DisplayMsg(LogType.Log, $"Setting CustFW processed is: {CustFW_FW_boardVer}");
+                //                                DisplayMsg(LogType.Log, $"SFCS CustFW is: {infor.FWver_Cust}");
+                //                                DisplayMsg(LogType.Log, $"Compare CustFW between SFCS & Setting file fail");
+                //                            }
+                //                        }
+                //    */
+                //    DisplayMsg(LogType.Log, "Get Base MAC From SFCS is:" + infor.BaseMAC);
+                //    DisplayMsg(LogType.Log, "Get HWver From SFCS is:" + infor.HWver_for_Board);
+                //    infor.BaseMAC = MACConvert(infor.BaseMAC);
+                //    DisplayMsg(LogType.Log, "Base MAC Convert" + infor.BaseMAC);
+                //    DisplayMsg(LogType.Log, "Get SFCS_CustFW From SFCS is:" + infor.FWver_Cust);
+                //    #endregion Get Data from SFCS & Comapre with setting
+
+                //}
+                //else
+                //{
+                //    //Rena_20230407 add for HQ test
+                //    GetBoardDataFromExcel1();
+                //    infor.HWver_for_Board = Func.ReadINI("Setting", "FWSwitch", "HWver_for_Board", "EVT1");
+                //    infor.FWver_Cust = Func.ReadINI("Setting", "FWSwitch", "FWver_Cust", "XXXXXXXX");
+                //    infor.HWver_Cust = Func.ReadINI("Setting", "FWSwitch", "HWver_Cust", "FUT");
+                //}
+                //if (!ChkStation(status_ATS.txtPSN.Text))
+                //    return;
+
+                //#endregion
 
                 if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
                 {
@@ -167,6 +167,8 @@ namespace MiniPwrSupply.LMG1
                 }
                 else if (Func.ReadINI("Setting", "Port", "RelayBoard", "Disable").ToUpper() == "ENABLE")
                 {
+                    SwitchRelay(CTRL.ON);
+                    Thread.Sleep(5000);
                     SwitchRelay(CTRL.OFF);
                 }
                 else
@@ -198,6 +200,7 @@ namespace MiniPwrSupply.LMG1
                 ChkBootUp(PortType.SSH);
                 this.UpgradeCustFW_EPR2_3(); // build>=EPR2-3
                 //this.UpgradeCustFW_new(); //(build<=EPR2-2)
+                if (!CheckGoNoGo()) { return; }
 
                 //VerifyBoardData:
                 VerifyBoardData();
@@ -237,9 +240,8 @@ namespace MiniPwrSupply.LMG1
             string PC_IP = Func.ReadINI("Setting", "IP", "PC", "192.168.1.2");
             string CustFW_IP = Func.ReadINI("Setting", "IP", "CustFW", "192.168.1.254");
             int PingTimeoutSec = Convert.ToInt32(Func.ReadINI("Setting", "FWSwitch", "PingTimeoutSec", "300"));
-            string CustFW_FW_FileName = Func.ReadINI("Setting", "FWSwitch", "CustFW_FW_FileName", "certutil -hashfile indigo-sw4a-r2.15.3-R-924755_standard_loader_update.itb");
+            string CustFW_FW_FileName = Func.ReadINI("Setting", "FWSwitch", "CustFW_FW_FileName", "certutil -hashfile indigo-sw4a-r2.15.3-R-924755-PROD-1_standard_loader_update.itb");
             DisplayMsg(LogType.Log, "=============== Upgrade to Customer FW ===============");
-
             try
             {
                 OpenFTPdmin();
@@ -248,7 +250,7 @@ namespace MiniPwrSupply.LMG1
                 {
                     return;
                 }
-
+                // ====================================== test plan removal ============================================
                 //Check hardware version
                 //MFG FW v0.1.2.6 only supports version 0/1/2
                 SendAndChk(PortType.SSH, "cat /tmp/sysinfo/hardware_version", keyword, out res, 0, 5000);
@@ -268,7 +270,7 @@ namespace MiniPwrSupply.LMG1
                     AddData(item, 1);
                     return;
                 }
-
+                // ======================================================================================================
                 //download Customer FW
                 if (!File.Exists(Path.Combine(Application.StartupPath, CustFW_FW_FileName)))
                 {
@@ -607,50 +609,60 @@ namespace MiniPwrSupply.LMG1
             string item = "VerifyBoardData";
             string keyword = "root@OpenWrt";
             string res = "";
-            string fw_ver = "";
-            string hw_ver = "";
+            //string fw_ver = "";
+            //string hw_ver = "";
             string base_mac = "";
-            string wifi_ssid = "";
-            string wifi_pwd = "";
+            string _sn = "";
+            //string wifi_ssid = "";
+            //string wifi_pwd = "";
+            int retryTime = 0;
             DisplayMsg(LogType.Log, "=============== Verify MFG Board data ===============");
             try
             {
-                //connect to golden ssh
-                GoldenSshParameter();
-
-                if (!ChkInitial(PortType.GOLDEN_SSH, keyword, 120 * 1000))
+                //for (int i = 0; i < 3; i++)
+                //{
+                //    if (SendAndChk(PortType.GOLDEN_SSH, "cd /wnc/build/usp", "root@OpenWrt:/wnc/build/usp#", out res, 0, 3000))
+                //    {
+                //        break;
+                //    }
+                //    else
+                //    {
+                //        AddData(item, 1);
+                //        return;
+                //    }
+                //}
+                SendAndChk(PortType.GOLDEN_SSH, "rm /tmp/dhcp.leases", keyword, out res, 0, 3000);
+            pingRetry:
+                DisplayMsg(LogType.Log, @"Delay 150s upon test plan");
+                if (SendAndChk(PortType.GOLDEN_SSH, "/etc/init.d/dnsmasq restart", keyword, out res, 150 * 1000, 20 * 1000))
                 {
-                    DisplayMsg(LogType.Log, "Golden SSH fail");
-                    AddData("GoldenSSH", 1);
-                    return;
-                }
-
-                //check if golden mode
-                SendAndChk(PortType.GOLDEN_SSH, "fw_printenv", keyword, out res, 0, 3000);
-                if (!res.Contains("checkcust=1"))
-                {
-                    SendAndChk(PortType.GOLDEN_SSH, "fw_setenv checkcust 1", keyword, out res, 0, 3000);
-                    SendAndChk(PortType.GOLDEN_SSH, "reboot", keyword, out res, 0, 3000);
-                    DisplayMsg(LogType.Log, "Delay 10s");
-                    Thread.Sleep(10 * 1000);
-                    if (!ChkInitial(PortType.GOLDEN_SSH, keyword, 120 * 1000))
+                    SendAndChk(PortType.GOLDEN_SSH, "ping 192.168.1.200 -c 1", "ms", out res, 1000, 10000);
+                    if (res.Contains("1 packets received"))
                     {
-                        DisplayMsg(LogType.Log, "Golden SSH fail");
-                        AddData("GoldenSSH", 1);
+                        AddData("GOLDEN_PING_DUT_OK", 0);
+                        ChkResponse(PortType.GOLDEN_SSH, ITEM.NONE, "", out res, 10000);
+                    }
+                    else
+                    {
+                        while (retryTime++ < 3)
+                        {
+                            goto pingRetry;
+                        }
+                        AddData("GOLDEN_PING_DUT_NG", 1);
+                        AddData(item, 1);
                         return;
                     }
                 }
-                DisplayMsg(LogType.Log, @"constrain LMG1 IP address");
-                SendAndChk(PortType.GOLDEN_SSH, "uci set dhcp.lan.limit='1'", keyword, out res, 0, 3000);
-                SendAndChk(PortType.GOLDEN_SSH, "uci set dhcp.lan.start='200'", keyword, out res, 0, 3000);
-                SendAndChk(PortType.GOLDEN_SSH, "/etc/init.d/dnsmasq restart", keyword, out res, 0, 3000);
-                SendAndChk(PortType.GOLDEN_SSH, "cd /wnc/build/usp", "root@OpenWrt:/wnc/build/usp#", out res, 0, 3000);
-
-                //一開始都會fail,所以增加retry
-                //check board data
+                else
+                {
+                    DisplayMsg(LogType.Error, @"dnsmasq restart NG");
+                    AddData(item, 1);
+                    return;
+                }
+                SendAndChk(PortType.GOLDEN_SSH, "cd /wnc/build/usp/", "root@OpenWrt:/wnc/build/usp#", out res, 1000, 10000);
                 for (int i = 0; i < 20; i++)
                 {
-                    SendAndChk(PortType.GOLDEN_SSH, $"python3 ./get.py -m manufacturer -a ../certs/mqtt.indigo.cert.pem -k ../certs/manufacturer-wnc.key.pem -f ../certs/manufacturer-wnc.cert.pem -s +119747+{infor.SerialNumber} basic.txt --ipaddr 192.168.1.200", "root@OpenWrt:/wnc/build/usp# \r\n", out res, 0, 20 * 1000);
+                    SendAndChk(PortType.GOLDEN_SSH, $"python3 ./get.py -m manufacturer -a ../certs/mqtt.indigo.cert.pem -k ../certs/manufacturer-wnc.key.pem -f ../certs/manufacturer-wnc.cert.pem -s +119747+{infor.SerialNumber} basic.txt --ipaddr 192.168.1.200", "root@OpenWrt:/wnc/build/usp#", out res, 0, 20 * 1000);
                     if (res.Contains("Device.DeviceInfo.SoftwareVersion"))
                     {
                         result = true;
@@ -667,42 +679,52 @@ namespace MiniPwrSupply.LMG1
                     AddData(item, 1);
                     return;
                 }
-                Match m = Regex.Match(res, "Device.DeviceInfo.SoftwareVersion => (?<fw_ver>.+)");
-                if (m.Success)
-                {
-                    fw_ver = m.Groups["fw_ver"].Value.Trim();
-                }
-                m = Regex.Match(res, "Device.DeviceInfo.HardwareVersion => (?<hw_ver>.+)");
-                if (m.Success)
-                {
-                    hw_ver = m.Groups["hw_ver"].Value.Trim();
-                }
-                m = Regex.Match(res, "Device.DeviceInfo.X_BT-COM_BaseMACAddress => (?<base_mac>.+)");
+                //Match m = Regex.Match(res, "Device.DeviceInfo.SoftwareVersion => (?<fw_ver>.+)");
+                //if (m.Success)
+                //{
+                //    fw_ver = m.Groups["fw_ver"].Value.Trim();
+                //}
+                //m = Regex.Match(res, "Device.DeviceInfo.HardwareVersion => (?<hw_ver>.+)");
+                //if (m.Success)
+                //{
+                //    hw_ver = m.Groups["hw_ver"].Value.Trim();
+                //}
+                Match m = Regex.Match(res, "Device.DeviceInfo.X_BT-COM_BaseMACAddress => (?<base_mac>.+)");
                 if (m.Success)
                 {
                     base_mac = m.Groups["base_mac"].Value.Trim();
                 }
-                m = Regex.Match(res, "Device.WiFi.SSID.1.SSID => (?<wifi_ssid>.+)");
+                m = Regex.Match(res, "Device.DeviceInfo.SerialNumber => (?<_sn>.+)");
                 if (m.Success)
                 {
-                    wifi_ssid = m.Groups["wifi_ssid"].Value.Trim();
+                    _sn = m.Groups["wifi_pwd"].Value.Trim();
                 }
+                //m = Regex.Match(res, "Device.WiFi.SSID.1.SSID => (?<wifi_ssid>.+)");
+                //if (m.Success)
+                //{
+                //    wifi_ssid = m.Groups["wifi_ssid"].Value.Trim();
+                //}
 
                 //SendAndChk(PortType.GOLDEN_SSH, $"python3 ./get.py -m ws -u admin -P {infor.Admin_PWD} -s {infor.SerialNumber} admin.txt", "root@OpenWrt:/wnc/build/usp# \r\n", out res, 0, 20 * 1000);
-                m = Regex.Match(res, "Device.WiFi.AccessPoint.1.Security.X_BT-COM_KeyPassphrase => (?<wifi_pwd>.+)");
-                if (m.Success)
-                {
-                    wifi_pwd = m.Groups["wifi_pwd"].Value.Trim();
-                }
+                //m = Regex.Match(res, "Device.WiFi.AccessPoint.1.Security.X_BT-COM_KeyPassphrase => (?<wifi_pwd>.+)");
+                //if (m.Success)
+                //{
+                //    wifi_pwd = m.Groups["wifi_pwd"].Value.Trim();
+                //}
 
                 DisplayMsg(LogType.Log, $"Spec fw_ver: {infor.FWver_Cust}");
                 DisplayMsg(LogType.Log, $"Spec hw_ver: {infor.HWver_Cust}");
                 DisplayMsg(LogType.Log, $"Spec base_mac: {infor.BaseMAC}");
-                DisplayMsg(LogType.Log, $"fw_ver: {fw_ver}");
-                DisplayMsg(LogType.Log, $"hw_ver: {hw_ver}");
+                //DisplayMsg(LogType.Log, $"fw_ver: {fw_ver}");
+                //DisplayMsg(LogType.Log, $"hw_ver: {hw_ver}");
                 DisplayMsg(LogType.Log, $"base_mac: {base_mac}");
 
-                if (string.Compare(fw_ver, infor.FWver_Cust) != 0 || string.Compare(hw_ver, infor.HWver_Cust) != 0 || string.Compare(base_mac, infor.BaseMAC) != 0)
+                //if (string.Compare(fw_ver, infor.FWver_Cust) != 0 || string.Compare(hw_ver, infor.HWver_Cust) != 0 || string.Compare(base_mac, infor.BaseMAC) != 0)
+                //{
+                //    DisplayMsg(LogType.Log, "Check board data fail");
+                //    AddData(item, 1);
+                //}
+                if (string.Compare(base_mac, infor.BaseMAC) != 0 || string.Compare(_sn, infor.SerialNumber) != 0)
                 {
                     DisplayMsg(LogType.Log, "Check board data fail");
                     AddData(item, 1);
@@ -711,13 +733,12 @@ namespace MiniPwrSupply.LMG1
                 {
                     DisplayMsg(LogType.Log, "Check board data pass");
                     DisplayMsg(LogType.Log, @"Disconnect LRG1 and LMG1, and in LRG1 SSH console, remove DHCP lease");
-                    SendAndChk(PortType.GOLDEN_SSH, "rm /tmp/dhcp.leases", "root@OpenWrt:/wnc/build/usp#", out res, 0, 3000);
-                    if (SendAndChk(PortType.GOLDEN_SSH, "/etc/init.d/dnsmasq restart", "root@OpenWrt:/wnc/build/usp#", out res, 0, 3000))
+                    SendAndChk(PortType.GOLDEN_SSH, "rm /tmp/dhcp.leases", "", out res, 0, 3000);
+                    if (SendAndChk(PortType.GOLDEN_SSH, "/etc/init.d/dnsmasq restart", "", out res, 0, 3000))
                     {
                         AddData(item, 0);
                     }
                 }
-
             }
             catch (Exception ex)
             {
@@ -727,9 +748,9 @@ namespace MiniPwrSupply.LMG1
             finally
             {
                 //upload data to SFCS
-                status_ATS.AddDataRaw("LRG1_FWver_Cust", infor.FWver_Cust, infor.FWver_Cust, "000000");
-                status_ATS.AddDataRaw("LRG1_HWver_Cust", infor.HWver_Cust, infor.HWver_Cust, "000000");
-                status_ATS.AddDataRaw("LRG1_BASE_MAC", infor.BaseMAC, infor.BaseMAC, "000000");
+                //status_ATS.AddDataRaw("LRG1_FWver_Cust", infor.FWver_Cust, infor.FWver_Cust, "000000");
+                //status_ATS.AddDataRaw("LRG1_HWver_Cust", infor.HWver_Cust, infor.HWver_Cust, "000000");
+                //status_ATS.AddDataRaw("LRG1_BASE_MAC", infor.BaseMAC, infor.BaseMAC, "000000");
             }
         }
         private void OpenFTPdmin()
@@ -754,7 +775,7 @@ namespace MiniPwrSupply.LMG1
                 Process process;
                 process = new Process();
                 process.StartInfo.WorkingDirectory = Application.StartupPath;
-                process.StartInfo.FileName = "ftpdmin.exe";
+                process.StartInfo.FileName = "ftpdmin.exe"; //certutil -hashfile indigo-sw4a-r2.15.3-R-924755-PROD-1_standard_loader_update.itb
                 process.StartInfo.Arguments = "."; //Using Application.StartupPath as root directory
                 process.StartInfo.CreateNoWindow = false;
                 status_ATS.AddLog("Start ftpdmin.exe...");
@@ -767,48 +788,81 @@ namespace MiniPwrSupply.LMG1
                 AddData("OpenFTPdmin", 1);
             }
         }
-        private void SwitchFW_INDIGO(string FW_FileName) //build>=EPR2-3
+        private void SwitchFW_INDIGO(string customerFW_FileName) //build>=EPR2-3
         {
             if (!CheckGoNoGo())
             {
                 return;
             }
             //certutil -hashfile 
-            string md5sum = Func.ReadINI("Setting", "FWSwitch", "EPR23_md5sum", "6cb2a3a0f4a60af39855387dc2e238c1");
-
+            string md5sum = Func.ReadINI("Setting", "FWSwitch", "EPR23_md5sum", "32659def0ddc7e012440ae75ad76359b");
+            string MD5_inPC = "";
             string PC_IP = WNC.API.Func.ReadINI("Setting", "IP", "PC", "192.168.1.2");
             string res = string.Empty;
             string item = "SwitchFW_INDIGO";
-            string keyword = "";
+            string keyword = "root@OpenWrt:~#";
             int index = 0;
             bool isMD5sum_OK = false;
+            string DUT_IP_New = WNC.API.Func.ReadINI("Setting", "CustomerFW", "DUT_IP_New", "192.168.1.1");
+            string absFwPath = Path.Combine(Application.StartupPath, customerFW_FileName);
             try
             {
                 DisplayMsg(LogType.Log, $"=================== {item} ===================");
-                if (!File.Exists(Path.Combine(Application.StartupPath, FW_FileName))) // md5
+                if (!File.Exists(absFwPath)) // md5
                 {
-                    DisplayMsg(LogType.Log, Path.Combine(Application.StartupPath, FW_FileName) + " doesn't exist!!");
+                    DisplayMsg(LogType.Log, absFwPath + " doesn't exist!!");
                     AddData(item, 1);
                     return;
                 }
-                SendAndChk(PortType.SSH, $"certutil -hashfile {FW_FileName} md5", "", out res, 0, 5000);
-                if (!res.Contains(md5sum)) //debug
+
+                DisplayMsg(LogType.Log, @"Disconnect LRG1 and LMG1, and in LRG1 SSH console, remove DHCP lease");
+                SendAndChk(PortType.GOLDEN_SSH, "rm /tmp/dhcp.leases", keyword, out res, 0, 3000);
+                if (SendAndChk(PortType.GOLDEN_SSH, "/etc/init.d/dnsmasq restart", keyword, out res, 0, 3000))
                 {
-                    DisplayMsg(LogType.Log, $"check {md5sum} NG");
-                    AddData(item, 1);
-                    return;
+                    AddData(item, 0);
                 }
-                SendAndChk(PortType.SSH, $"ftpget {PC_IP} {FW_FileName}", keyword, out res, 0, 10 * 1000);
-                if (res.Contains("No such file or directory") || res.Contains("Host is unreachable"))
+                //if (WNC.API.Func.ReadINI("Setting", "TFTP_min", "USE", "0") == "1")
                 {
-                    DisplayMsg(LogType.Log, "Download customer FW fail");
-                    AddData(item, 1);
-                    return;
+                    #region  start FTPdmin server
+                    KillTaskProcess("ftpdmin");
+                    Thread.Sleep(1000);
+                    //string TFTPminServer = WNC.API.Func.ReadINI("Setting", "TFTP_min", "Path", @"C:\");
+                    Process process;
+                    process = new Process();
+                    process.StartInfo.WorkingDirectory = Application.StartupPath;
+                    process.StartInfo.FileName = "ftpdmin.exe";
+                    process.StartInfo.Arguments = "."; //Using Application.StartupPath as root directory
+                    process.StartInfo.CreateNoWindow = false;
+                    status_ATS.AddLog("Start ftpdmin.exe...");
+                    process.Start();
+                    Thread.Sleep(1000);
+                    #endregion
                 }
-                SendAndChk(PortType.SSH, "cd /tmp", "root@OpenWrt:/tmp#", out res, 0, 3000);
+
+                SendAndChk(PortType.SSH, "cd /tmp", "root@OpenWrt:/tmp#", out res, 0, 5000);
+                SendAndChk(PortType.SSH, $"ftpget {PC_IP} {customerFW_FileName}", keyword, out res, 0, 10 * 1000);
+                // ================ remove from testplan =====================
+                //MD5_inPC = this.MakeMD5sum(customerFW_FileName);
+                //if (string.Compare(MD5_inPC, md5sum) == 0)
+                //{
+                //    //bool MD5_result = true;
+                //    DisplayMsg(LogType.Log, "MD5 check pass");
+                //}
+                //else
+                //{
+                //    DisplayMsg(LogType.Log, "MD5 check fail");
+                //    Thread.Sleep(1000);
+                //}
+                // ================ remove from testplan =====================
                 while (index++ < 5)
                 {
-                    SendAndChk(PortType.SSH, $"md5sum {FW_FileName}", keyword, out res, 0, 5000);
+                    SendAndChk(PortType.SSH, $"md5sum {customerFW_FileName}", "root@OpenWrt:/tmp#", out res, 0, 10000);
+                    if (res.Contains("No such file or directory") || res.Contains("Host is unreachable"))
+                    {
+                        DisplayMsg(LogType.Log, "Download customer FW fail");
+                        AddData(item, 1);
+                        return;
+                    }
                     if (res.Contains(md5sum)) // >>> need check it out 
                     {
                         isMD5sum_OK = true;
@@ -827,6 +881,21 @@ namespace MiniPwrSupply.LMG1
                     AddData(item, 1);
                     return;
                 }
+                SendAndChk(PortType.SSH, $"sysupgrade --target=iopsys -n -p -v {customerFW_FileName}", "", keyword, out res, 0, 10 * 1000);//Commencing upgrade
+                DisplayMsg(LogType.Log, @"Delay 4mins for FW upgrade & reboot");
+                Thread.Sleep(4 * 60 * 1000);
+                MessageBox.Show("make sure the light turn out to be Tianffy");
+                SendAndChk(PortType.UART, "\r\n", "", out res, 0, 8000);
+                if (res.Contains($"sw40j-119747-{infor.SerialNumber} login")) //sw40j-119747-2318000029
+                {
+                    DisplayMsg(LogType.Log, "Switch FW to INDIGO from WNC MFG PASS");
+                    AddData(item, 0);
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, "UR cannot access or Switch FW NG");
+                    AddData(item, 0);
+                }
             }
             catch (Exception ex)
             {
@@ -834,26 +903,21 @@ namespace MiniPwrSupply.LMG1
                 AddData(item, 1);
             }
         }
-        private void UpgradeCustFW_EPR2_3()
+        private void UpgradeCustFW_EPR2_3() //12.3.1  Switch FW to INDIGO from WNC MFG (build>=EPR2-3)
         {
             if (!CheckGoNoGo())
             {
                 return;
             }
             int retry_cnt = 3;
-            int index = 0;
             string item = "UpgradeCustFW";
-            string item1 = "Verify_Board_Data";
             string keyword = "root@OpenWrt:~# \r\n";
-            string keyword2 = "IPQ5332#";
+            //string keyword2 = "IPQ5332#";
             string res = "";
             string PC_IP = Func.ReadINI("Setting", "IP", "PC", "192.168.1.2");
             string CustFW_IP = Func.ReadINI("Setting", "IP", "CustFW", "192.168.1.254");
-            string CustFW_FW_FileName = Func.ReadINI("Setting", "FWSwitch", "CustFW_FW_FileName", "");
-            string CustFW_FW_boardVer = Func.ReadINI("Setting", "FWSwitch", "CustFW_FW_boardVer", "");
-            string FW_FileName = Func.ReadINI("Setting", "FWSwitch", "CustFW_FW_FileName", "indigo-sw4a-r2.15.3-R-924755_standard_loader_update.itb");
-            CustFW_FW_boardVer = CustFW_FW_boardVer.ToLower();
-            int PingTimeoutSec = Convert.ToInt32(Func.ReadINI("Setting", "FWSwitch", "PingTimeoutSec", "300"));
+            string FW_FileName = Func.ReadINI("Setting", "FWSwitch", "CustFW_FW_FileName", "indigo-sw4a-r2.15.3-R-924755-PROD-1_standard_loader_update.itb");
+            //int PingTimeoutSec = Convert.ToInt32(Func.ReadINI("Setting", "FWSwitch", "PingTimeoutSec", "300"));
             DisplayMsg(LogType.Log, "=============== Upgrade to Customer FW ===============");
             try
             {
@@ -863,26 +927,22 @@ namespace MiniPwrSupply.LMG1
                 {
                     return;
                 }
-                //download Customer FW
-                // ================== 12.3. Switch FW to INDIGO from WNC MFG (build>=EPR2-3) ==============
-                this.SwitchFW_INDIGO(FW_FileName);
+                // ================== 12.3.1 Switch FW to INDIGO from WNC MFG (build>=EPR2-3) ==============
+                MessageBox.Show("PreSetting LRG1 merely one time");
+                if (this.PreSettingLRG1())
+                {
+                    this.SwitchFW_INDIGO(FW_FileName);
+                }
+                if (!CheckGoNoGo()) { return; }
                 // ============================================================================================
-                retry_cnt = 3;
-                SendAndChk(PortType.SSH, $"sysupgrade --target=iopsys -n -p -v {FW_FileName}", "success", keyword, out res, 0, 10 * 1000);
-                DisplayMsg(LogType.Log, @"Delay 4mins for FW upgrade & reboot");
-                Thread.Sleep(4 * 60 * 1000);
-                if (ChkResponse(PortType.UART, ITEM.NONE, "Please press Enter to activate this console", out res, 200000))
+                if (ChkResponse(PortType.UART, ITEM.NONE, "", out res, 200 * 1000))
                 {
                     SendAndChk(PortType.UART, "\r\n", "login:", out res, 0, 10 * 5000);
                     SendAndChk(PortType.UART, "root", "Password:", out res, 0, 10 * 5000);
                     SendAndChk(PortType.UART, "5hut/ra1n.dr0prun@h0m3", "~#", out res, 0, 10 * 5000);
+                    SendAndChk(PortType.UART, "ifconfig | grep inet", "~#", out res, 0, 10 * 5000);
                 }
                 else
-                {
-                    AddData(item, 1);
-                    return;
-                }
-                if (!CheckGoNoGo())
                 {
                     AddData(item, 1);
                     return;
@@ -890,10 +950,127 @@ namespace MiniPwrSupply.LMG1
             }
             catch (Exception ex)
             {
-                DisplayMsg(LogType.Exception, ex.Message);
+                DisplayMsg(LogType.Exception, item + "_____" + ex.Message);
                 AddData(item, 1);
             }
-        }   //12.3.1  Switch FW to INDIGO from WNC MFG (build>=EPR2-3)
+            finally
+            {
+                UartDispose(uart);
+            }
+        }
+        private string MakeMD5sum(string Customer_FW)
+        {
+            string MD5_result = string.Empty;
+            try
+            {
+                KillTaskProcess("certutil");
+                Thread.Sleep(1000);
+                Process process;
+                process = new Process();
+                process.StartInfo.FileName = "certutil"; //
+                process.StartInfo.Arguments = $"-hashfile \"{Customer_FW}\" md5"; //Using Application.StartupPath as root directory
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.CreateNoWindow = true;
+                process.StartInfo.WorkingDirectory = Application.StartupPath;
+                process.Start();
+                Thread.Sleep(1000);
+                string error = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+                if (!string.IsNullOrEmpty(error))
+                {
+                    DisplayMsg(LogType.Log, $"MakeMD5sum Error: {error}");
+                }
+                else
+                {
+                    // Display the hash output
+                    //MD5_result = process.StandardOutput.ReadToEnd();
+                    string[] lines = process.StandardOutput.ReadToEnd().Split('\n');
+                    MD5_result = lines[1].Trim();
+                    DisplayMsg(LogType.Log, "MD5sum => " + MD5_result);
+                }
+                // try debug
+                MessageBox.Show("try debug");
+                process.Dispose();
+                process.Close();
+                process = null;
+                KillTaskProcess("certutil");
+                // try debug
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData("MakeMD5sum", 1);
+            }
+            finally
+            {
+                KillTaskProcess("certutil");
+                status_ATS.AddLog(" --------- MakeMD5sum via certutil --------- ");
+            }
+            return MD5_result;
+        }
+        private bool PreSettingLRG1()
+        {
+            bool IsPreSettingOK = false;
+            string keyword = "root@OpenWrt";
+            string item = "PreSettingLRG1";
+            string res = string.Empty;
+            string CopyToConfig = "cp /etc/config/* /overlay1/config/";
+            try
+            {
+                //connect to golden ssh
+                GoldenSshParameter();
+
+                if (!ChkInitial(PortType.GOLDEN_SSH, keyword, 120 * 1000))
+                {
+                    DisplayMsg(LogType.Log, "Golden SSH fail");
+                    AddData("GoldenSSH", 1);
+                    return IsPreSettingOK;
+                }
+
+                //check if golden mode
+                SendAndChk(PortType.GOLDEN_SSH, "fw_printenv", keyword, out res, 0, 3000);
+                if (!res.Contains("checkcust=1"))
+                {
+                    SendAndChk(PortType.GOLDEN_SSH, "fw_setenv checkcust 1", keyword, out res, 0, 3000);
+                    SendAndChk(PortType.GOLDEN_SSH, "reboot", keyword, out res, 0, 3000);
+                    DisplayMsg(LogType.Log, "Delay 15s");
+                    Thread.Sleep(15 * 1000);
+                    if (!ChkInitial(PortType.GOLDEN_SSH, keyword, 120 * 1000))
+                    {
+                        DisplayMsg(LogType.Log, "Golden SSH fail");
+                        AddData("GoldenSSH", 1);
+                        return IsPreSettingOK;
+                    }
+                }
+                SendAndChk(PortType.GOLDEN_SSH, "umount /dev/mmcblk0p30", keyword, out res, 1000, 5000);
+                SendAndChk(PortType.GOLDEN_SSH, "mkfs.ext4 /dev/mmcblk0p30", keyword, out res, 5000, 10 * 1000);
+                SendAndChk(PortType.GOLDEN_SSH, "mount -t ext4 /dev/mmcblk0p30 /overlay1/", keyword, out res, 5000, 10 * 1000);
+                SendAndChk(PortType.GOLDEN_SSH, "uci set system.@system[0].hostname='Golden for lmg1'", keyword, out res, 5000, 10 * 1000);
+                DisplayMsg(LogType.Log, @"constrain LMG1 IP address");
+                SendAndChk(PortType.GOLDEN_SSH, "uci set dhcp.lan.limit='1'", keyword, out res, 0, 3000);
+                SendAndChk(PortType.GOLDEN_SSH, "uci set dhcp.lan.start='200'", keyword, out res, 0, 3000);
+                SendAndChk(PortType.GOLDEN_SSH, "uci commit", keyword, out res, 0, 3000);
+                SendAndChk(PortType.GOLDEN_SSH, "mkdir /overlay1/config", keyword, out res, 0, 3000);
+                SendAndChk(PortType.GOLDEN_SSH, CopyToConfig, keyword, out res, 0, 3000);
+                SendAndChk(PortType.GOLDEN_SSH, $"echo \"{CopyToConfig}\" > /overlay1/externalScript.sh", keyword, out res, 0, 3000);
+                SendAndChk(PortType.GOLDEN_SSH, "chmod +x /overlay1/externalScript.sh", keyword, out res, 0, 3000);
+                SendAndChk(PortType.GOLDEN_SSH, "chmod +x /overlay1/config", keyword, out res, 0, 3000);
+                SendAndChk(PortType.GOLDEN_SSH, "sync", keyword, out res, 0, 3000);
+                if (SendAndChk(PortType.GOLDEN_SSH, "reboot", keyword, out res, 10 * 1000, 5000))
+                {
+                    IsPreSettingOK = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, item + "______" + ex.Message);
+                AddData(item, 1);
+            }
+            return IsPreSettingOK;
+        }
+
     }
 }
-
+    
