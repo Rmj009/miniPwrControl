@@ -9,15 +9,7 @@ using NationalInstruments.VisaNS;
 using System.IO.Ports;
 using System.Text.RegularExpressions;
 using EasyLibrary;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Management;
-
+using System.Security.Cryptography;
 namespace MiniPwrSupply.LMG1
 {
     public partial class LMG1_OTA
@@ -27,7 +19,6 @@ namespace MiniPwrSupply.LMG1
             Antenna_0 = 0x00,
             Antenna_1 = 0x01,
         }
-
         private void OTA()
         {
             try
@@ -37,12 +28,19 @@ namespace MiniPwrSupply.LMG1
 
                 if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
                 {
-                    string txPin = Func.ReadINI("Setting", "IO_Board_Control", "Pin0", "0");
                     string rev_message = "";
-                    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
-                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
-                    DisplayMsg(LogType.Log, rev_message);
+                    string txPin = "";
+                    for (int i = 0; i < 4; i++)
+                    {
+                        rev_message = "";
+                        txPin = Func.ReadINI("Setting", "IO_Board_Control", $"Pin{i}", "0");
+                        status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                        IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+                        DisplayMsg(LogType.Log, rev_message);
+                    }
+
                 }
+
                 else if (Func.ReadINI("Setting", "Port", "RelayBoard", "Disable").ToUpper() == "ENABLE")
                 {
                     SwitchRelay(CTRL.OFF);
@@ -55,6 +53,11 @@ namespace MiniPwrSupply.LMG1
                 DisplayMsg(LogType.Log, "Power on!!!");
 
                 ChkBootUp(PortType.SSH);
+
+                if (Func.ReadINI("Setting", "OTA", "SkipEthernet", "0") == "0")
+                {
+                    EthernetTest();
+                }
 
                 if (Func.ReadINI("Setting", "OTA", "SkipThread", "0") == "0")
                 {
@@ -75,13 +78,90 @@ namespace MiniPwrSupply.LMG1
             {
                 if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
                 {
-                    string txPin = Func.ReadINI("Setting", "IO_Board_Control", "Pin0", "0");
                     string rev_message = "";
-                    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
-                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
-                    DisplayMsg(LogType.Log, rev_message);
+                    string txPin = "";
+                    for (int i = 0; i < 4; i++)
+                    {
+                        rev_message = "";
+                        txPin = Func.ReadINI("Setting", "IO_Board_Control", $"Pin{i}", "0");
+                        status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
+                        IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
+                        DisplayMsg(LogType.Log, rev_message);
+                    }
+
                 }
+
                 else SwitchRelay(CTRL.ON);
+            }
+        }
+        private void EthernetTest()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            int retry_cnt;
+            string item = "EthernetTest";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string res = "";
+            bool P1_linkrate;
+            bool P2_linkrate;
+
+            try
+            {
+                DisplayMsg(LogType.Log, "=============== Ethernet Test ===============");
+
+                //LAN Port1~2
+                //LMG1直接接兩條ethernet,所以可同時測LAN port1 & port2
+                retry_cnt = 0;
+
+            LAN_Port_Test:
+                P1_linkrate = false;
+                P2_linkrate = false;
+                SendAndChk(PortType.SSH, "mt eth linkrate", keyword, out res, 0, 3000);
+                if (res.Contains($"port 1: {Func.ReadINI("Setting", "LinkRate", "Port1", "2500M")} FD"))
+                {
+                    P1_linkrate = true;
+                    DisplayMsg(LogType.Log, "Check LAN Port1 pass");
+                }
+                if (res.Contains($"port 2: {Func.ReadINI("Setting", "LinkRate", "Port2", "2500M")} FD"))
+                {
+                    P2_linkrate = true;
+                    DisplayMsg(LogType.Log, "Check LAN Port2 pass");
+                }
+
+                if (!P1_linkrate || !P2_linkrate)
+                {
+                    DisplayMsg(LogType.Log, $"Check LAN Port1 & Port2 fail");
+                    if (retry_cnt++ < 3)
+                    {
+                        frmOK.Label = "Vui lòng kiểm tra xem dây mạng của LAN Port1 và Port2 đã được kết nối đúng chưa";
+                        frmOK.ShowDialog();
+                        DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
+                        Thread.Sleep(1000);
+                        goto LAN_Port_Test;
+                    }
+                    else
+                    {
+                        if (!P1_linkrate)
+                            AddData("Eth_LAN_Port1", 1);
+                        if (!P2_linkrate)
+                            AddData("Eth_LAN_Port2", 1);
+                        return;
+                    }
+                }
+                else
+                {
+                    AddData(item, 0);
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
             }
         }
         private void ChkBootUp(PortType portType)
@@ -126,26 +206,14 @@ namespace MiniPwrSupply.LMG1
 
             int retry = 1;
             string item = "Thread";
-            string cmd = "";
             string res = "";
             string broadcast_pan_id = "";
             string broadcast_channel = "";
-
+            string cmd = Func.ReadINI("Setting", "setting", "Switch_Fw", "XXXX");
             try
             {
                 DisplayMsg(LogType.Log, "=============== Thread ===============");
-                if (this.SwitchDmpMode("0.1.2.7")) // judge FW greater or smaller
-                {
-                    if (this.SwitchDmpMode("0.2.0.4"))
-                    {
-                        cmd = "bt_upgrade_utility -f /lib/firmware/efr32/rcp4.3.0_no_encrypt_afh_coex_noTxLimit.gbl -p /dev/ttyMSM1";
-                    }
-                    cmd = "bt_upgrade_utility -f /lib/firmware/efr32/rcp4.3.0_no_encrypt_afh.gbl -p /dev/ttyMSM1";
-                }
-                else
-                {
-                    cmd = "bt_upgrade_utility -f /lib/firmware/efr32/rcp_no_encrypt_afh.gbl -p /dev/ttyMSM1";
-                }
+
             //這裡只有DUT要切換成DMP FW,陪測Golden需要手動切換一次就好
             //Switch to DMP(dynamic multi-protocol) FW
             //9/21/23 Frank update test plan change command to bt_upgrade_utility -f /lib/firmware/efr32/rcp_no_encrypt_afh.gbl -p /dev/ttyMSM1
@@ -424,43 +492,6 @@ namespace MiniPwrSupply.LMG1
                 DisplayMsg(LogType.Exception, ex.ToString());
                 AddData(item, 1);
             }
-        }
-        private bool SwitchDmpMode(string _version)
-        {
-            if (!CheckGoNoGo())
-            {
-                return false;
-            }
-            bool IsFwGreater = false;
-            string res = string.Empty;
-            string FWversion = string.Empty;
-            string item = $"SwitchDmpMode";
-            string keyword = "root@OpenWrt:~# \r\n";
-            DisplayMsg(LogType.Log, $"=============== {item} ===============");
-            Version targetVerison = new Version(_version);
-            //Version targetVerison = Version.Parse("1.0.0.0");
-            try
-            {
-                SendAndChk(PortType.SSH, "mt info", keyword, out res, 0, 3000);
-                Match m = Regex.Match(res, @"FW Version: (?<FWver>.+)");
-                if (m.Success)
-                {
-                    FWversion = m.Groups["FWver"].Value.Trim().Split('v')[1];
-                    DisplayMsg(LogType.Log, "DUT FWversion: " + FWversion);
-                    //string a = FWversion.Split('v')[1];
-                }
-                Version FwVer = Version.Parse(FWversion);
-                if (FwVer.CompareTo(targetVerison) > 0)
-                {
-                    IsFwGreater = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                DisplayMsg(LogType.Exception, $"{item}" + ex.Message);
-                AddData(item, 1);
-            }
-            return IsFwGreater;
         }
 
     }
