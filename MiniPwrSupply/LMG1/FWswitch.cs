@@ -609,32 +609,21 @@ namespace MiniPwrSupply.LMG1
             string item = "VerifyBoardData";
             string keyword = "root@OpenWrt";
             string res = "";
-            //string fw_ver = "";
+            string fw_ver = "";
             //string hw_ver = "";
             string base_mac = "";
             string _sn = "";
             //string wifi_ssid = "";
             //string wifi_pwd = "";
             int retryTime = 0;
+            string keyword2 = "root@Golden_for_lmg1:";
             DisplayMsg(LogType.Log, "=============== Verify MFG Board data ===============");
             try
             {
-                //for (int i = 0; i < 3; i++)
-                //{
-                //    if (SendAndChk(PortType.GOLDEN_SSH, "cd /wnc/build/usp", "root@OpenWrt:/wnc/build/usp#", out res, 0, 3000))
-                //    {
-                //        break;
-                //    }
-                //    else
-                //    {
-                //        AddData(item, 1);
-                //        return;
-                //    }
-                //}
                 SendAndChk(PortType.GOLDEN_SSH, "rm /tmp/dhcp.leases", keyword, out res, 0, 3000);
             pingRetry:
                 DisplayMsg(LogType.Log, @"Delay 150s upon test plan");
-                if (SendAndChk(PortType.GOLDEN_SSH, "/etc/init.d/dnsmasq restart", keyword, out res, 150 * 1000, 20 * 1000))
+                if (SendAndChk(PortType.GOLDEN_SSH, "/etc/init.d/dnsmasq restart", keyword, out res, 3 * 1000, 20 * 1000))
                 {
                     SendAndChk(PortType.GOLDEN_SSH, "ping 192.168.1.200 -c 1", "ms", out res, 1000, 10000);
                     if (res.Contains("1 packets received"))
@@ -659,10 +648,10 @@ namespace MiniPwrSupply.LMG1
                     AddData(item, 1);
                     return;
                 }
-                SendAndChk(PortType.GOLDEN_SSH, "cd /wnc/build/usp/", "root@OpenWrt:/wnc/build/usp#", out res, 1000, 10000);
+                SendAndChk(PortType.GOLDEN_SSH, "cd /wnc/build/usp/", keyword2, out res, 1000, 15000);
                 for (int i = 0; i < 20; i++)
                 {
-                    SendAndChk(PortType.GOLDEN_SSH, $"python3 ./get.py -m manufacturer -a ../certs/mqtt.indigo.cert.pem -k ../certs/manufacturer-wnc.key.pem -f ../certs/manufacturer-wnc.cert.pem -s +119747+{infor.SerialNumber} basic.txt --ipaddr 192.168.1.200", "root@OpenWrt:/wnc/build/usp#", out res, 0, 20 * 1000);
+                    SendAndChk(PortType.GOLDEN_SSH, $"python3 ./get.py -m manufacturer -a ../certs/mqtt.indigo.cert.pem -k ../certs/manufacturer-wnc.key.pem -f ../certs/manufacturer-wnc.cert.pem -s +119747+{infor.SerialNumber} basic.txt --ipaddr 192.168.1.200", keyword2, out res, 1000, 30 * 1000);
                     if (res.Contains("Device.DeviceInfo.SoftwareVersion"))
                     {
                         result = true;
@@ -679,17 +668,17 @@ namespace MiniPwrSupply.LMG1
                     AddData(item, 1);
                     return;
                 }
-                //Match m = Regex.Match(res, "Device.DeviceInfo.SoftwareVersion => (?<fw_ver>.+)");
-                //if (m.Success)
-                //{
-                //    fw_ver = m.Groups["fw_ver"].Value.Trim();
-                //}
+                Match m = Regex.Match(res, "Device.DeviceInfo.SoftwareVersion => (?<fw_ver>.+)");
+                if (m.Success)
+                {
+                    fw_ver = m.Groups["fw_ver"].Value.Trim();
+                }
                 //m = Regex.Match(res, "Device.DeviceInfo.HardwareVersion => (?<hw_ver>.+)");
                 //if (m.Success)
                 //{
                 //    hw_ver = m.Groups["hw_ver"].Value.Trim();
                 //}
-                Match m = Regex.Match(res, "Device.DeviceInfo.X_BT-COM_BaseMACAddress => (?<base_mac>.+)");
+                m = Regex.Match(res, "Device.DeviceInfo.X_BT-COM_BaseMACAddress => (?<base_mac>.+)");
                 if (m.Success)
                 {
                     base_mac = m.Groups["base_mac"].Value.Trim();
@@ -713,7 +702,7 @@ namespace MiniPwrSupply.LMG1
                 //}
 
                 DisplayMsg(LogType.Log, $"Spec fw_ver: {infor.FWver_Cust}");
-                DisplayMsg(LogType.Log, $"Spec hw_ver: {infor.HWver_Cust}");
+                //DisplayMsg(LogType.Log, $"Spec hw_ver: {infor.HWver_Cust}");
                 DisplayMsg(LogType.Log, $"Spec base_mac: {infor.BaseMAC}");
                 //DisplayMsg(LogType.Log, $"fw_ver: {fw_ver}");
                 //DisplayMsg(LogType.Log, $"hw_ver: {hw_ver}");
@@ -724,7 +713,7 @@ namespace MiniPwrSupply.LMG1
                 //    DisplayMsg(LogType.Log, "Check board data fail");
                 //    AddData(item, 1);
                 //}
-                if (string.Compare(base_mac, infor.BaseMAC) != 0 || string.Compare(_sn, infor.SerialNumber) != 0)
+                if (string.Compare(fw_ver, infor.FWver_Cust) != 0 || string.Compare(base_mac, infor.BaseMAC) != 0 || string.Compare(_sn, infor.SerialNumber) != 0)
                 {
                     DisplayMsg(LogType.Log, "Check board data fail");
                     AddData(item, 1);
@@ -748,9 +737,9 @@ namespace MiniPwrSupply.LMG1
             finally
             {
                 //upload data to SFCS
-                //status_ATS.AddDataRaw("LRG1_FWver_Cust", infor.FWver_Cust, infor.FWver_Cust, "000000");
-                //status_ATS.AddDataRaw("LRG1_HWver_Cust", infor.HWver_Cust, infor.HWver_Cust, "000000");
-                //status_ATS.AddDataRaw("LRG1_BASE_MAC", infor.BaseMAC, infor.BaseMAC, "000000");
+                status_ATS.AddDataRaw("LRG1_FWver_Cust", infor.FWver_Cust, infor.FWver_Cust, "000000");
+                status_ATS.AddDataRaw("LRG1_HWver_Cust", infor.HWver_Cust, infor.HWver_Cust, "000000");
+                status_ATS.AddDataRaw("LRG1_BASE_MAC", infor.BaseMAC, infor.BaseMAC, "000000");
             }
         }
         private void OpenFTPdmin()
@@ -800,7 +789,7 @@ namespace MiniPwrSupply.LMG1
             string PC_IP = WNC.API.Func.ReadINI("Setting", "IP", "PC", "192.168.1.2");
             string res = string.Empty;
             string item = "SwitchFW_INDIGO";
-            string keyword = "root@OpenWrt:~#";
+            string keyword = "root@Golden_for_lmg1:~#";
             int index = 0;
             bool isMD5sum_OK = false;
             string DUT_IP_New = WNC.API.Func.ReadINI("Setting", "CustomerFW", "DUT_IP_New", "192.168.1.1");
@@ -885,7 +874,7 @@ namespace MiniPwrSupply.LMG1
                 DisplayMsg(LogType.Log, @"Delay 4mins for FW upgrade & reboot");
                 Thread.Sleep(4 * 60 * 1000);
                 MessageBox.Show("make sure the light turn out to be Tianffy");
-                SendAndChk(PortType.UART, "\r\n", "", out res, 0, 8000);
+                SendAndChk(PortType.UART, "\r\n", "login:", out res, 0, 8000);
                 if (res.Contains($"sw40j-119747-{infor.SerialNumber} login")) //sw40j-119747-2318000029
                 {
                     DisplayMsg(LogType.Log, "Switch FW to INDIGO from WNC MFG PASS");
@@ -928,11 +917,16 @@ namespace MiniPwrSupply.LMG1
                     return;
                 }
                 // ================== 12.3.1 Switch FW to INDIGO from WNC MFG (build>=EPR2-3) ==============
-                MessageBox.Show("PreSetting LRG1 merely one time");
-                if (this.PreSettingLRG1())
+                //MessageBox.Show("PreSetting LRG1 merely one time");
+                //connect to golden ssh
+                GoldenSshParameter();
+                if (Func.ReadINI("Setting", "FWSwitch", "PreSettingLRG1", "0") == "0")
                 {
-                    this.SwitchFW_INDIGO(FW_FileName);
+                    int outcome = this.PreSettingLRG1() == true ? 0 : 1;
+                    AddData(item, outcome);
                 }
+                if (!CheckGoNoGo()) { return; }
+                this.SwitchFW_INDIGO(FW_FileName);
                 if (!CheckGoNoGo()) { return; }
                 // ============================================================================================
                 if (ChkResponse(PortType.UART, ITEM.NONE, "", out res, 200 * 1000))
@@ -940,7 +934,10 @@ namespace MiniPwrSupply.LMG1
                     SendAndChk(PortType.UART, "\r\n", "login:", out res, 0, 10 * 5000);
                     SendAndChk(PortType.UART, "root", "Password:", out res, 0, 10 * 5000);
                     SendAndChk(PortType.UART, "5hut/ra1n.dr0prun@h0m3", "~#", out res, 0, 10 * 5000);
-                    SendAndChk(PortType.UART, "ifconfig | grep inet", "~#", out res, 0, 10 * 5000);
+                    if (SendAndChk(PortType.UART, "ifconfig | grep 192.168.1.200", "~#", out res, 0, 10 * 5000))
+                    {
+                        DisplayMsg(LogType.Log, "192.168.1.200 exist!");
+                    }
                 }
                 else
                 {
@@ -1057,8 +1054,12 @@ namespace MiniPwrSupply.LMG1
                 SendAndChk(PortType.GOLDEN_SSH, $"echo \"{CopyToConfig}\" > /overlay1/externalScript.sh", keyword, out res, 0, 3000);
                 SendAndChk(PortType.GOLDEN_SSH, "chmod +x /overlay1/externalScript.sh", keyword, out res, 0, 3000);
                 SendAndChk(PortType.GOLDEN_SSH, "chmod +x /overlay1/config", keyword, out res, 0, 3000);
-                SendAndChk(PortType.GOLDEN_SSH, "sync", keyword, out res, 0, 3000);
-                if (SendAndChk(PortType.GOLDEN_SSH, "reboot", keyword, out res, 10 * 1000, 5000))
+                SendCommand(PortType.GOLDEN_SSH, "sync", 3000);
+                SendAndChk(PortType.GOLDEN_SSH, "reboot", "", out res, 10 * 1000, 5000);
+                DisplayMsg(LogType.Log, "Delay after reboot");
+                Thread.Sleep(25 * 1000);
+                SendAndChk(PortType.GOLDEN_SSH, "\r\n", "#", out res, 10 * 1000, 5000);
+                if (res.Contains("root@Golden_for_lmg1:~#"))
                 {
                     IsPreSettingOK = true;
                 }
@@ -1070,7 +1071,113 @@ namespace MiniPwrSupply.LMG1
             }
             return IsPreSettingOK;
         }
+        private void FWSwitch_FromIndigo_ToWNC()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
 
+            //接console & 網路線透過Bootloader更新FW,網路線需接到紅色Reset Button旁的lan port
+            //set PC's IP address to 192.168.1.2
+            DisplayMsg(LogType.Log, "=============== FWSwitch_FromIndigo_ToWNC ===============");
+
+            int retry_cnt = 3;
+            string res = "";
+            string item = "FWSwitch_ToWNC";
+            string FW_folder = Application.StartupPath + "\\upgrade";
+            string FW_image = Func.ReadINI("Setting", "PCBA", "FWimage", "emmc-ipq5332_64-single_lmg1_PROD_v0.2.0.5.img");
+
+            try
+            {
+            //stop device in bootloader
+            Enter_bootloader:
+                if (!BootLoader(uart))
+                {
+                    DisplayMsg(LogType.Log, "Enter bootloader fail");
+                    if (retry_cnt-- > 0)
+                    {
+                        DisplayMsg(LogType.Log, "Reboot DUT and retry...");
+                        frmOK.Label = "Vui lòng nhấn nút OK trước, sau đó khởi động lại thiết bị (DUT)";
+                        frmOK.ShowDialog();
+                        goto Enter_bootloader;
+                    }
+                    else
+                    {
+                        AddData(item, 1);
+                        return;
+                    }
+                }
+
+                OpenTftpd32(FW_folder);
+
+                DisplayMsg(LogType.Log, "Check FW image: " + Path.Combine(FW_folder, FW_image));
+                if (!File.Exists(Path.Combine(FW_folder, FW_image)))
+                {
+                    DisplayMsg(LogType.Log, "FW image doesn't exist");
+                    AddData(item, 1);
+                    return;
+                }
+                //setup ip
+                if (!SendAndChk(PortType.UART, $"setenv ipaddr 192.168.1.1", "IPQ5332#", out res, 5000, 100 * 1000))
+                {
+                    DisplayMsg(LogType.Log, "setup IP fail");
+                    AddData(item, 1);
+                    return;
+                }
+                if (!SendAndChk(PortType.UART, $"setenv serverip 192.168.1.2", "IPQ5332#", out res, 5000, 100 * 1000))
+                {
+                    DisplayMsg(LogType.Log, "setup IP fail");
+                    AddData(item, 1);
+                    return;
+                }
+
+                //write image
+                if (!SendAndChk(PortType.UART, $"tftpboot 0x44000000 {FW_image} && setenv machid 8060001 && imgaddr=0x44000000 && source $imgaddr:script", "Flashing gptbackup:                     [ done ]", out res, 5000, 100 * 1000))
+                {
+                    DisplayMsg(LogType.Log, "Write image fail");
+                    AddData(item, 1);
+                    return;
+                }
+                Thread.Sleep(10 * 1000);
+                //check [ done ]
+                int done_cnt = Regex.Matches(res, @"\[ done \]").Count;
+                DisplayMsg(LogType.Log, $"[ done ] count: {done_cnt}");
+                if (done_cnt < 13)
+                {
+                    DisplayMsg(LogType.Log, "Check [ done ] count fail");
+                    AddData(item, 1);
+                    return;
+                }
+                Thread.Sleep(5 * 1000);
+                //reboot device
+                if (!SendAndChk(PortType.UART, "reset", "resetting", out res, 0, 20000))
+                {
+                    DisplayMsg(LogType.Log, "Reboot device fail");
+                    AddData(item, 1);
+                    return;
+                }
+                if (res.Contains("Hit"))
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        SendAndChk(PortType.UART, "\r\n", "", 0, 1000);
+                    }
+                }
+                if (!SendAndChk(PortType.UART, "env default -a;env save;reset", "Saving Environment to MMC", 1000, 20 * 1000))
+                {
+                    DisplayMsg(LogType.Log, "env default >>> NG");
+                    AddData(item, 1);
+                    return;
+                }
+                AddData(item, 0);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                AddData(item, 1);
+            }
+        }
     }
 }
-    
+
