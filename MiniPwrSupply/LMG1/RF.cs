@@ -33,125 +33,157 @@ namespace MiniPwrSupply.LMG1
 
         private void RF_Test()
         {
+            //CreateIQC();
             try
             {
                 infor.ResetParam();
-
                 //SE_TODO: get infor from SFCS
-                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
-                //{
-                //    //SentPsnForGetMAC(status_ATS.txtPSN.Text.Trim());
-                //        DisplayMsg(LogType.Log, "Delay 1s...");
-                //        Thread.Sleep(1000);
-
-                //        string SN_name = Func.ReadINI("Setting", "FirehoseFW", "SN", "@LRG1_SN");
-                //        string MAC_name = Func.ReadINI("Setting", "FirehoseFW", "BaseMAC", "@MAC");
-                //        #region Check SN base on format
-                //        SFCS_Query _sfcsQuery = new SFCS_Query();
-                //        ATS_Template.SFCS_ATS_2_0.ATS ss = new ATS_Template.SFCS_ATS_2_0.ATS();
-                //        int snLength = Convert.ToInt32(Func.ReadINI("Setting", "Match", "SN_Length", "11"));
-                //        string snStartwith = Func.ReadINI("Setting", "Match", "SN_Start", "T");
-                //        GetFromSfcs("@LRG1_SN", out infor.SerialNumber);
-
-                //        if (infor.SerialNumber.Length == 18)
-                //        {
-                //            bool SN_check = CheckSN(infor.SerialNumber);
-                //            if (SN_check)
-                //            {
-                //                SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                //                //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
-                //                status_ATS.SFCS_Data.PSN = infor.SerialNumber;
-                //                status_ATS.SFCS_Data.First_Line = infor.SerialNumber;
-                //            }
-                //            else
-                //            {
-                //                warning = "Get SN from SFCS fail";
-                //            }
-
-                //        }
-                //        else
-                //        {
-                //            warning = "Get SN from SFCS fail";
-                //            return;
-                //        }
-                //        #endregion Check SN base on format
-
-
-                //    infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
-                //    infor.BaseMAC = MACConvert(infor.BaseMAC);
-                //    DisplayMsg(LogType.Log, "Base MAC Convert" + infor.BaseMAC);
-                //    //WiFi 2.4G MAC = BaseMAC+4
-                //    infor.WiFiMAC_2G = MACConvert(infor.BaseMAC, 4);
-                //    //WiFi 5G MAC = BaseMAC+3
-                //    infor.WiFiMAC_5G = MACConvert(infor.BaseMAC, 3);
-                //    //WiFi 6G MAC = BaseMAC+2
-                //    infor.WiFiMAC_6G = MACConvert(infor.BaseMAC, 2);
-
-                //    DisplayMsg(LogType.Log, $"WiFiMAC_2G: {infor.WiFiMAC_2G}");
-                //    DisplayMsg(LogType.Log, $"WiFiMAC_5G: {infor.WiFiMAC_5G}");
-                //    DisplayMsg(LogType.Log, $"WiFiMAC_6G: {infor.WiFiMAC_6G}");
-
-                //}
-                //else
-                //{
-                //    //Rena_20230627, for HQ RF stress test
-                //    //get SN and BaseMAC
-                //    //GetBoardDataFromExcel(status_ATS.txtPSN.Text, true);
-                //    GetBoardDataFromExcel1();
-
-                //    if (isLoop == 0)
-                //        infor.BaseMAC = MACConvert(infor.BaseMAC);
-                //    else
-                //        infor.BaseMAC = MACConvert("E8:C7:CF:AF:4D:D0", Loopcnt * 8); //for HQ stress test only
-
-                //    //WiFi 2.4G MAC = BaseMAC+4
-                //    infor.WiFiMAC_2G = MACConvert(infor.BaseMAC, 4);
-                //    //WiFi 5G MAC = BaseMAC+3
-                //    infor.WiFiMAC_5G = MACConvert(infor.BaseMAC, 3);
-                //    //WiFi 6G MAC = BaseMAC+2
-                //    infor.WiFiMAC_6G = MACConvert(infor.BaseMAC, 2);
-
-                //    DisplayMsg(LogType.Log, $"BaseMAC: {infor.BaseMAC}");
-                //    DisplayMsg(LogType.Log, $"WiFiMAC_2G: {infor.WiFiMAC_2G}");
-                //    DisplayMsg(LogType.Log, $"WiFiMAC_5G: {infor.WiFiMAC_5G}");
-                //    DisplayMsg(LogType.Log, $"WiFiMAC_6G: {infor.WiFiMAC_6G}");
-
-                //}
-
-
+                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                {
+                    //SentPsnForGetMAC(status_ATS.txtPSN.Text.Trim());
+                    DisplayMsg(LogType.Log, "Delay 1s...");
+                    Thread.Sleep(1000);
+                    string SN_name = Func.ReadINI("Setting", "FirehoseFW", "SN", "@LRG1_SN");
+                    string MAC_name = Func.ReadINI("Setting", "FirehoseFW", "BaseMAC", "@MAC");
+                    #region Check SN base on format
+                    SFCS_Query _sfcsQuery = new SFCS_Query();
+                    ATS_Template.SFCS_ATS_2_0.ATS ss = new ATS_Template.SFCS_ATS_2_0.ATS();
+                    int snLength = Convert.ToInt32(Func.ReadINI("Setting", "Match", "SN_Length", "11"));
+                    string snStartwith = Func.ReadINI("Setting", "Match", "SN_Start", "T");
+                    GetFromSfcs("@LRG1_SN", out infor.SerialNumber);
+                    if (infor.SerialNumber.Length == 18)
+                    {
+                        bool SN_check = CheckSN(infor.SerialNumber);
+                        if (SN_check)
+                        {
+                            SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                            //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                            status_ATS.SFCS_Data.PSN = infor.SerialNumber;
+                            status_ATS.SFCS_Data.First_Line = infor.SerialNumber;
+                        }
+                        else
+                        {
+                            warning = "Get SN from SFCS fail";
+                        }
+                    }
+                    else
+                    {
+                        warning = "Get SN from SFCS fail";
+                        return;
+                    }
+                    #endregion Check SN base on format
+                    infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
+                    infor.BaseMAC = MACConvert(infor.BaseMAC);
+                    DisplayMsg(LogType.Log, "Base MAC Convert" + infor.BaseMAC);
+                    //WiFi 2.4G MAC = BaseMAC+4
+                    infor.WiFiMAC_2G = MACConvert(infor.BaseMAC, 4);
+                    //WiFi 5G MAC = BaseMAC+3
+                    infor.WiFiMAC_5G = MACConvert(infor.BaseMAC, 3);
+                    //WiFi 6G MAC = BaseMAC+2
+                    infor.WiFiMAC_6G = MACConvert(infor.BaseMAC, 2);
+                    DisplayMsg(LogType.Log, $"WiFiMAC_2G: {infor.WiFiMAC_2G}");
+                    DisplayMsg(LogType.Log, $"WiFiMAC_5G: {infor.WiFiMAC_5G}");
+                    DisplayMsg(LogType.Log, $"WiFiMAC_6G: {infor.WiFiMAC_6G}");
+                }
+                else
+                {
+                    //Rena_20230627, for HQ RF stress test
+                    //get SN and BaseMAC
+                    //GetBoardDataFromExcel(status_ATS.txtPSN.Text, true);
+                    //GetFromSfcs("@LRG1_SN", out infor.SerialNumber);
+                    //infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
+                    //if (string.IsNullOrEmpty(infor.BaseMAC)) GetBoardDataFromExcel1();
+                    //SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                    //if (isLoop == 0)
+                    //    infor.BaseMAC = MACConvert(infor.BaseMAC);
+                    //else
+                    //    infor.BaseMAC = MACConvert("E8:C7:CF:AF:4D:D0", Loopcnt * 8); //for HQ stress test only
+                    GetBoardDataFromExcel1();
+                    //WiFi 2.4G MAC = BaseMAC+4
+                    infor.WiFiMAC_2G = MACConvert(infor.BaseMAC, 4);
+                    //WiFi 5G MAC = BaseMAC+3
+                    infor.WiFiMAC_5G = MACConvert(infor.BaseMAC, 3);
+                    //WiFi 6G MAC = BaseMAC+2
+                    infor.WiFiMAC_6G = MACConvert(infor.BaseMAC, 2);
+                    DisplayMsg(LogType.Log, $"BaseMAC: {infor.BaseMAC}");
+                    DisplayMsg(LogType.Log, $"WiFiMAC_2G: {infor.WiFiMAC_2G}");
+                    DisplayMsg(LogType.Log, $"WiFiMAC_5G: {infor.WiFiMAC_5G}");
+                    DisplayMsg(LogType.Log, $"WiFiMAC_6G: {infor.WiFiMAC_6G}");
+                }
                 //if (!ChkStation(status_ATS.txtPSN.Text))
                 //    return;
-
-                if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
-                {
-                    string txPin = Func.ReadINI("Setting", "IO_Board_Control", "Pin0", "0");
-                    string rev_message = "";
-                    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
-                    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
-                    DisplayMsg(LogType.Log, rev_message);
-                }
-                else if (Func.ReadINI("Setting", "Port", "RelayBoard", "Disable").ToUpper() == "ENABLE")
+                //if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
+                //{
+                //    string txPin = Func.ReadINI("Setting", "IO_Board_Control", "Pin0", "0");
+                //    string rev_message = "";
+                //    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                //    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+                //    DisplayMsg(LogType.Log, rev_message);
+                //}
+                //else if (Func.ReadINI("Setting", "Port", "RelayBoard", "Disable").ToUpper() == "ENABLE")
                 {
                     SwitchRelay(CTRL.ON);
                     Thread.Sleep(5 * 1000);
                     SwitchRelay(CTRL.OFF);
                 }
-                else
-                {
-                    if (isLoop == 0)
-                    {
-                        frmOK.Label = "Vui lòng cắm điện và nhấn nút nguồn để bật máy";
-                        frmOK.ShowDialog();
-                    }
-
-                }
+                //else
+                //{
+                //    if (isLoop == 0)
+                //    {
+                //        frmOK.Label = "Vui lòng cắm điện và nhấn nút nguồn để bật máy";
+                //        frmOK.ShowDialog();
+                //    }
+                //}
                 DisplayMsg(LogType.Log, "Power on!!!");
+                //#region on power button
+                //DisplayMsg(LogType.Log, $"Delay {Convert.ToInt32(WNC.API.Func.ReadINI(Application.StartupPath, "Setting", "TimeOut", "DelayPower", "1000"))}ms");
+                //Thread.Sleep(Convert.ToInt32(WNC.API.Func.ReadINI(Application.StartupPath, "Setting", "TimeOut", "DelayPower", "1000")));
+                //string cameraResult = "";
+                //int n = 0;
+                //retryBTN:
+                //if (Camera())
+                //{
+                //    if (CheckCameraResult($"item_1", $"black", out cameraResult))
+                //    {
+                //        if (fixture.useFixture)
+                //        {
+                //            fixture.ControlIO(Fixture.FixtureIO.IO_5, CTRL.ON);
+                //            fixture.ControlIO(Fixture.FixtureIO.IO_5, CTRL.OFF);
+                //        }
+                //        else
+                //        {
+                //            frmOK.Label = "DUT chưa lên nguồn, hãy bật nguồn sau đó nhấn [OK]";
+                //            frmOK.ShowDialog();
+                //        }
+                //    }
+                //}
+                //if (Camera())
+                //{
+                //    if (CheckCameraResult($"item_1", $"black", out cameraResult))
+                //    {
+                //        if (fixture.useFixture)
+                //        {
+                //            n++;
+                //            if (n < 3)
+                //            {
+                //                DisplayMsg(LogType.Log, "Retry -->");
+                //                goto retryBTN;
+                //            }
+                //        }
+                //        else
+                //        {
+                //            frmOK.Label = "DUT chưa lên nguồn, hãy bật nguồn sau đó nhấn [OK]";
+                //            frmOK.ShowDialog();
+                //        }
+                //    }
+                //}
+                //#endregion
 
                 ChkBootUp(PortType.SSH);
-
-                if (isLoop == 0)
-                    CheckEthernetMAC();
-
+                // =============== remove bcoz testPlan testflow =====================
+                //if (isLoop == 0)  //bcoz PCBA did not write MAC
+                //    CheckEthernetMAC();
+                // ==================================================================
                 //BLE & Thread透過uart
                 //這裡的uart是接到BLE bridge,不是接DUT
                 if (Func.ReadINI("Setting", "RF", "SkipBLE", "0") == "0" || Func.ReadINI("Setting", "RF", "SkipThread", "0") == "0")
@@ -162,7 +194,6 @@ namespace MiniPwrSupply.LMG1
                     //ChkBootUp(PortType.UART, "Wrt:/#");
                     CheckBridgeIP();
                 }
-
                 if (Func.ReadINI("Setting", "RF", "SkipBLE", "0") == "0")
                 {
                     RF_BLE();
@@ -176,6 +207,9 @@ namespace MiniPwrSupply.LMG1
                 if (Func.ReadINI("Setting", "RF", "SkipWiFi", "0") == "0")
                 {
                     RF_WiFi();
+                    EthernetTest(true);
+                    if (!CheckGoNoGo()) { return; }
+                    //this.ArtChksum();
                 }
             }
             catch (Exception ex)
@@ -312,11 +346,12 @@ namespace MiniPwrSupply.LMG1
 
             try
             {
-                //LMG1重開機機時會去抓先前產生的Cal data,導致後續重K的值不會寫入,所以必須先清除Cal data
-                if (!isGolden && status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
-                {
+                //LMG1重開機機時會去抓先前產生的Cal data, 導致後續重K的值不會寫入, 所以必須先清除Cal data
+                //if (!isGolden && status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                {   // Must removeCalData() after ran EthernetTest() while running stress test
                     RemoveCalData();
                     RebootDUT();
+
                 }
 
                 EnterWiFiTestMode();
@@ -328,14 +363,14 @@ namespace MiniPwrSupply.LMG1
                 if (!CheckGoNoGo()) { return; }
                 RunIQFact(RFTestItem.WiFi);
 
-                if (!isGolden && status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
-                {
-                    CheckWiFiCalData();
-                }
-                else
-                {
-                    DisplayMsg(LogType.Log, "Golden DUT or Engineer mode skip WiFiCalData");
-                }
+                //if (!isGolden && status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                //{
+                //    CheckWiFiCalData();
+                //}
+                //else
+                //{
+                //    DisplayMsg(LogType.Log, "Golden DUT or Engineer mode skip WiFiCalData");
+                //}
 
 
                 if (CheckGoNoGo())
@@ -452,12 +487,12 @@ namespace MiniPwrSupply.LMG1
                 res = "";
                 int retry = 0;
             Entercommand:
-                if (SendAndChk(PortType.UART, "\r\n", "No command found", 2000, 3000))
+                if (SendAndChk(PortType.UART, "\r\n", ">", 2000, 3000))
                 {
                     //Thread.Sleep(3000);
                     // SendCommand(PortType.UART, "\r\n","no command", 2000);
                     DisplayMsg(LogType.Log, "Get Ctune");
-                    string Ctune = Func.ReadINI("Setting", "Setting", "Ctune", "{{(getCtune)}{CTUNEXIANA:0x06a}{CTUNEXOANA:0x06a}}");
+                    string Ctune = Func.ReadINI("Setting", "Setting", "Ctune", "xxxx");
                     // bool chkCtune = SendAndChk(PortType.UART, "getCtune", Ctune,out res, 2000, 3000);
                     bool chkCtune = SendAndChk(PortType.UART, "getCtune", Ctune, out res, 2000, 3000);
                     if (chkCtune)
@@ -535,9 +570,9 @@ namespace MiniPwrSupply.LMG1
                 DisplayMsg(LogType.Log, "Enable BLE FTM via bridge");
             pingRetry:
                 DisplayMsg(LogType.Log, "------ Ping DUT via Golen ------");
-                SendAndChk(PortType.UART, "ping 192.168.1.1", keyword_bridge, out res, 0, 15 * 1000);
-                SendCommand(PortType.UART, sCtrlC, 500);
-                if (res.Contains("ms"))
+                SendAndChk(PortType.UART, "ping 192.168.1.1 -c 1", keyword_bridge, out res, 0, 10 * 1000);
+                //SendCommand(PortType.UART, sCtrlC, 500);
+                if (res.Contains("1 packets received"))
                 {
                     AddData("Golden_PING_DUT_PASS", 0);
                     DisplayMsg(LogType.Log, "Golden_PING_DUT_PASS");
@@ -559,11 +594,16 @@ namespace MiniPwrSupply.LMG1
                         }
                     }
                 }
-                SendAndChk(PortType.UART, "ssh 192.168.1.1 -y -y", keyword_bridge, "", out res, 0, 20 * 1000);
+                if (!SendAndChk(PortType.UART, "ssh 192.168.1.1 -y -y", keyword, out res, 0, 20 * 1000))
+                {
+                    DisplayMsg(LogType.Log, @"SSH into DUT NG");
+                    AddData(item, 1);
+                    return;
+                }
                 for (int i = 0; i < 5; i++)
                 {
                     SendAndChk(PortType.SSH, "\n", "", out res, 0, 1000);
-                    DisplayMsg(LogType.Log, res);
+                    //DisplayMsg(LogType.Log, res);
                     if (res.Contains("root@Bridge_golden"))
                     {
                         break;
@@ -720,7 +760,10 @@ namespace MiniPwrSupply.LMG1
                     _RFTestPlan = Func.ReadINI("Setting", "RF", $"TestPlan_{testItem.ToString()}", string.Empty);
                 }
 
-                _RFTimeOutSec = Convert.ToInt32(Func.ReadINI("Setting", "RF", $"TimeOutSec_{testItem.ToString()}", "180"));
+                //_RFTimeOutSec = Convert.ToInt32(Func.ReadINI("Setting", "RF", $"TimeOutSec_{testItem.ToString()}", "180"));
+                // =================== debug CheckWiFiLog =================================
+                _RFTimeOutSec = Convert.ToInt32(320);
+                // =================== debug CheckWiFiLog =================================
                 DisplayMsg(LogType.Log, $"Tool: {_RFTool}");
                 DisplayMsg(LogType.Log, $"Log: {_RFLog}");
                 DisplayMsg(LogType.Log, $"TestPlan: {_RFTestPlan}");
@@ -775,7 +818,7 @@ namespace MiniPwrSupply.LMG1
             }
 
             string item = $"RF_{testItem.ToString()}";
-
+            //string path = @"C:\LitePoint\IQfact_plus\IQfact+_QCA_9224_5.0.0.13_Lock\bin\";
             try
             {
                 Process process;
@@ -789,6 +832,19 @@ namespace MiniPwrSupply.LMG1
                 process.Start();
                 DisplayMsg(LogType.Log, "Wait for exit..");
 
+                //// chk IQFACT run or not
+                //if (!CheckToolExist(Path.GetDirectoryName(path) + "IQfactRun_Console.exe"))
+                //{
+                //    if (!OpenTestTool(Path.GetDirectoryName(path), "IQfactRun_Console.exe", "", 3000))
+                //    {
+                //        status_ATS.Write_Warning("Open IQfactRun_Console.exe error", StatusUI2.StatusUI.StatusProc.Warning);
+                //        DisplayMsg(LogType.Error, @"IQfactRun_Console did not open!!!!!!");
+                //    }
+                //    else
+                //    {
+                //        DisplayMsg(LogType.Log, @"IQfactRun_Console.exe check OK");
+                //    }
+                //}
                 if (ChkResult(testItem))
                 {
                     Analyze_RFLog(testItem);
@@ -799,6 +855,17 @@ namespace MiniPwrSupply.LMG1
                 process.Dispose();
                 process.Close();
                 process = null;
+                if (!OpenTestTool(Path.GetDirectoryName(@"C:\LitePoint\IQfact_plus\IQfact+_QCA_9224_5.0.0.13_Lock\bin\"), "IQfactRun_Console.exe", "", 3000))
+                {
+                    status_ATS.Write_Warning("Open IQfactRun_Console.exe error", StatusUI2.StatusUI.StatusProc.Warning);
+                    DisplayMsg(LogType.Error, @"IQfactRun_Console check twice_____NG!!!!!!");
+                }
+                else
+                {
+                    DisplayMsg(LogType.Log, @"IQfactRun_Console.exe check twice_____OK");
+                }
+                DisplayMsg(LogType.Log, @"Delay after Dispose");
+                Thread.Sleep(10 * 1000);
                 KillTaskProcess("IQfactRun_Console");
             }
             catch (Exception ex)
@@ -813,7 +880,7 @@ namespace MiniPwrSupply.LMG1
             {
                 return false;
             }
-
+            string path = @"C:\LitePoint\IQfact_plus\IQfact+_QCA_9224_5.0.0.13_Lock\bin\";
             string item = $"Check{testItem.ToString()}Log";
 
             try
@@ -827,12 +894,26 @@ namespace MiniPwrSupply.LMG1
                 TimeSpan ts;
                 dt = DateTime.Now;
 
+                // chk IQFACT run or not
+                if (!CheckToolExist(Path.GetDirectoryName(path) + "IQfactRun_Console.exe"))
+                {
+                    if (!OpenTestTool(Path.GetDirectoryName(path), "IQfactRun_Console.exe", "", 3000))
+                    {
+                        status_ATS.Write_Warning("Open IQfactRun_Console.exe error", StatusUI2.StatusUI.StatusProc.Warning);
+                        DisplayMsg(LogType.Error, @"IQfactRun_Console did not open!!!!!!");
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, @"IQfactRun_Console.exe check OK");
+                    }
+                }
                 while (true)
                 {
                     ts = new TimeSpan(DateTime.Now.Ticks - dt.Ticks);
                     if (ts.TotalMilliseconds > timeOutMs)
                     {
                         DisplayMsg(LogType.Error, "Check log timeout");
+                        MessageBox.Show("debug for CheckWiFiLog"); //lucky request 12/21
                         AddData(item, 1);
                         return false;
                     }
@@ -1526,37 +1607,6 @@ namespace MiniPwrSupply.LMG1
                 AddData(test_item, 1);
             }
         }
-        private void RemoveCalData()
-        {
-            if (!CheckGoNoGo())
-            {
-                return;
-            }
-
-            string res = "";
-            string keyword = "root@OpenWrt:~# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:~#"
-            string item = "RemoveCalData";
-
-            try
-            {
-                DisplayMsg(LogType.Log, "Remove Calibration Data");
-
-                SendAndChk(PortType.SSH, "rm /lib/firmware/IPQ5332/caldata.bin", keyword, 0, 3000);
-                SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_1.bin", keyword, 0, 3000);
-                SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_2.bin", keyword, 0, 3000);
-
-                SendAndChk(PortType.SSH, "dd of=/tmp/mac if=/dev/mmcblk0p18 bs=1 count=12", keyword, 0, 10 * 1000);
-                SendAndChk(PortType.SSH, "dd if=/dev/zero of=/dev/mmcblk0p18", keyword, 0, 10 * 1000);
-                SendAndChk(PortType.SSH, "dd if=/tmp/mac of=/dev/mmcblk0p18 bs=1 count=12", keyword, 0, 10 * 1000);
-
-                AddData(item, 0);
-            }
-            catch (Exception ex)
-            {
-                DisplayMsg(LogType.Exception, ex.Message);
-                AddData(item, 1);
-            }
-        }
         private void EnterWiFiTestMode()
         {
             if (!CheckGoNoGo())
@@ -1568,24 +1618,35 @@ namespace MiniPwrSupply.LMG1
             string keyword = "root@OpenWrt:~# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:~#"
             string item = "EnterWiFiTestMode";
             string PC_IP = Func.ReadINI("Setting", "IP", "PC", "192.168.1.66");
-
+            bool IsCmdOK = false;
             try
             {
                 DisplayMsg(LogType.Log, "Enter WiFi test mode");
                 DisplayMsg(LogType.Log, $"PC_IP : {PC_IP}");
-                SendAndChk(PortType.SSH, "rmmod ath12k", keyword, 0, 30 * 1000);
-                SendAndChk(PortType.SSH, "insmod ath12k.ko dyndbg=+p ftm_mode=1", keyword, 0, 3000);
-
+                for (int i = 0; i < 10; i++)
+                {
+                    SendAndChk(PortType.SSH, "rmmod ath12k", keyword, out res, 0, 30 * 1000);
+                    if (res.Contains("module is not loaded"))
+                    {
+                        IsCmdOK = true;
+                        break;
+                    }
+                    SendCommand(PortType.SSH, sCtrlC, 500);
+                    ChkResponse(PortType.SSH, ITEM.NONE, keyword, out res, 5000);
+                    Thread.Sleep(1000);
+                }
+                SendAndChk(PortType.SSH, "insmod ath12k.ko dyndbg=+p ftm_mode=1", keyword, 0, 30 * 1000);
                 //diag_socket_app connect前要先打開QUTS並設定好
-                SendAndChk(PortType.SSH, $"diag_socket_app -a {PC_IP} &", "logging", out res, 0, 30 * 1000);
+                SendAndChk(PortType.SSH, $"diag_socket_app -a {PC_IP} &", "logging", out res, 3000, 30 * 1000);
                 if (!res.Contains("Successful connect to address:"))
                 {
                     DisplayMsg(LogType.Log, $"Connect to {PC_IP} fail");
+                    MessageBox.Show("DIAG_SOCKET >>>> NG");
                     AddData(item, 1);
                     return;
                 }
                 SendAndChk(PortType.SSH, "cp /etc/wifi/ftm.conf /tmp/ftm.conf", keyword, 0, 3000);
-                SendAndChk(PortType.SSH, "/usr/sbin/ftm -n -c /tmp/ftm.conf &", keyword, 0, 3000);
+                SendAndChk(PortType.SSH, "/usr/sbin/ftm -n -c /tmp/ftm.conf &", keyword, 1000, 3000);
                 //============================================================================================
                 //SendAndChk(PortType.SSH, "wifi down", keyword, 0, 30 * 1000);
                 //SendAndChk(PortType.SSH, "rmmod ecm_wifi_plugin", keyword, 0, 3000);
@@ -1649,7 +1710,7 @@ namespace MiniPwrSupply.LMG1
                 else if (Func.ReadINI("Setting", "Port", "RelayBoard", "Disable").ToUpper() == "ENABLE")
                 {
                     SwitchRelay(CTRL.ON);
-                    Thread.Sleep(3000);
+                    Thread.Sleep(6000);
                     SwitchRelay(CTRL.OFF);
                 }
                 else
@@ -1659,6 +1720,8 @@ namespace MiniPwrSupply.LMG1
                 }
 
                 ChkBootUp(PortType.SSH);
+                DisplayMsg(LogType.Log, @"Delay after PING_OK");
+                Thread.Sleep(30 * 1000);
             }
             catch (Exception ex)
             {
@@ -1690,10 +1753,15 @@ namespace MiniPwrSupply.LMG1
                 DisplayMsg(LogType.Log, $"Mac_2G: {infor.WiFiMAC_2G}");
                 DisplayMsg(LogType.Log, $"Mac_5G: {infor.WiFiMAC_5G}");
                 DisplayMsg(LogType.Log, $"Mac_6G: {infor.WiFiMAC_6G}");
-                // ========================== for stress test ====================================
+
+                /// ========================== for stress test ====================================
                 //infor.WiFiMAC_2G = "AC:91:9B:57:2A:10";
                 //infor.WiFiMAC_5G = "AC:91:9B:57:2A:0F";
                 //infor.WiFiMAC_6G = "AC:91:9B:57:2A:0E";
+                //---------------------------------------------
+                //infor.WiFiMAC_2G = "E8.C7.CF.AF.42.40";
+                //infor.WiFiMAC_5G = "E8.C7.CF.AF.42.41";
+                //infor.WiFiMAC_6G = "E8.C7.CF.AF.42.42";
                 // ===============================================================================
                 // check if MAC exist
                 if (string.IsNullOrEmpty(infor.WiFiMAC_2G) || string.IsNullOrEmpty(infor.WiFiMAC_2G) || string.IsNullOrEmpty(infor.WiFiMAC_2G))
@@ -1809,7 +1877,6 @@ namespace MiniPwrSupply.LMG1
             }
             return IsFwGreater;
         }
-        
 
     }
 }
