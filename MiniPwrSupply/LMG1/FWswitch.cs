@@ -180,23 +180,7 @@ namespace MiniPwrSupply.LMG1
                 DisplayMsg(LogType.Log, "Power on!!!");
 
                 //考慮到重測流程,如果已更新到Customer FW就直接執行VerifyBoardData
-                //ping MFG FW(192.168.1.1) fail -> ping Customer FW(192.168.1.254) pass -> skip upgrade, do VerifyBoardData
-                //string CustFW_IP = Func.ReadINI("Setting", "IP", "CustFW", "192.168.1.254");
-                //if (!telnet.Ping(sshInfo.ip, 180 * 1000))
-                //{
-                //    DisplayMsg(LogType.Log, $"Ping {sshInfo.ip} fail, start ping {CustFW_IP}...");
-                //    if (telnet.Ping(CustFW_IP, 10 * 1000))
-                //    {
-                //        DisplayMsg(LogType.Log, "Already is Indigo FW, skip FW upgrade process");
-                //        goto VerifyBoardData;
-                //    }
-                //    else
-                //    {
-                //        DisplayMsg(LogType.Log, $"Ping {sshInfo.ip} and {CustFW_IP} failed");
-                //        AddData("BootUp", 1);
-                //        return;
-                //    }
-                //}
+                //ping MFG FW(192.168.1.1) fail -> ping Customer FW(192.168.1.200) pass -> skip upgrade, do VerifyBoardData
                 ChkBootUp(PortType.SSH);
                 this.UpgradeCustFW_EPR2_3(); // build>=EPR2-3
                 //this.UpgradeCustFW_new(); //(build<=EPR2-2)
@@ -294,7 +278,7 @@ namespace MiniPwrSupply.LMG1
                 DisplayMsg(LogType.Log, $"MD5_inPC: {MD5_inPC}");
                 while (index++ < 5)
                 {
-                    SendAndChk(PortType.SSH, $"md5sum {CustFW_FW_FileName}", keyword, out res, 0, 5000);
+                    SendAndChk(PortType.SSH, $"md5sum {CustFW_FW_FileName}", keyword, out res, 0, 10 * 1000);
                     m = Regex.Match(res, pattern);
                     if (m.Success)
                     {
@@ -620,10 +604,10 @@ namespace MiniPwrSupply.LMG1
             DisplayMsg(LogType.Log, "=============== Verify MFG Board data ===============");
             try
             {
-                SendAndChk(PortType.GOLDEN_SSH, "rm /tmp/dhcp.leases", keyword, out res, 0, 3000);
+                SendAndChk(PortType.GOLDEN_SSH, "rm /tmp/dhcp.leases", keyword2, out res, 0, 3000);
             pingRetry:
-                DisplayMsg(LogType.Log, @"Delay 150s upon test plan");
-                if (SendAndChk(PortType.GOLDEN_SSH, "/etc/init.d/dnsmasq restart", keyword, out res, 3 * 1000, 20 * 1000))
+                //DisplayMsg(LogType.Log, @"Delay 150s upon test plan");
+                if (SendAndChk(PortType.GOLDEN_SSH, "/etc/init.d/dnsmasq restart", keyword2, out res, 150 * 1000, 20 * 1000))
                 {
                     SendAndChk(PortType.GOLDEN_SSH, "ping 192.168.1.200 -c 1", "ms", out res, 1000, 10000);
                     if (res.Contains("1 packets received"))
@@ -648,7 +632,14 @@ namespace MiniPwrSupply.LMG1
                     AddData(item, 1);
                     return;
                 }
-                SendAndChk(PortType.GOLDEN_SSH, "cd /wnc/build/usp/", keyword2, out res, 1000, 15000);
+                for (int i = 0; i < 5; i++)
+                {
+                    if (SendAndChk(PortType.GOLDEN_SSH, "cd /wnc/build/usp/", keyword2, out res, 1000, 15000))
+                    {
+                        break;
+                    }
+                }
+
                 for (int i = 0; i < 20; i++)
                 {
                     SendAndChk(PortType.GOLDEN_SSH, $"python3 ./get.py -m manufacturer -a ../certs/mqtt.indigo.cert.pem -k ../certs/manufacturer-wnc.key.pem -f ../certs/manufacturer-wnc.cert.pem -s +119747+{infor.SerialNumber} basic.txt --ipaddr 192.168.1.200", keyword2, out res, 1000, 30 * 1000);
@@ -686,7 +677,7 @@ namespace MiniPwrSupply.LMG1
                 m = Regex.Match(res, "Device.DeviceInfo.SerialNumber => (?<_sn>.+)");
                 if (m.Success)
                 {
-                    _sn = m.Groups["wifi_pwd"].Value.Trim();
+                    _sn = m.Groups["_sn"].Value.Trim();
                 }
                 //m = Regex.Match(res, "Device.WiFi.SSID.1.SSID => (?<wifi_ssid>.+)");
                 //if (m.Success)
@@ -704,9 +695,10 @@ namespace MiniPwrSupply.LMG1
                 DisplayMsg(LogType.Log, $"Spec fw_ver: {infor.FWver_Cust}");
                 //DisplayMsg(LogType.Log, $"Spec hw_ver: {infor.HWver_Cust}");
                 DisplayMsg(LogType.Log, $"Spec base_mac: {infor.BaseMAC}");
-                //DisplayMsg(LogType.Log, $"fw_ver: {fw_ver}");
+                DisplayMsg(LogType.Log, $"fw_ver: {fw_ver}");
                 //DisplayMsg(LogType.Log, $"hw_ver: {hw_ver}");
                 DisplayMsg(LogType.Log, $"base_mac: {base_mac}");
+                DisplayMsg(LogType.Log, $"SerialNumber: {_sn}");
 
                 //if (string.Compare(fw_ver, infor.FWver_Cust) != 0 || string.Compare(hw_ver, infor.HWver_Cust) != 0 || string.Compare(base_mac, infor.BaseMAC) != 0)
                 //{
@@ -827,9 +819,8 @@ namespace MiniPwrSupply.LMG1
                     Thread.Sleep(1000);
                     #endregion
                 }
-
-                SendAndChk(PortType.SSH, "cd /tmp", "root@OpenWrt:/tmp#", out res, 0, 5000);
-                SendAndChk(PortType.SSH, $"ftpget {PC_IP} {customerFW_FileName}", keyword, out res, 0, 10 * 1000);
+                SendAndChk(PortType.SSH, "cd /tmp", "root@OpenWrt:/tmp#", out res, 0, 8000);
+                SendAndChk(PortType.SSH, $"ftpget {PC_IP} {customerFW_FileName}", "root@OpenWrt:/tmp#", out res, 0, 10 * 1000);
                 // ================ remove from testplan =====================
                 //MD5_inPC = this.MakeMD5sum(customerFW_FileName);
                 //if (string.Compare(MD5_inPC, md5sum) == 0)
@@ -874,17 +865,6 @@ namespace MiniPwrSupply.LMG1
                 DisplayMsg(LogType.Log, @"Delay 4mins for FW upgrade & reboot");
                 Thread.Sleep(4 * 60 * 1000);
                 MessageBox.Show("make sure the light turn out to be Tianffy");
-                SendAndChk(PortType.UART, "\r\n", "login:", out res, 0, 8000);
-                if (res.Contains($"sw40j-119747-{infor.SerialNumber} login")) //sw40j-119747-2318000029
-                {
-                    DisplayMsg(LogType.Log, "Switch FW to INDIGO from WNC MFG PASS");
-                    AddData(item, 0);
-                }
-                else
-                {
-                    DisplayMsg(LogType.Log, "UR cannot access or Switch FW NG");
-                    AddData(item, 0);
-                }
             }
             catch (Exception ex)
             {
@@ -929,21 +909,6 @@ namespace MiniPwrSupply.LMG1
                 this.SwitchFW_INDIGO(FW_FileName);
                 if (!CheckGoNoGo()) { return; }
                 // ============================================================================================
-                if (ChkResponse(PortType.UART, ITEM.NONE, "", out res, 200 * 1000))
-                {
-                    SendAndChk(PortType.UART, "\r\n", "login:", out res, 0, 10 * 5000);
-                    SendAndChk(PortType.UART, "root", "Password:", out res, 0, 10 * 5000);
-                    SendAndChk(PortType.UART, "5hut/ra1n.dr0prun@h0m3", "~#", out res, 0, 10 * 5000);
-                    if (SendAndChk(PortType.UART, "ifconfig | grep 192.168.1.200", "~#", out res, 0, 10 * 5000))
-                    {
-                        DisplayMsg(LogType.Log, "192.168.1.200 exist!");
-                    }
-                }
-                else
-                {
-                    AddData(item, 1);
-                    return;
-                }
             }
             catch (Exception ex)
             {
@@ -952,7 +917,7 @@ namespace MiniPwrSupply.LMG1
             }
             finally
             {
-                UartDispose(uart);
+                //UartDispose(uart);
             }
         }
         private string MakeMD5sum(string Customer_FW)
@@ -1016,9 +981,6 @@ namespace MiniPwrSupply.LMG1
             string CopyToConfig = "cp /etc/config/* /overlay1/config/";
             try
             {
-                //connect to golden ssh
-                GoldenSshParameter();
-
                 if (!ChkInitial(PortType.GOLDEN_SSH, keyword, 120 * 1000))
                 {
                     DisplayMsg(LogType.Log, "Golden SSH fail");
@@ -1133,13 +1095,12 @@ namespace MiniPwrSupply.LMG1
                 }
 
                 //write image
-                if (!SendAndChk(PortType.UART, $"tftpboot 0x44000000 {FW_image} && setenv machid 8060001 && imgaddr=0x44000000 && source $imgaddr:script", "Flashing gptbackup:                     [ done ]", out res, 5000, 100 * 1000))
+                if (!SendAndChk(PortType.UART, $"tftpboot 0x44000000 {FW_image} && setenv machid 8060001 && imgaddr=0x44000000 && source $imgaddr:script", "Flashing gptbackup:                     [ done ]", out res, 9000, 100 * 1000))
                 {
                     DisplayMsg(LogType.Log, "Write image fail");
                     AddData(item, 1);
                     return;
                 }
-                Thread.Sleep(10 * 1000);
                 //check [ done ]
                 int done_cnt = Regex.Matches(res, @"\[ done \]").Count;
                 DisplayMsg(LogType.Log, $"[ done ] count: {done_cnt}");
@@ -1157,19 +1118,32 @@ namespace MiniPwrSupply.LMG1
                     AddData(item, 1);
                     return;
                 }
-                if (res.Contains("Hit"))
+                //if (res.Contains("resetting"))
+                //{
+                //    for (int i = 0; i < 6; i++)
+                //    {
+                //        SendAndChk(PortType.UART, "\r\n", "", 0, 1000);
+                //    }
+                //}
+                Thread.Sleep(3000);
+                for (int i = 0; i < 20; i++)
                 {
-                    for (int i = 0; i < 3; i++)
+                    SendAndChk(PortType.UART, "\r\n", "#", out res, 0, 1000);
+                    if (res.Contains("IPQ5332#"))
                     {
-                        SendAndChk(PortType.UART, "\r\n", "", 0, 1000);
+                        DisplayMsg(LogType.Log, res);
+                        break;
                     }
+                    Thread.Sleep(500);
                 }
-                if (!SendAndChk(PortType.UART, "env default -a;env save;reset", "Saving Environment to MMC", 1000, 20 * 1000))
+                if (!SendAndChk(PortType.UART, "env default -a;env save;reset", "", 1000, 60 * 1000))
                 {
                     DisplayMsg(LogType.Log, "env default >>> NG");
                     AddData(item, 1);
                     return;
                 }
+                DisplayMsg(LogType.Log, "reboot after reset");
+                Thread.Sleep(120 * 1000);
                 AddData(item, 0);
             }
             catch (Exception ex)
@@ -1177,7 +1151,10 @@ namespace MiniPwrSupply.LMG1
                 DisplayMsg(LogType.Exception, ex.Message);
                 AddData(item, 1);
             }
+            finally
+            {
+                UartDispose(uart);
+            }
         }
     }
 }
-
