@@ -19,6 +19,7 @@ namespace MiniPwrSupply.LMG1
             Antenna_0 = 0x00,
             Antenna_1 = 0x01,
         }
+
         private void OTA()
         {
             try
@@ -197,6 +198,7 @@ namespace MiniPwrSupply.LMG1
                 AddData(item, 1);
             }
         }
+
         private void OTA_Thread()
         {
             if (!CheckGoNoGo())

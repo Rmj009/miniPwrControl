@@ -21,7 +21,7 @@ using System.Runtime.CompilerServices;
 
 namespace MiniPwrSupply.LMG1
 {
-    public partial class LMG1_OTA
+    public partial class LRG1_OTA
     {
         public class DeviceInfor
         {
