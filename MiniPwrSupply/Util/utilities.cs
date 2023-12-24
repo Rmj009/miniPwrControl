@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -48,6 +49,15 @@ namespace MiniPwrSupply.Util
             }
             return IsFwGreater;
         }
-
+        private void DisplayMsg(LogType type, string msg)
+        {
+            if (string.Compare(type.ToString(), LogType.Empty.ToString(), true) == 0)
+            {
+                status_ATS.AddLog(msg);
+            }
+            {
+                status_ATS.AddLog("[ " + type.ToString() + " ]" + msg);
+            }
+        }
     }
 }

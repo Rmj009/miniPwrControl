@@ -826,7 +826,8 @@ namespace MiniPwrSupply.LMG1
                 process.StartInfo.WorkingDirectory = Path.GetDirectoryName(_RFTool);
                 process.StartInfo.FileName = _RFTool;
                 process.StartInfo.Arguments = "-RUN \"" + _RFTestPlan + "\" -EXIT";
-                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.UseShellExecute = true;
+                process.StartInfo.Verb= "runas";
                 DisplayMsg(LogType.Log, "Execute IQfactRun_Console tool");
                 DisplayMsg(LogType.Log, $"Cmd: {_RFTool} -RUN \"{_RFTestPlan}\" -EXIT");
                 process.Start();
