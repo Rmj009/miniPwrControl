@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
@@ -11,19 +10,18 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using System.Diagnostics;
-//using WNC.API;
-using System.Runtime.CompilerServices;
-using System.Net.Security;
+using WNC.API;
+using Renci.SshNet;
+using MiniPwrSupply.Instrument;
 
 namespace MiniPwrSupply.LRG1
 {
-    public partial class frmMain
+    public partial class LRG1_RF
     {
         private string _RFTool = "";
         private string _RFLog = "";
         private string _RFTestPlan = "";
         private int _RFTimeOutSec = 0;
-
         private string _LitePointFolder = string.Empty;
         private string _LitePointTool = string.Empty;
         private string _LitePointSummary = string.Empty;
@@ -139,8 +137,8 @@ namespace MiniPwrSupply.LRG1
                 }
                 else if (Func.ReadINI("Setting", "Port", "RelayBoard", "Disable").ToUpper() == "ENABLE")
                 {
-                    SwitchRelay(CTRL.ON);
-                    Thread.Sleep(5 * 1000);
+                    //SwitchRelay(CTRL.ON);
+                    //Thread.Sleep(loopDelay);
                     SwitchRelay(CTRL.OFF);
                 }
                 else
@@ -165,7 +163,16 @@ namespace MiniPwrSupply.LRG1
                 }
 
                 ChkBootUp(PortType.SSH);
-
+                #region Ethenet Speed check
+                if (!CheckGoNoGo()) { return; }
+                if (Func.ReadINI("Setting", "RF", "SkipLANSPEED1", "0") == "0") { this.EthernetTest(1); }
+                if (Func.ReadINI("Setting", "RF", "SkipLANSPEED2", "0") == "0") { this.EthernetTest(2); }
+                if (Func.ReadINI("Setting", "RF", "SkipLANSPEED3", "0") == "0") { this.EthernetTest(3); }
+                if (Func.ReadINI("Setting", "RF", "SkipLANSPEED4", "0") == "0") { this.EthernetTest(4); }
+                if (Func.ReadINI("Setting", "RF", "SkipLANSPEED5", "0") == "0") { this.EthernetTest(5); }
+                #endregion Ethenet Speed check
+                if (!CheckGoNoGo()) { return; }
+                this.BatteryDetection("AC_ALARM: low");
                 if (isLoop == 0)
                 {
                     if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
@@ -174,45 +181,41 @@ namespace MiniPwrSupply.LRG1
                     }
                 }
                 // ---------------------------------------
-                this.ChkD2License();
+                //this.ChkD2License();//Jason add more follow NPI Thiem Liu 20231125
+                if (!CheckGoNoGo()) { return; }
+                CheckEthernetMAC();
+                // test plan extra added
                 // ----------------------------------------
-
-                #region Ethernet test
-                if (isLoop == 0)
-                {
-                    this.EthernetTest(5);
-                    this.BatteryDetection();
-                }
-                #endregion
-
-                //DECT需透過uart
                 if (Func.ReadINI("Setting", "RF", "SkipDECT", "0") == "0")
                 {
+                    if (!CheckGoNoGo()) { return; }
                     RF_DECT();
                 }
-
-                //BLE & Thread透過uart
-                if (Func.ReadINI("Setting", "RF", "SkipBLE", "0") == "0" || Func.ReadINI("Setting", "RF", "SkipThread", "0") == "0")
-                {
-                    //UartDispose(uart);
-                    ChkBootUp(PortType.UART);
-                }
-
+                //BLE & Thread via uart
+                //   ============================= removal Not in test plan  ============================= 
+                //if (Func.ReadINI("Setting", "RF", "SkipBLE", "0") == "0" || Func.ReadINI("Setting", "RF", "SkipThread", "0") == "0")
+                //{
+                //    //UartDispose(uart);
+                //    ChkBootUp(PortType.SSH);
+                //}
+                //   ============================= removal Not in test plan  ============================= 
                 if (Func.ReadINI("Setting", "RF", "SkipBLE", "0") == "0")
                 {
+                    if (!CheckGoNoGo()) { return; }
                     RF_BLE();
                 }
 
                 if (Func.ReadINI("Setting", "RF", "SkipThread", "0") == "0")
                 {
+                    if (!CheckGoNoGo()) { return; }
                     RF_Thread();
                 }
 
                 if (Func.ReadINI("Setting", "RF", "SkipWiFi", "0") == "0")
                 {
+                    if (!CheckGoNoGo()) { return; }
                     RF_WiFi();
                 }
-
             }
             catch (Exception ex)
             {
@@ -246,74 +249,76 @@ namespace MiniPwrSupply.LRG1
                 else SwitchRelay(CTRL.ON);
             }
         }
-        private void LRG1_FTM_bridge()
+        private void CheckLEDBootup(string item, COLOR color, STAGE stage, string cameraItem) // Jason Add 2023/10/15
         {
-            if (!CheckGoNoGo())
-            {
-                return;
-            }
-            DisplayMsg(LogType.Log, "=============== WiFi Test ===============");
+            if (!CheckGoNoGo()) { return; }
 
-            string item = $"LRG1_Bridge_";
-            string keyword = @"root@OpenWrt";
-            string res = string.Empty;
-            string resp = string.Empty;
-            int IsPass = 1; // 1: NG ; 2 : OK
-            try
+            if (useCamera)
             {
-                DisplayMsg(LogType.Cmd, $"Write 'mkfs.ext4 /dev/mmcblk0p30' via Uart");
-                SendAndChk(PortType.UART, "mkfs.ext4 /dev/mmcblk0p30", keyword, out res, 500, 3000);
-                SendAndChk(PortType.UART, "mount -t ext4 /dev/mmcblk0p30 /overlay1/", keyword, out res, 500, 3000);
-                SendAndChk(PortType.UART, "uci set network.lan.ipaddr=192.168.1.5", keyword, out res, 500, 3000);
-                SendAndChk(PortType.UART, "uci commit", keyword, out res, 500, 3000);
-                SendAndChk(PortType.UART, "mkdir /overlay1/config", keyword, out res, 500, 3000);
-                SendAndChk(PortType.UART, "cp /etc/config/* /overlay1/config/", keyword, out res, 500, 3000);
-                DisplayMsg(LogType.Cmd, $"---make directory & copy file --- \r\n {res}");
-                SendAndChk(PortType.UART, "echo \"cp / overlay1 / config/* /etc/config/ \" > /overlay1/externalScript.sh", keyword, out res, 500, 3000);
-                SendAndChk(PortType.UART, "chmod +x /overlay1/externalScript.sh", keyword, out res, 500, 3000);
-                SendAndChk(PortType.UART, "chmod +x /overlay1/config", keyword, out res, 500, 3000);
-                SendAndChk(PortType.UART, "sync", keyword, out res, 500, 3000);
-                SendAndChk(PortType.UART, "reboot", keyword, out res, 500, 3000);
-                DisplayMsg(LogType.Log, @"delay 10s after reboot");
-                Thread.Sleep(10 * 1000);
-                IsPass = res.Contains(keyword) == true ? 0 : 1;
-                if (IsPass == 1)
+                string cameraResult = "";
+                if (CameraLEDCheck())
                 {
-                    DisplayMsg(LogType.Log, @"reboot fail");
-                    return;
-                }
-                if (!ChkInitial(PortType.UART, keyword, 200000))
-                {
-                    DisplayMsg(LogType.Log, @"ping DUT ok");
-                    //  ssh 192.168.1.1 
-                    if (SendAndChk(PortType.SSH, "is not in the trusted hosts file", keyword, 0, 3000)) //@"Host '192.168.1.1' is not in the trusted hosts file."
+                    /*
+
+                    List<int> Colorlist = ColorlistString.Split(',').Select(int.Parse).ToList();
+                    for (int i = 0; i < Colorlist.Count; i++)
                     {
-                        DisplayMsg(LogType.Log, @"Show Do you want to continue connecting? ");
-                        SendAndChk(PortType.SSH, "y", keyword, out res, 5, 10000);
-                        if (res.Contains(@"BusyBox"))
+                        DisplayMsg(LogType.Log, $" Check LED Item {item} /Color {Colorlist[i]} /Stage {stage} /In camera Item {cameraItem}");
+                        if (CheckCameraResult($"{cameraItem}", $"{Colorlist[i].ToString().ToLower()}", out cameraResult)) // Check If have color will return because DUT already have power
                         {
-                            DisplayMsg(LogType.Log, @"confirmation OK");
-                            IsPass = SendCommand(PortType.UART, "microcom /dev/ttyMSM1 -s 115200 -X", 2000) == true ? 0 : 1;
-                            AddData(item, IsPass);
+                            DisplayMsg(LogType.Log, $"Check LED bootup is ok But DUT Cannot bootup");
+                            AddData($"CkLedBootup", 1);
+                            Colorlist.Clear();
+                            return;
                         }
+                    }
+                    */
+
+                    DisplayMsg(LogType.Log, $" Check LED Item {item} /Color {color} /Stage {stage} /In camera Item {cameraItem}");
+                    if (CheckCameraResult($"{cameraItem}", $"{color.ToString().ToLower()}", out cameraResult)) // Check If have color will return because DUT already have power
+                    {
+                        DisplayMsg(LogType.Log, $"Check LED bootup is ok But DUT Cannot bootup");
+                        AddData("CkLedBootup", 1);
+                        return;
                     }
                     else
                     {
-                        DisplayMsg(LogType.Log, @"bridge cannot reach DUT");
-                        AddData(item, 1);
+                        DisplayMsg(LogType.Log, $"Check LED Fail OP forgot to press the Power button");
+                        //Colorlist.Clear();
+                        if (!fixture.ChkState(true))
+                        {
+                            DisplayMsg(LogType.Log, $"Fixture Auto Press Power button....");
+                            fixture.ControlIO(Fixture.FixtureIO.IO_5, CTRL.ON); // Press button power then re-try again
+                            Thread.Sleep(1000);
+                            fixture.ControlIO(Fixture.FixtureIO.IO_5, CTRL.OFF);
+                            Thread.Sleep(200);
+                        }
+                        else { MessageBox.Show("Open Fixture then Press power button"); }
                     }
                 }
-                //In bridge debug console, SSH into DUT. Note there will be a confirmation which needs to enter a “y”
-                IsPass = CheckGoNoGo() == true ? 0 : 1;
+                else
+                {
+                    if (Process.GetProcessesByName("camera").Length > 0)
+                    {
+                        warning = "Camera is running but use camera fail!!";
+                        return;
+                    }
+                    else
+                    {
+                        warning = "Using camera fail because Camera is not running!!";
+                        return;
+                    }
+                }
             }
-            catch (Exception ex)
+            else
             {
-                DisplayMsg(LogType.Exception, ex.Message);
-                AddData(item, IsPass);
-            }
-            finally
-            {
-                AddData(item, IsPass);
+                if (DialogResult.No == MessageBox.Show($"Open Fixture then Press power button", "Led Test", MessageBoxButtons.YesNo))
+                {
+                    DisplayMsg(LogType.Log, $"OP choose No");
+                    AddData($"CkLedBootup", 1);
+                    return;
+                }
+                DisplayMsg(LogType.Log, $"OP choose Yes");
             }
         }
         private void TestBridge(PortType portType)
@@ -434,6 +439,8 @@ namespace MiniPwrSupply.LRG1
 
                 RunIQFact(RFTestItem.WiFi);
 
+                this.CheckSecureBootEnable();
+
                 if (!isGolden)
                 {
                     //if (Func.ReadINI("Setting", "RF", "CheckCalData", "0") == "1")
@@ -469,34 +476,79 @@ namespace MiniPwrSupply.LRG1
                 return;
             }
 
-            string item = "Enable_FTM";
+            string item = $"Enable_{testItem.ToString()}_FTM_via_bridge";
             //string keyword = "root@OpenWrt:~# \r\n";
             //string keyword_bridge = "root@Bridge_golden:/# \r\n";
             string keyword = "root@OpenWrt";
             string keyword_bridge = "root@Bridge_golden";
             string res = "";
-
+            string cmd = "";
+            int retrytime = 0;
             try
             {
-                DisplayMsg(LogType.Log, "Enable BLE FTM via bridge");
-
-                //In bridge debug console, SSH into DUT
-                SendAndChk(PortType.UART, "ssh 192.168.1.1 -y -y", keyword, "Do you want to continue connecting?", out res, 0, 10 * 1000);
-                if (res.Contains("Do you want to continue connecting?"))
+                DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            //In bridge debug console, SSH into DUT
+            pingRetry:
+                SendAndChk(PortType.UART, "ping 192.168.1.1", keyword_bridge, out res, 0, 15 * 1000);
+                SendCommand(PortType.UART, sCtrlC, 500);
+                if (res.Contains("ms"))
                 {
-                    SendAndChk(PortType.UART, "y", keyword, keyword_bridge, out res, 0, 5000);
+                    AddData("PING_DUT_PASS", 0);
+                    DisplayMsg(LogType.Log, "PING_DUT_PASS");
                 }
-
-                if (!res.Contains("BusyBox") || !res.Contains(keyword))
+                else
                 {
-                    DisplayMsg(LogType.Log, "SSH into DUT fail");
-                    AddData(item, 1);
-                    return;
+                    retrytime++;
+                    if (retrytime < 3)
+                    {
+                        goto pingRetry;
+                    }
+                    else
+                    {
+                        AddData("PING_DUT_PASS", 1);
+                        if (!CheckGoNoGo())
+                        {
+                            DisplayMsg(LogType.Error, @"PING_DUT_NG");
+                            return;
+                        }
+                    }
                 }
+                SendAndChk(PortType.UART, "ssh 192.168.1.1 -y -y", keyword_bridge, "", out res, 0, 20 * 1000);
+                for (int i = 0; i < 3; i++)
+                {
+                    SendAndChk(PortType.SSH, "\n", "", out res, 0, 1000);
+                    //DisplayMsg(LogType.Log, res);
+                    if (res.Contains("root@OpenWrt:~#"))
+                    {
+                        break;
+                    }
+                }
+                //if (res.Contains("Do you want to continue connecting?"))
+                //{
+                //    SendAndChk(PortType.UART, "y", keyword, keyword_bridge, out res, 0, 5000);
+                //}
+                //Thread.Sleep(10 * 1000);
+                //MessageBox.Show("wait for busy box");
+                //if (!res.Contains("BusyBox") || !res.Contains(keyword_bridge))
+                //{
+                //    DisplayMsg(LogType.Log, "SSH into DUT fail");
+                //    AddData(item, 1);
+                //    return;
+                //}
 
                 if (testItem == RFTestItem.BLE)
                 {
-                    if (!SendAndChk(PortType.SSH, "bt_upgrade_utility -p /dev/ttyMSM1 -f /lib/firmware/efr32/bt_ncp_afh_se.gbl", "Transfer completed successfully", out res, 0, 60 * 1000))
+                    // ====================================================================
+                    if (this.SwitchDmpMode("1.0.0.0")) // judge FW greater or smaller
+                    {
+                        cmd = "bt_upgrade_utility -f /lib/firmware/efr32/bt_ncp_afh_se_coex_4_3_0_noTxlimit.gbl -p /dev/ttyMSM1";
+                    }
+                    else
+                    {
+                        cmd = "bt_upgrade_utility -p /dev/ttyMSM1 -f /lib/firmware/efr32/bt_ncp_afh_se.gbl";
+                    }
+                    // ====================================================================
+                    if (!SendAndChk(PortType.SSH, cmd, "Transfer completed successfully", out res, 0, 60 * 1000))
                     {
                         DisplayMsg(LogType.Log, "Switch BLE FW fail");
                         AddData("SwitchBLEFW", 1);
@@ -511,7 +563,9 @@ namespace MiniPwrSupply.LRG1
 
                 if (testItem == RFTestItem.Thread)
                 {
-                    SendAndChk(PortType.UART, "bt_host_empty -u /dev/ttyMSM1", "Press Crtl+C to quit", out res, 0, 3000);
+                    //SendAndChk(PortType.UART, "bt_host_empty -u /dev/ttyMSM1", "Press Crtl+C to quit", out res, 0, 3000);
+                    // secureboot testplan
+                    SendAndChk(PortType.UART, "bt_upgrade_utility -p /dev/ttyMSM1 -f /lib/firmware/efr32/rail_test_gecko3.2.3_noFlowCtl.gbl", "Press Crtl+C to quit", out res, 0, 3000);
                     SendAndChk(PortType.UART, sCtrlC, keyword, out res, 500, 3000);
                 }
 
@@ -524,6 +578,7 @@ namespace MiniPwrSupply.LRG1
                 else
                 {
                     AddData(item, 1);
+                    return;
                 }
             }
             catch (Exception ex)
@@ -585,6 +640,7 @@ namespace MiniPwrSupply.LRG1
                 else
                 {
                     AddData(item, 1);
+                    return;
                 }
             }
             catch (Exception ex)
@@ -612,7 +668,7 @@ namespace MiniPwrSupply.LRG1
             string res = "";
             //string respones = "{{(getCtune)}{CTUNEXIANA:0x06a}{CTUNEXOANA:0x06a}}";   //will output 0x06a if PN = 53.LRG16.F0
             //string respes = "{{(getCtune)}{CTUNEXIANA:0x06a}{CTUNEXOANA:0x06a}}";  //will output 0x66 if PN = 53.LRG16.F01
-            string respes = Func.ReadINI("Setting", "RFTest", "CTUNEThread", "{{(getCtune)}{CTUNEXIANA:0x066}{CTUNEXOANA:0x066}}");
+            string respes = Func.ReadINI("Setting", "RFTest", "CTUNEThread", "{{(getCtune)}{CTUNEXIANA:0x06a}{CTUNEXOANA:0x06a}}");
 
             try
             {
@@ -676,12 +732,14 @@ namespace MiniPwrSupply.LRG1
                 else
                 {
                     AddData(item, 1);
+                    return;
                 }
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, ex.ToString());
                 AddData(item, 1);
+                return;
             }
             finally
             {
@@ -743,13 +801,8 @@ namespace MiniPwrSupply.LRG1
 
             string item = $"RF_{RFTestItem.DECT.ToString()}";
             DisplayMsg(LogType.Log, $"=============== {item} ===============");
-
             try
             {
-                //開始DECT test前要關閉uart
-                // ==============================================
-                //UartDispose(uart);   //no UART any more
-                // ==============================================
                 int delay = Convert.ToInt32(Func.ReadINI("Setting", "RF", "DelaySec_DECT", "0"));
                 DisplayMsg(LogType.Log, $"Sleep {delay}s");
                 Thread.Sleep(delay * 1000);
@@ -757,21 +810,16 @@ namespace MiniPwrSupply.LRG1
                 string IQXelMW_IP = Func.ReadINI("Setting", "IP", "IQxelMW", "192.168.100.253");
                 string toolPath = Func.ReadINI("Setting", "RF", "ToolPath_DECT", @"D:\ATSuite_V11_0_2_DSPG_Hub_Pro_FP_V_1.2.0_WNC_LS04\Release");
                 string logPath = Path.Combine(toolPath, @"Log\Log_Current.txt");
-                int TimeOutSec = Convert.ToInt32(Func.ReadINI("Setting", "RF", "TimeOutSec_DECT", "300"));
+                int TimeOutSec = Convert.ToInt32(Func.ReadINI("Setting", "RF", "TimeOutSec_DECT", "240"));
 
                 DisplayMsg(LogType.Log, "DECT tool Path:" + toolPath);
                 DisplayMsg(LogType.Log, "DECT log Path:" + logPath);
-                // ping IQXel_MW => cancel by breakDown
-                //if (!telnet.Ping(IQXelMW_IP, 10 * 1000))
-                //{
-                //    DisplayMsg(LogType.Error, $"Ping IQXel_MW({IQXelMW_IP}) failed!!");
-                //    AddData("PingIQXelMW", 1);
-                //    return;
-                //}
                 this.CheckDECTMode("None");
                 LitePoint litepoint = new LitePoint(toolPath + "\\ATSuite.exe", logPath);
                 if (litepoint.Start())
+                {
                     litepoint.WaitResult(TimeOutSec * 1000);
+                }
                 else
                 {
                     warning = "Cannot start litepoint";
@@ -795,13 +843,19 @@ namespace MiniPwrSupply.LRG1
                 {
                     AddData(item, 1);
                 }
-
-
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, @"RF_DECT___" + ex.Message);
                 AddData(item, 1);
+            }
+            finally
+            {
+                if (SendAndChk(PortType.SSH, "\r\n", "#", 0, 2000))
+                {
+                    DisplayMsg(LogType.Log, "back to root@OpenWrt");
+                }
+                //Thread.Sleep(50);
             }
         }
         private void Kill_microcom()
@@ -1604,7 +1658,6 @@ namespace MiniPwrSupply.LRG1
                 //    AddData(item, 1);
                 //    return;
                 //}
-
                 //SendAndChk(portType, "/etc/init.d/ftm start", keyword, 0, 3000);
                 //SendAndChk(portType, "/usr/sbin/ftm -n -c /tmp/ftm.conf &", keyword, 0, 3000);
 
@@ -1645,8 +1698,6 @@ namespace MiniPwrSupply.LRG1
                 // ==============================================================
                 DisplayMsg(LogType.Log, "Delay 3s...");
                 System.Threading.Thread.Sleep(3000);
-                //MessageBox.Show("SAM stop");
-                //MessageBox.Show(res.ToString());
                 AddData(item, 0);
             }
             catch (Exception ex)
@@ -1758,35 +1809,46 @@ namespace MiniPwrSupply.LRG1
             }
             bool result = false;
             string res = "";
-            string keyword = "root@OpenWrt";
+            string keyword = "menu";
             string test_mode = "";
             string item = $"CheckDECTMode";
-            int delayMs = 100;
+            int delayMs = 3000;
+            int retry = 0;
+        retryCMB:
             try
             {
                 DisplayMsg(LogType.Log, " ============== Check DECT mode ==============");
-
                 for (int i = 0; i < 3; i++)
                 {
-                    SendCommand(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", delayMs);
-                    if (result = ChkResponse(PortType.SSH, ITEM.NONE, "Choose", out res, 3000))
+                    SendAndChk(PortType.SSH, "cmbs_tcx -comname ttyMSM2 -baud 460800", keyword, out res, delayMs, 4000);
+                    if (res.Contains("q => Quit"))
+                    {
+                        result = true;
                         break;
-                    DisplayMsg(LogType.Log, "Delay 5s...");
-                    Thread.Sleep(5000);
+                    }
+                    DisplayMsg(LogType.Log, "Retry cmbs Delay 3s...");
+                    Thread.Sleep(3000);
                 }
-
                 if (!result)
                 {
-                    DisplayMsg(LogType.Log, "Enter DECT MENU fail");
-                    AddData(item, 1);
-                    return;
+                    if (!this.killCMBS(PortType.GOLDEN_SSH))
+                    {
+                        AddData(item, 1);
+                        return;
+                    }
+                    if (retry++ > 3)
+                    {
+                        return;
+                    }
+                    goto retryCMB;
+                    //Thread thread = new Thread(() => {
+                    //});
+                    //thread.Start();
                 }
-
+                //--------------------------------------------------------------------------------------------
                 DisplayMsg(LogType.Log, "Transmitted 'x' to device");
-                //uart.Write("x\r"); // no Uart any more
                 SSH_stream.Write("x\r");
                 ChkResponse(PortType.SSH, ITEM.NONE, "q) Quit", out res, 5000);
-
                 //check TestMode
                 Match m = Regex.Match(res, @"TestMode:\s+(?<dect_test_mode>.+)");
                 if (m.Success)
@@ -1803,7 +1865,9 @@ namespace MiniPwrSupply.LRG1
                 else
                 {
                     DisplayMsg(LogType.Log, $"Check TestMode:{test_mode} fail");
+                    MessageBox.Show($"{test_mode} testMode fault=> testMode shall None");
                     AddData(item, 1);
+                    return;
                 }
             }
             catch (Exception ex)
@@ -1813,8 +1877,15 @@ namespace MiniPwrSupply.LRG1
             }
             finally
             {
-                //exit calibration menu
-                SendAndChk(PortType.SSH, "qqqqq\r\n", keyword, out res, 1000, 5000);
+                if (this.exitCalMenu("q => Quit"))
+                {
+                    DisplayMsg(LogType.Log, "exit calibration menu OK");
+                }
+                else
+                {
+                    warning = "exit_calibration_menu_NG";
+                    DisplayMsg(LogType.Log, "exit calibration menu >>>> NG");
+                }
             }
         }
         private bool DECTAnalysisLog(string logpath)
@@ -1978,11 +2049,10 @@ namespace MiniPwrSupply.LRG1
             try
             {
                 DisplayMsg(LogType.Log, "Remove Calibration Data");
-
+                SendAndChk(portType, "rm /lib/firmware/qcn9224/caldata_*.bin", keyword, 0, 3600);
                 //SendAndChk(PortType.SSH, "rm /lib/firmware/IPQ5332/caldata.bin", keyword, 0, 3600);
                 //SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_1.bin", keyword, 0, 3600);
                 //SendAndChk(PortType.SSH, "rm /lib/firmware/qcn9224/caldata_2.bin", keyword, 0, 3600);
-                SendAndChk(portType, "rm /lib/firmware/qcn9224/caldata_*.bin", keyword, 0, 3600);
 
                 SendAndChk(portType, "dd of=/tmp/mac if=/dev/mmcblk0p21 bs=1 count=30", keyword, 0, 10 * 1000);
                 SendAndChk(portType, "dd if=/dev/zero of=/dev/mmcblk0p21", keyword, 0, 10 * 1000);
@@ -1990,16 +2060,19 @@ namespace MiniPwrSupply.LRG1
                 ////------------------------------------------------
                 //SendAndChk(portType, "\r\n", keyword, 0, 1000);
                 ////------------------------------------------------
+
                 AddData(item, 0);
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, ex.Message);
                 AddData(item, 1);
+                return;
             }
         }
         private void ChkD2License()
         {
+            if (!CheckGoNoGo()) { return; }
             string item = "ChkD2License";
             try
             {
@@ -2013,7 +2086,7 @@ namespace MiniPwrSupply.LRG1
                 if (m.Success)
                 {
                     string D2License = m.Groups["D2License"].Value.Trim();
-                    DisplayMsg(LogType.Log, "--------- Check" + D2License + "with SFCS ---------");
+                    //DisplayMsg(LogType.Log, "--------- Check" + D2License+ " with SFCS ---------");
                 }
                 SendAndChk(PortType.SSH, "/etc/init.d/vtspd start", keyword, out res, 0, 5000);
                 SendAndChk(PortType.SSH, "ps | grep ve_vtsp_main", keyword, out res, 0, 5000);
@@ -2026,10 +2099,11 @@ namespace MiniPwrSupply.LRG1
                         while (retryC++ < 2)
                         {
                             DisplayMsg(LogType.Log, "Check ve_vtsp_main fail, D2 License is incorrect");
-                            SendAndChk(PortType.SSH, "/etc/init.d/vtspd stop", keyword, out res, 0, 5000);
+                            //SendAndChk(PortType.SSH, "/etc/init.d/vtspd stop", keyword, out res, 0, 5000);  //RD-Smith suggest remove this part
                             goto retryFlag;
                         }
                         AddData("D2_License", 1);
+                        return;
                     }
                     else
                     {
@@ -2037,14 +2111,161 @@ namespace MiniPwrSupply.LRG1
                         AddData("D2_License", 0);
                     }
                 }
-                SendAndChk(PortType.SSH, "/etc/init.d/vtspd stop", keyword, out res, 0, 8000);
+                //SendAndChk(PortType.SSH, "/etc/init.d/vtspd stop", keyword, out res, 0, 8000);
 
             }
             catch (Exception ex)
             {
                 DisplayMsg(LogType.Exception, item + "___" + ex.Message);
                 AddData(item, 1);
+                return;
+            }
+            finally
+            {
+                //Dispose(golden_SSH_client);
             }
         }
+        private bool killCMBS(PortType portType)
+        {
+            string item = "killCMBS";
+            string keyword = "root@OpenWrt:~# \r\n";
+            string res = string.Empty;
+            bool isKill = false;
+            DisplayMsg(LogType.Log, "Enter DECT MENU fail, purge & retry");
+            DisplayMsg(LogType.Log, $"================ {item} ================");
+            try
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    if (SendAndChk(portType, "killall -9 cmbs_tcx", keyword, out res, 0, 8000))
+                    {
+                        isKill = true;
+                        DisplayMsg(LogType.Log, $"{item} succeed");
+                        break;
+                    }
+                }
+                DisplayMsg(LogType.Log, $"---------------- {item} NG ----------------");
+
+            }
+            catch (Exception ex)
+            {
+                isKill = false;
+                DisplayMsg(LogType.Exception, item + "___" + ex.Message);
+                AddData(item, 1);
+            }
+            return isKill;
+        }
+        private bool SwitchDmpMode(string _version)
+        {
+            if (!CheckGoNoGo())
+            {
+                return false;
+            }
+        retry:
+            bool IsFwGreater = false;
+            int retryMtInFo = 0;
+            string res = string.Empty;
+            string FWversion = string.Empty;
+            string item = $"SwitchDmpMode";
+            string keyword = "root@OpenWrt:~# \r\n";
+            DisplayMsg(LogType.Log, $"=============== {item} ===============");
+            Version targetVerison = new Version(_version);
+            //Version targetVerison = Version.Parse("1.0.0.0");
+            try
+            {
+                SendAndChk(PortType.SSH, "mt info", keyword, out res, 0, 3000);
+                Match m = Regex.Match(res, @"FW Version: (?<FWver>.+)");
+                if (m.Success)
+                {
+                    FWversion = m.Groups["FWver"].Value.Trim().Split('v')[1];
+                    DisplayMsg(LogType.Log, "DUT FWversion: " + FWversion);
+                }
+                Version FwVer = Version.Parse(FWversion);
+                if (FwVer.CompareTo(targetVerison) > 0)
+                {
+                    IsFwGreater = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, $"{item}=>" + ex.Message);
+                retryMtInFo++;
+                if (retryMtInFo > 2)
+                {
+                    AddData(item, 1);
+                    throw;
+                }
+                goto retry;
+            }
+            return IsFwGreater;
+        }
+        private void CheckBatteryDetection()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string res = "";
+            string item = "BatteryDetection";
+            string keyword = @"root@OpenWrt";
+
+            try
+            {
+                //When using standard adaptor, the AC_ALARM is low.
+                //When using customized adaptor or power supply, the AC_ALARM is high.
+                //Battery detection
+                SendAndChk(PortType.SSH, "mt gpio dump all", "AC_ALARM", out res, 0, 5000);
+
+                DisplayMsg(LogType.Log, "=============== Battery Detection Check ===============");
+                item = "BatteryDetection";
+                if (res.Contains("AC_ALARM: low"))
+                {
+                    AddData(item, 0);
+                    DisplayMsg(LogType.Log, "Found out 'AC_ALARM: low' => Battery detection Pass");
+                }
+                else
+                {
+                    AddData(item, 1);
+                    DisplayMsg(LogType.Log, "Not Found 'AC_ALARM: low' => Battery detection Fail");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+                return;
+            }
+        }
+        private void CheckSecureBootEnable()
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+
+            string res = "";
+            string item = "Check Secure Boot Enable";
+            string keyword = @"root@OpenWrt";
+            try
+            {
+                SendAndChk(PortType.SSH, "cat /sys/devices/system/qfprom/qfprom0/authenticate", keyword, out res, 0, 3000);
+                if (!res.Contains("1"))
+                {
+                    DisplayMsg(LogType.Log, @"Secure boot not enable");
+                    AddData(item, 1);
+                    return;
+                }
+                DisplayMsg(LogType.Log, @"Secure boot enable ok!");
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.ToString());
+                AddData(item, 1);
+                return;
+            }
+        }
+
     }
 }
