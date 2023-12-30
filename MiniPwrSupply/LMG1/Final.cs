@@ -23,6 +23,8 @@ namespace MiniPwrSupply.LMG1
         {
             try
             {
+                string keyword = "root@OpenWrt:~# \r\n"; //避免誤判到指令第一行的"root@OpenWrt:~#"
+                string res = "";
                 infor.ResetParam();
 
                 #region create SMT file
@@ -111,61 +113,35 @@ namespace MiniPwrSupply.LMG1
                 }
                 else
                 {
-                    bool get_excel_data = true;
-                    if (!get_excel_data)
-                    {
-                        #region Check SN base on format
-                        if (infor.SerialNumber.Length == 18)
-                        {
-                            bool SN_check = CheckSN(infor.SerialNumber);
-                            if (SN_check)
-                            {
-                                SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                                //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
-                                status_ATS.SFCS_Data.PSN = infor.SerialNumber;
-                                status_ATS.SFCS_Data.First_Line = infor.SerialNumber;
-                            }
-                            else
-                            {
-                                DisplayMsg(LogType.Log, $"Get SN from SFCS fail: {infor.SerialNumber}");
-                                get_excel_data = true;
-                            }
+                    GetFromSfcs("@MAC", out infor.BaseMAC);
+                    GetFromSfcs("@LRG1_SN", out infor.SerialNumber);
+                    if (infor.SerialNumber.Length != 18) { GetBoardDataFromExcel1(); }
 
-                        }
-                        else
-                        {
-                            DisplayMsg(LogType.Log, $"Get SN from SFCS fail: {infor.SerialNumber}");
-                            get_excel_data = true;
+                    SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
+                    infor.FWver = Func.ReadINI(Application.StartupPath, "Setting", "Final", "FWver", "LMG1_v0.0.0.1");
+                    infor.HWver = Func.ReadINI(Application.StartupPath, "Setting", "Final", "HWver", "EVT1");
+                    infor.HWID = Func.ReadINI(Application.StartupPath, "Setting", "Final", "HWID", "0000");
+                    infor.BLEver = Func.ReadINI(Application.StartupPath, "Setting", "Final", "BLEver", "v5.0.0-b108");
+                    infor.SEver = Func.ReadINI(Application.StartupPath, "Setting", "Final", "SEver", "00010206");
+                    infor.Chipver = Func.ReadINI(Application.StartupPath, "Setting", "Final", "Chipver", "0x4000023D");
+                    infor.HWver_for_Board = Func.ReadINI(Application.StartupPath, "Setting", "Final", "HWver_for_Board", "XXXX");
 
-                        }
-                        #endregion Check SN base on format
-                        infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
-                        if (string.IsNullOrEmpty(infor.BaseMAC))
-                        {
-                            DisplayMsg(LogType.Log, $"Get BaseMAC from SFCS fail: {infor.BaseMAC}");
-                            get_excel_data = true;
-                        }
+                    _sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LMG1_CalDataMD5", ref infor.CalData_MD5);
+                    if (string.IsNullOrEmpty(infor.CalData_MD5)) infor.CalData_MD5 = Func.ReadINI("Setting", "Final", "CalData_MD5", "");
+                    infor.CalData_MD5 = infor.CalData_MD5.ToUpper();
+                    DisplayMsg(LogType.Log, "CalData_MD5 is:" + infor.CalData_MD5);
 
-                        if (get_excel_data)
-                        {
-                            GetBoardDataFromExcel1();
-                        }
-                        infor.FWver = Func.ReadINI("Setting", "Final", "FWver", "0.2.0.5");
-                        infor.HWver = Func.ReadINI("Setting", "Final", "HWver", "EVT2-3");
-                        infor.HWID = Func.ReadINI("Setting", "Final", "HWID", "0002");
-                        infor.BLEver = Func.ReadINI("Setting", "Final", "BLEver", "v5.0.0-b108");
-                        infor.SEver = Func.ReadINI("Setting", "Final", "SEver", "00010206");
-                        infor.Chipver = Func.ReadINI("Setting", "Final", "Chipver", "0x0001023D");
-                        infor.CalData_MD5 = Func.ReadINI("Setting", "Final", "CalData_MD5", "");
-                        _sfcsQuery.Get15Data(status_ATS.txtPSN.Text, "LMG1_CalDataMD5", ref infor.CalData_MD5);
-                        infor.CalData_MD5 = infor.CalData_MD5.ToUpper();
-                        DisplayMsg(LogType.Log, "CalData_MD5 is:" + infor.CalData_MD5);
+                    infor.HWver_for_Board = Func.ReadINI("Setting", "Final", "HWver_for_Board", "EVT2");
 
-                        infor.HWver_for_Board = Func.ReadINI("Setting", "Final", "HWver_for_Board", "EVT2-3");
-
-                        infor.BaseMAC = MACConvert(infor.BaseMAC);
-
-                    }
+                    infor.BaseMAC = MACConvert(infor.BaseMAC);
+                    DisplayMsg(LogType.Log, "Get SN From setting is:" + infor.SerialNumber);
+                    DisplayMsg(LogType.Log, "Get Base MAC From setting is:" + infor.BaseMAC);
+                    DisplayMsg(LogType.Log, "Get chipver From setting is:" + infor.Chipver);
+                    DisplayMsg(LogType.Log, "Get HWID From setting is:" + infor.HWID);
+                    DisplayMsg(LogType.Log, "Get FWVER From setting is:" + infor.FWver);
+                    DisplayMsg(LogType.Log, "Get BLEver From setting is:" + infor.BLEver);
+                    DisplayMsg(LogType.Log, "Get SEver From setting is:" + infor.SEver);
+                    DisplayMsg(LogType.Log, "Get HWver_for_Board From setting is:" + infor.HWver_for_Board);
                 }
                 if (!ChkStation(status_ATS.txtPSN.Text))
                     return;
@@ -245,43 +221,38 @@ namespace MiniPwrSupply.LMG1
                 if (!CheckGoNoGo()) { return; }
                 CheckFWVerAndHWID();
                 if (!CheckGoNoGo()) { return; }
+                CheckEthernetMAC();
                 // ---------------------------------
                 if (this.ChkSecurityBootStatus()) // Security boot should be enabled in this status.
                 {
-                    this.DownloadFilesRequired(true); // require verify by VN
+                    this.DownloadFilesRequired(false); // require verify by VN
                     this.DownloadAllConfigs();
                 }
                 //this.DownloadDisgue(true);
                 //this.DownloadDisgue2();
+                SendAndChk(PortType.SSH, "mkdir -p /mnt/data", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "mkdir -p /mnt/defaults", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "mount -t ext4 /dev/mmcblk0p28 /mnt/data", keyword, out res, 0, 3000);
+                SendAndChk(PortType.SSH, "mount | grep /dev/mmcblk0p28", keyword, out res, 0, 3000);
                 if (!CheckGoNoGo()) { return; }
                 this.FilesystemEncryption(false);
                 // ---------------------------------
-                CheckBoardData();
                 if (!CheckGoNoGo()) { return; }
+                CheckBoardData();
                 if (Func.ReadINI("Setting", "Setting", "SkipEthernet", "0") == "0")
                 {
                     EthernetTest(false);
                 }
                 if (!CheckGoNoGo()) { return; }
-                CheckEthernetMAC();
-                if (isLoop == 0)
-                {
-                    CheckLEDAuto();
-                }
+                CheckLEDAuto();
                 if (!CheckGoNoGo()) { return; }
-                CheckWiFiCalData(IsFinal_staion: true); //CheckWiFiCalData();
+                CheckWiFiCalData();
                 if (!CheckGoNoGo()) { return; }
                 CheckPCIe();
                 if (!CheckGoNoGo()) { return; }
-                if (isLoop == 0)
-                {
-                    WPSButton();
-                }
+                WPSButton();
                 if (!CheckGoNoGo()) { return; }
-                if (isLoop == 0)
-                {
-                    ResetButton();
-                }
+                ResetButton();
                 if (!CheckGoNoGo()) { return; }
                 CurrentSensor();
                 if (!CheckGoNoGo()) { return; }
@@ -289,8 +260,7 @@ namespace MiniPwrSupply.LMG1
                 //Rena_20230808, Do FinalCheck
                 if (!CheckGoNoGo()) { return; }  //Jason add check gonogo to skipped next test item if got failure 2023/10/07
                 DisplayMsg(LogType.Log, "=============== FinalCheck ===============");// old code if check gonogo ok will test check cal -> is bug. already fixed 2023/10/07
-
-                string res = "";
+                res = "";
                 var fResult = CH_RD.Check.FinalCheck(out res, new string[] { project, infor.BaseMAC });
                 DisplayMsg(LogType.Log, res);
                 if (!fResult)
@@ -375,16 +345,25 @@ namespace MiniPwrSupply.LMG1
                     DisplayMsg(LogType.Log, $"Check mac_base '{infor.BaseMAC}' pass");
                 }
 
-                //以下為固定值確認
-                if (!res.Contains("device_category=COM") || !res.Contains("manufacturer=BT") || !res.Contains("wifi_country_revision=0") ||
-                    !res.Contains("manufacturer_oui=0000DB") /*|| !res.Contains("model_name=Smart WiFi SW40J")*/ || !res.Contains("model_number=SW40J") ||
-                    /*!res.Contains("description=Smart WiFi SW40J") ||*/ !res.Contains("product_class=SW4-1") || !res.Contains("mac_count=7") ||
-                    !res.Contains("item_code=119747") || !res.Contains("brand_variant=Consumer") || !res.Contains("wifi_country_code=GB") ||
-                    !res.Contains("model_name=\"Smart WiFi SW40J\"") || !res.Contains("description=\"Smart WiFi SW40J\""))
+                List<string> ItemNameList = new List<string> {"device_category=COM", "manufacturer=BT", "wifi_country_revision=0",
+                    "manufacturer_oui=0000DB", "model_name=\"Smart Hub SH40J\"",
+                    "model_number=SH40J", "description=\"Smart Hub SH40J\"","product_class=SW4-1","mac_count=7","item_code=119747"
+                    ,"brand_variant=Consumer","wifi_country_code=GB" };
+
+                for (int i = 0; i < ItemNameList.Count; i++)
                 {
-                    DisplayMsg(LogType.Log, "Check board data fail");
-                    AddData(item, 1);
+                    if (res.Contains(ItemNameList[i]))
+                    {
+                        DisplayMsg(LogType.Log, $"Check '{ItemNameList[i]}' with DUT PASS");
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, $"Check '{ItemNameList[i]}' with DUT FAIL");
+                        AddData(item, 1);
+                        return;
+                    }
                 }
+
 
                 if (CheckGoNoGo())
                 {
@@ -434,26 +413,10 @@ namespace MiniPwrSupply.LMG1
                     AddData(item, 1);
                     return;
                 }
-
-                /*                SendAndChk(PortType.SSH, "uci set wireless.radio0_band0.disabled='0'", keyword, delayMs, timeOutMs);
-                                SendAndChk(PortType.SSH, "uci set wireless.radio0_band1.disabled='0'", keyword, delayMs, timeOutMs);
-                                SendAndChk(PortType.SSH, "uci set wireless.radio0_band2.disabled='0'", keyword, delayMs, timeOutMs);
-                                SendAndChk(PortType.SSH, "uci commit", keyword, delayMs, timeOutMs);
-                                SendAndChk(PortType.SSH, "wifi", keyword, delayMs, timeOutMs);*/
-
                 //check WiFi 2.4G MAC = BaseMAC+4
                 string wifi_2g_mac = MACConvert(infor.BaseMAC, 4);
                 DisplayMsg(LogType.Log, "WiFi_2G_MAC: " + wifi_2g_mac);
                 wifi_2g_mac = Regex.Replace(wifi_2g_mac, regex, "$2$1 $4$3 $6$5").ToLower();
-
-                /*                SendAndChk(PortType.SSH, "ifconfig wlan0", keyword, out res, 0, 5000);
-                                if (!res.Contains("wifi0"))
-                                {
-                                    DisplayMsg(LogType.Log, "Check WiFi 2.4G MAC fail with ifconfig wifi0");
-                                    AddData(item, 1);
-                                    return;
-                                }*/
-
                 SendAndChk(PortType.SSH, "hexdump -s 0x001016 -n 6 /dev/mmcblk0p18", keyword, out res, 0, 5000);
                 if (!res.Contains(wifi_2g_mac))
                 {
@@ -466,14 +429,6 @@ namespace MiniPwrSupply.LMG1
                 string wifi_5g_mac = MACConvert(infor.BaseMAC, 3);
                 DisplayMsg(LogType.Log, "WiFi_5G_MAC: " + wifi_5g_mac);
                 wifi_5g_mac = Regex.Replace(wifi_5g_mac, regex, "$2$1 $4$3 $6$5").ToLower();
-
-                /*                SendAndChk(PortType.SSH, "ifconfig wlan1", keyword, out res, 0, 5000);
-                                if (!res.Contains("wifi1"))
-                                {
-                                    DisplayMsg(LogType.Log, "Check WiFi 5G MAC fail with ifconfig wifi1");
-                                    AddData(item, 1);
-                                    return;
-                                }*/
                 SendAndChk(PortType.SSH, "hexdump -s 0x026810 -n 6 /dev/mmcblk0p18", keyword, out res, 0, 5000);
                 if (!res.Contains(wifi_5g_mac))
                 {
@@ -486,14 +441,6 @@ namespace MiniPwrSupply.LMG1
                 string wifi_6g_mac = MACConvert(infor.BaseMAC, 2);
                 DisplayMsg(LogType.Log, "WiFi_6G_MAC: " + wifi_6g_mac);
                 wifi_6g_mac = Regex.Replace(wifi_6g_mac, regex, "$2$1 $4$3 $6$5").ToLower();
-
-                /*                SendAndChk(PortType.SSH, "ifconfig wlan2", keyword, out res, 0, 5000);
-                                if (!res.Contains("wifi2"))
-                                {
-                                    DisplayMsg(LogType.Log, "Check WiFi 6G MAC fail ifconfig wifi2");
-                                    AddData(item, 1);
-                                    return;
-                                }*/
                 SendAndChk(PortType.SSH, "hexdump -s 0x058810 -n 6 /dev/mmcblk0p18", keyword, out res, 0, 5000);
                 if (!res.Contains(wifi_6g_mac))
                 {
@@ -502,59 +449,28 @@ namespace MiniPwrSupply.LMG1
                     return;
                 }
 
-                //Rena_20230809, check某個區間的cal data
-                SendAndChk(PortType.SSH, "hexdump -s 0x1000 -n 16 /dev/mmcblk0p18", keyword, out res, 0, 5000);
-                if (res.Contains("0001000 0000 0000 0000 0000 0000 0000 0000 0000"))
-                {
-                    DisplayMsg(LogType.Log, "Check cal data fail, hexdump 0x1000 is empty");
-                    AddData(item, 1);
-                    return;
-                }
-
                 //Rena_20230809, check cal data md5sum
-                string CalData_MD5 = "";
-                SendAndChk(PortType.SSH, "md5sum /dev/mmcblk0p18", keyword, out res, 0, 5000);
-                Match m = Regex.Match(res, @"(?<md5sum>[a-zA-Z0-9]{32})\s+/dev/mmcblk0p18");
-                if (m.Success)
-                {
-                    CalData_MD5 = m.Groups["md5sum"].Value.Trim().ToUpper();
-                }
-                DisplayMsg(LogType.Log, $"CalData_MD5: {CalData_MD5}");
-                if (CalData_MD5 == "")
-                {
-                    DisplayMsg(LogType.Log, "Get cal data md5sum fail");
-                    AddData(item, 1);
-                    return;
-                }
-
-                if (station == "RF")
-                {
-                    //upload cal data md5sum to SFCS
-                    status_ATS.AddDataRaw("LMG1_CalDataMD5", CalData_MD5, CalData_MD5, "000000");
-                }
-                else if (station == "Final")
-                {
-                    //check cal data md5sum with SFCS
-                    DisplayMsg(LogType.Log, $"SFCS CalData_MD5: {infor.CalData_MD5.ToUpper()}");
-                    if (string.Compare(CalData_MD5, infor.CalData_MD5.ToUpper()) == 0)
-                    {
-                        DisplayMsg(LogType.Log, "Check cal data md5sum pass");
-                    }
-                    else
-                    {
-                        DisplayMsg(LogType.Log, "Check cal data md5sum fail");
-                        AddData(item, 1);
-                        return;
-                    }
-                }
-
+                //string CalData_MD5 = "";
+                //SendAndChk(PortType.SSH, "md5sum /dev/mmcblk0p18", keyword, out res, 0, 5000);
+                //Match m = Regex.Match(res, @"(?<md5sum>[a-zA-Z0-9]{32})\s+/dev/mmcblk0p18");
+                //if (m.Success)
+                //{
+                //    CalData_MD5 = m.Groups["md5sum"].Value.Trim().ToUpper();
+                //}
+                //DisplayMsg(LogType.Log, $"CalData_MD5: {CalData_MD5}");
+                //if (CalData_MD5 == "")
+                //{
+                //    DisplayMsg(LogType.Log, "Get cal data md5sum fail");
+                //    AddData(item, 1);
+                //    return;
+                //}
                 //Backup wifi data
                 if (Directory.Exists(wifi_data_backup_path))
                 {
                     File.Delete(Path.Combine(wifi_data_backup_path, "backupwifi"));
                     File.Delete(Path.Combine(wifi_data_backup_path, $"backupwifi_{infor.SerialNumber}"));
-                    SendAndChk(PortType.SSH, "cd /tmp", "root@OpenWrt:/tmp#", out res, 0, 3000);
-                    SendAndChk(PortType.SSH, $"tftp -p -l backupwifi {PC_IP}", "root@OpenWrt:/tmp# \r\n", out res, 0, 5000);
+                    SendAndChk(PortType.SSH, "cd /tmp", "root@OpenWrt:/tmp#", out res, 0, 5000);
+                    SendAndChk(PortType.SSH, $"tftp -p -l backupwifi {PC_IP}", "root@OpenWrt:/tmp# \r\n", out res, 0, 10000);
                     if (File.Exists(Path.Combine(wifi_data_backup_path, "backupwifi")))
                     {
                         File.Move(Path.Combine(wifi_data_backup_path, "backupwifi"), Path.Combine(wifi_data_backup_path, $"backupwifi_{infor.SerialNumber}"));
@@ -571,10 +487,16 @@ namespace MiniPwrSupply.LMG1
             }
             finally
             {
-                SendAndChk(PortType.SSH, "cd ~", keyword, out res, 0, 3000);
+                for (int i = 0; i < 3; i++)
+                {
+                    if (SendAndChk(PortType.SSH, "cd ~", keyword, out res, 0, 3000))
+                    {
+                        break;
+                    }
+                }
             }
         }
-        private void CheckWiFiCalData(bool IsFinal_staion)
+        private void CheckWiFiCalData_VN()
         {
             if (!CheckGoNoGo())
             {
@@ -652,20 +574,20 @@ namespace MiniPwrSupply.LMG1
                 }
 
                 //Rena_20230809, check某個區間的cal data
-                SendAndChk(PortType.SSH, "hexdump -s 0x1000 -n 16 /dev/mmcblk0p18", keyword, out res, 0, 5000);
-                if (res.Contains("0001000 0000 0000 0000 0000 0000 0000 0000 0000"))
-                {
-                    DisplayMsg(LogType.Log, "Check cal data fail, hexdump 0x1000 is empty");
-                    AddData(item, 1);
-                    return;
-                }
+                //SendAndChk(PortType.SSH, "hexdump -s 0x1000 -n 16 /dev/mmcblk0p18", keyword, out res, 0, 5000);
+                //if (res.Contains("0001000 0000 0000 0000 0000 0000 0000 0000 0000"))
+                //{
+                //    DisplayMsg(LogType.Log, "Check cal data fail, hexdump 0x1000 is empty");
+                //    AddData(item, 1);
+                //    return;
+                //}
 
                 // ============================================================================
-                if (IsFinal_staion)
-                {
-                    //int IfconfigOK = this.ifconfigVerifiedMac(PortType.SSH, IsFinal_staion) == true ? 0 : 1;
-                    //AddData(item, IfconfigOK);
-                }
+                //if (IsFinal_staion)
+                //{
+                //    //int IfconfigOK = this.ifconfigVerifiedMac(PortType.SSH, IsFinal_staion) == true ? 0 : 1;
+                //    //AddData(item, IfconfigOK);
+                //}
 
                 if (!CheckGoNoGo())
                 {
@@ -924,45 +846,62 @@ namespace MiniPwrSupply.LMG1
             bool P2_linkrate;
             string keyword = "root@OpenWrt:~# \r\n";
             string item = "831_1_Chkboarddata";
+            string linkrate1 = Func.ReadINI("Setting", "LinkRate", "port1", "1000");
+            string linkrate2 = Func.ReadINI("Setting", "LinkRate", "port2", "1000");
+            string serverIP = WNC.API.Func.ReadINI("Setting", "PCBA", "SeverIP", "10.169.100.108");
             string res = "";
             int retry_cnt;
+            int retrytime = 0;
             try
             {
             LAN_Port_Test:
                 P1_linkrate = false;
                 P2_linkrate = false;
                 retry_cnt = 0;
-                SendAndChk(PortType.SSH, "mt info", keyword, out res, 0, 3000);
+                DisplayMsg(LogType.Log, "=============== Ethernet Test ===============");
                 SendAndChk(PortType.SSH, "mt eth linkrate", keyword, out res, 0, 5000);
-                if (res.Contains("port 1: 2500M FD"))
+                if (res.Contains($"port 1: {linkrate1}M FD"))
                 {
-                    P1_linkrate = true;
                     DisplayMsg(LogType.Log, "Check LAN Port1 pass");
                 }
-                if (res.Contains("port 2: 2500M FD"))
+                else
                 {
-                    P2_linkrate = true;
+                    DisplayMsg(LogType.Log, "Check LAN Port1 fail");
+                    AddData("Eth_LAN_Port1", 1);
+                }
+                if (res.Contains($"port 2: {linkrate2}M FD"))
+                {
                     DisplayMsg(LogType.Log, "Check LAN Port2 pass");
                 }
-
-                if (!P1_linkrate || !P2_linkrate)
+                else
                 {
-                    DisplayMsg(LogType.Log, $"Check LAN Port1 & Port2 fail");
-                    if (retry_cnt++ < 3)
+                    DisplayMsg(LogType.Log, "Check LAN Port2 fail");
+                    AddData("Eth_LAN_Port2", 1);
+                }
+
+            pingRetry:
+                SendAndChk(PortType.SSH, $"ping {serverIP} -c 1", keyword, out res, 0, 15 * 1000);
+                //SendCommand(PortType.SSH, sCtrlC, 500);
+                if (res.Contains("1 packets received"))
+                {
+                    AddData("DUT_Ping_Sever", 0);
+                    DisplayMsg(LogType.Log, "DUT_Ping_Sever_PASS");
+                }
+                else
+                {
+                    retrytime++;
+                    if (retrytime < 3)
                     {
-                        frmOK.Label = "Vui lòng kiểm tra xem dây mạng của LAN Port1 và Port2 đã được kết nối đúng chưa";
-                        frmOK.ShowDialog();
-                        DisplayMsg(LogType.Log, "Delay 1000ms, retry...");
-                        Thread.Sleep(1000);
-                        goto LAN_Port_Test;
+                        goto pingRetry;
                     }
                     else
                     {
-                        if (!P1_linkrate)
-                            AddData("Eth_LAN_Port1", 1);
-                        if (!P2_linkrate)
-                            AddData("Eth_LAN_Port2", 1);
-                        return;
+                        AddData("DUT_Ping_Sever", 1);
+                        if (!CheckGoNoGo())
+                        {
+                            DisplayMsg(LogType.Error, @"DUT_Ping_Sever_NG");
+                            return;
+                        }
                     }
                 }
             }
@@ -1000,17 +939,50 @@ namespace MiniPwrSupply.LMG1
         public void ArtChksum()
         {
             string res = "";
+            string CalData_MD5 = "";
             string item = "ArtChksum";
             string keyword = "root@OpenWrt:~# \r\n";
             string cmd = "md5sum /dev/mmcblk0p18";
-            string chksum = "48402356e3589c3e606e31e020ed678b";
+            string chksum = "48402356e3589c3e606e31e020ed678b"; //need SE to amend
             try
             {
                 SendAndChk(PortType.SSH, cmd, keyword, out res, 0, 5000);
+                Match m = Regex.Match(res, @"(?<md5sum>[a-zA-Z0-9]{32})\s+/dev/mmcblk0p18");
+                if (m.Success)
+                {
+                    CalData_MD5 = m.Groups["md5sum"].Value.Trim().ToUpper();
+                }
+                DisplayMsg(LogType.Log, $"CalData_MD5: {CalData_MD5}");
+                if (CalData_MD5 == "")
+                {
+                    DisplayMsg(LogType.Log, "Get cal data md5sum fail");
+                    AddData(item, 1);
+                    return;
+                }
                 if (!res.Contains(chksum))
                 {
                     DisplayMsg(LogType.Log, @"ArtChksum NG in Final station");
                     AddData(item, 1);
+                }
+                if (station == "RF")
+                {
+                    //upload cal data md5sum to SFCS
+                    status_ATS.AddDataRaw("LMG1_CalDataMD5", CalData_MD5, CalData_MD5, "000000");
+                }
+                else if (station == "Final")
+                {
+                    //check cal data md5sum with SFCS
+                    DisplayMsg(LogType.Log, $"SFCS CalData_MD5: {infor.CalData_MD5.ToUpper()}");
+                    if (string.Compare(CalData_MD5, infor.CalData_MD5.ToUpper()) == 0)
+                    {
+                        DisplayMsg(LogType.Log, "Check cal data md5sum pass");
+                    }
+                    else
+                    {
+                        DisplayMsg(LogType.Log, "Check cal data md5sum fail");
+                        AddData(item, 1);
+                        return;
+                    }
                 }
             }
             catch (Exception ex)
