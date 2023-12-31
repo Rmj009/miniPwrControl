@@ -15,7 +15,7 @@ using WNC.API;
 
 namespace MiniPwrSupply.LMG1
 {
-    public partial class frmMain
+    public partial class LMG1_RF
     {
         private string _RFTool = "";
         private string _RFLog = "";
@@ -1847,7 +1847,9 @@ namespace MiniPwrSupply.LMG1
             {
                 return false;
             }
+        retry:
             bool IsFwGreater = false;
+            int retryMtInFo = 0;
             string res = string.Empty;
             string FWversion = string.Empty;
             string item = $"SwitchDmpMode";
@@ -1863,7 +1865,6 @@ namespace MiniPwrSupply.LMG1
                 {
                     FWversion = m.Groups["FWver"].Value.Trim().Split('v')[1];
                     DisplayMsg(LogType.Log, "DUT FWversion: " + FWversion);
-                    //string a = FWversion.Split('v')[1];
                 }
                 Version FwVer = Version.Parse(FWversion);
                 if (FwVer.CompareTo(targetVerison) > 0)
@@ -1873,8 +1874,14 @@ namespace MiniPwrSupply.LMG1
             }
             catch (Exception ex)
             {
-                DisplayMsg(LogType.Exception, $"{item}" + ex.Message);
-                AddData(item, 1);
+                DisplayMsg(LogType.Exception, $"{item}=>" + ex.Message);
+                retryMtInFo++;
+                if (retryMtInFo > 2)
+                {
+                    AddData(item, 1);
+                    throw;
+                }
+                goto retry;
             }
             return IsFwGreater;
         }
