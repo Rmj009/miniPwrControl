@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ATS.Util;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
 using System.Linq;
@@ -51,13 +52,27 @@ namespace MiniPwrSupply.Util
         }
         private void DisplayMsg(LogType type, string msg)
         {
-            if (string.Compare(type.ToString(), LogType.Empty.ToString(), true) == 0)
+            var TryExamples = new Foo();
+            TryExamples.SuspendEvents();
+            try
             {
-                status_ATS.AddLog(msg);
+                if (string.Compare(type.ToString(), LogType.Empty.ToString(), true) == 0)
+                {
+                    status_ATS.AddLog(msg);
+                }
+                {
+                    status_ATS.AddLog("[ " + type.ToString() + " ]" + msg);
+                }
             }
+            catch (Exception ex)
             {
-                status_ATS.AddLog("[ " + type.ToString() + " ]" + msg);
+                throw;
+            }
+            finally
+            {
+                TryExamples.ResumeEvents();
             }
         }
+
     }
 }

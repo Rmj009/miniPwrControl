@@ -6,6 +6,30 @@ using System.Threading.Tasks;
 
 namespace ATS.Util
 {
+    class Foo
+    {
+        int _suspendCount;
+        public void SuspendEvents() => _suspendCount++;
+        public void ResumeEvents() => _suspendCount--;
+        void FireSomeEvent()
+        {
+            if (_suspendCount == 0)
+            {
+                //fire the event
+            }
+        }
+    }
+    public class Disposable : IDisposable
+    {
+        public static Disposable Create(Action onDispose) => new Disposable(onDispose);
+        private Action _onDispose; 
+        private Disposable(Action onDispose) => _onDispose = onDispose;
+        public void Dispose()
+        {
+            _onDispose?.Invoke();
+            _onDispose = null;
+        }
+    }
     public class MSG
     {
         public static UInt32 ERROR = 0;
