@@ -26,6 +26,7 @@ namespace ATS.Util
         private Disposable(Action onDispose) => _onDispose = onDispose;
         public void Dispose()
         {
+            // Proper implementation to release any resources
             _onDispose?.Invoke();
             _onDispose = null;
         }
