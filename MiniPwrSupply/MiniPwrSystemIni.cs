@@ -11,8 +11,7 @@ namespace MiniPwrSupply
     {
         public bool IsPowerSupplyEnable()
         {
-            throw new NotImplementedException();
-            //return this.IniReadValue("wuzhiCmd", @"Enable").Trim().Equals(@"1");
+            return this.IniReadValue("wuzhiCmd", @"Enable").Trim().Equals(@"1");
         }
     }
 }
