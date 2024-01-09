@@ -72,6 +72,7 @@
     <Compile Include="DoWuzhiCmd\WuzhiCmd.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmdBase.cs" />
     <Compile Include="LCS5\Final.cs" />
+    <Compile Include="LCS5\FWSwitch.cs" />
     <Compile Include="LCS5\OTA.cs" />
     <Compile Include="LMG1\FWswitch.cs" />
     <Compile Include="Singleton\WiFi.cs" />

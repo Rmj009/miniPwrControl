@@ -70,6 +70,7 @@ namespace MiniPwrSupply.LCS5
         {
             public string SerialNumber = "";
             public string BaseMAC = "";
+            public string Eth0MAC = "";
             public string Eth1MAC = "";
             public string Eth2GMAC = "";
             public string Eth5GMAC = "";
@@ -710,9 +711,9 @@ namespace MiniPwrSupply.LCS5
                 }
                 #endregion
 
-                #region ETH1 mac
-                if (WriteOrCheckDeviceInfor(portType, "Write_ETH1_MAC", $"setenv eth1addr {infor.Eth1MAC = MACConvert(infor.BaseMAC, 0)}", keyword))
-                    status_ATS.AddDataRaw("LCS5_ETH1_MAC", infor.Eth1MAC, infor.Eth1MAC, "000000");
+                #region ETH0 mac
+                if (WriteOrCheckDeviceInfor(portType, "Write_ETH0_MAC", $"setenv eth0addr {infor.Eth1MAC = MACConvert(infor.BaseMAC, 0)}", keyword))
+                    status_ATS.AddDataRaw("LCS5_ETH1_MAC", infor.Eth0MAC, infor.Eth0MAC, "000000");
                 #endregion
 
 
