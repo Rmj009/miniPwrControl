@@ -1,5 +1,4 @@
-﻿//using ATS_Template.CSVs;
-using EasyLibrary;
+﻿using EasyLibrary;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -16,6 +15,11 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web.Services.Description;
 using System.Windows.Forms;
+using WNC.API;
+using static ATS.frmMain;
+using static WNC.UI.FrmRetry;
+//using ATS_Template.CSVs;
+using static System.Collections.Specialized.BitVector32;
 //using WNC.API;
 //using static WNC.UI.FrmRetry;
 
@@ -23,49 +27,7 @@ namespace MiniPwrSupply.LCS5
 {
     public partial class frmMain
     {
-        private Action<string, UInt32> mLogCallback = null;
-        private Action<string, bool> mRunResultCallback = null;
-        private Action<string> mUICallback = null;
-
-        //public bool mSendCmdErrorMustResendDTM = false;
-        private LCS5CsvRFTestItem csvItem = null;
-        private string mComport = "";
-        private int iRetryTime = 10;
-        public int iItemCount = 0;
-        public string code = "";
-        public static frmMain SELF = null;
-        // ===========================================
-        // ============== VN manuf ===================
         SFCS_Query _Sfcs_Query = new SFCS_Query();
-        // ===========================================
-
-
-        private Action<Action, string> CalcExecutionSpendTime = (doneCallback, title) =>
-        {
-            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-            sw.Reset();
-            sw.Start();
-            try
-            {
-                doneCallback();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-            finally
-            {
-                sw.Stop();
-                string timeSpend = sw.Elapsed.TotalMilliseconds.ToString();
-                SELF.DisplayMsg(LogType.Log, "----- Spend : " + Convert.ToString((Convert.ToDouble(timeSpend) / 1000)) + @" Sec. -----" + Environment.NewLine);
-            }
-        };
-        public void SetLogCallback(Action<string, uint> logAction)
-        {
-            this.mLogCallback = logAction;
-        }
-
-
         public class DeviceInfor
         {
             public string SerialNumber = "";
@@ -75,19 +37,18 @@ namespace MiniPwrSupply.LCS5
             public string Eth2GMAC = "";
             public string Eth5GMAC = "";
             public string FSAN = "";
-            public string PartNumber = "";        // NO partNumber in testplan
+            public string PartNumber = "";
             public string NoLevel300 = string.Empty;
             public string PartNumber_100 = "";
             public string GPON = "";
             public string FWver = "";
-            public string HWver = "";               //TestPlan0814 added
-            public string ModuleId = "";          // NO partNumber in testplan
+            public string HWver = "";
+            public string ModuleId = "";
             public string CalixFWver = "";
             public string IPADDR = "192.168.1.1";
             public string ServerIP = "192.168.1.100";
             public string MFGDate = DateTime.Now.ToString("MM/dd/yyyy");
             public string Key = "";
-            public string Md5sum = string.Empty;
 
             public void ResetParam()
             {
@@ -102,21 +63,82 @@ namespace MiniPwrSupply.LCS5
                 GPON = "";
             }
         }
+        private bool CreatePsnFile()
+        {
+            try
+            {
+                string file = @"C:\SFCS\PSN_" + status_ATS.txtPSN.Text + ".txt";
+                string content = Environment.NewLine + status_ATS.txtPSN.Text + Environment.NewLine;
+                File.AppendAllText(file, content);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+                return false;
+            }
+        }
+
+        private bool ChkCombine()
+        {
+            int count = 0;
+            string resultFile = @"C:\SFCS_Out\CHKResult_" + status_ATS.txtPSN.Text + ".txt";
+        Re:
+            try
+            {
+
+                if (!File.Exists(resultFile))
+                {
+                    DisplayMsg(LogType.Retry, "CHKResult file not exist.");
+
+                    if (count++ < 5)
+                    {
+                        DisplayMsg(LogType.Retry, "Retry count : " + count);
+                        System.Threading.Thread.Sleep(2000);
+                        goto Re;
+                    }
+                    return false;
+                }
+
+                string content;
+                StreamReader Str = new StreamReader(resultFile);
+                StringReader strR = new StringReader(Str.ReadToEnd());
+                Str.Close();
+
+                while ((content = strR.ReadLine()) != null)
+                {
+                    DisplayMsg(LogType.Log, content);
+                    if (content.ToLower().Contains("ok"))
+                    {
+                        strR.Close();
+                        return true;
+                    }
+                }
+                strR.Close();
+
+                DisplayMsg(LogType.Log, "Combine fail !!");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Log, "Combine sn error: " + ex.ToString());
+                return false;
+            }
+        }
+
+        public bool CheckRule(string istring, string rule)
+        {
+            Regex regex = new Regex(rule);
+            bool result = regex.IsMatch(istring);
+            return regex.IsMatch(istring);
+        }
+
         private void PCBA()
         {
             if (!CheckGoNoGo())
-            {
                 return;
-            }
-            string title = "======= PCBA =======";
             string res = string.Empty;
-            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-            sw.Reset();
-            sw.Start();
-            //csvItem.Date_Time = DateTime.UtcNow.AddHours(8).ToString(@"yyyy/MM/dd HH:mm:ss");
-            //SELF.CalcExecutionSpendTime(() => { }, title);
-            sw.Stop();
-            //csvItem.END_Time = DateTime.UtcNow.AddHours(8).ToString(@"yyyy/MM/dd HH:mm:ss");
+
             try
             {
                 DeviceInfor infor = new DeviceInfor();
@@ -135,57 +157,122 @@ namespace MiniPwrSupply.LCS5
                     isGolden = false;
                 }
 
-                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                CreatePsnFile();
+
+                if (!ChkCombine())
                 {
-                    SentPsnForGetMAC(status_ATS.txtPSN.Text.Trim());
+                    warning = "Combine fail";
+                    return;
+                }
 
-                    for (int i = 0; i < 3; i++)
-                    {
-                        DisplayMsg(LogType.Log, "Delay 1000ms...");
-                        Thread.Sleep(1000);
-
-                        infor.SerialNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LCS5_SN");
-
-                        infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
-
-                        infor.FSAN = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LCS5_SSID_SN_FSAN");
-
-                        string name = Func.ReadINI("Setting", "SFCS", "Calix_Name", "@LCS5_CLX_FW_VER_21");
-                        infor.CalixFWver = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, name);
-
-                        infor.PartNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LCS5_300_PN").Substring(0, 10);
-
-                        infor.PartNumber_100 = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LCS5_100_PN").Substring(0, 10);
-
-                        infor.MFGDate = DateTime.Now.ToString("MM/dd/yyyy");
-
-                        infor.GPON = "0";
-
-                        infor.ModuleId = "0";
-
-                        infor.FWver = Func.ReadINI("Setting", "Final", "FWver", "!@#$%");
-                        string FWname = Func.ReadINI("Setting", "SFCS", "MFGFW_Name", "@LCS5_MFG_FW_VER_18");
-                        GetFromSfcs(FWname, out infor.FWver);
-                        infor.FWver = infor.FWver.Substring(0, infor.FWver.Length - 10);
-
-                        if (infor.SerialNumber != "")
-                            break;
-                    }
-
+                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                {
+                    infor.SerialNumber = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@CHJGP1_SN");
                     DisplayMsg(LogType.Log, "Get SN From SFCS is:" + infor.SerialNumber);
+
+                    infor.BaseMAC = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@MAC");
                     DisplayMsg(LogType.Log, "Get Base MAC From SFCS is:" + infor.BaseMAC);
+
+                    infor.Eth1MAC = MACConvert(infor.BaseMAC, 0);
+                    DisplayMsg(LogType.Log, "Eth1MAC convert from BaseMac: " + infor.Eth1MAC);
+
+                    infor.Eth2GMAC = MACConvert(infor.BaseMAC, 2);
+                    DisplayMsg(LogType.Log, "Eth2GMAC convert from BaseMac: " + infor.Eth2GMAC);
+
+                    infor.Eth5GMAC = MACConvert(infor.BaseMAC, 3);
+                    DisplayMsg(LogType.Log, "Eth5GMAC convert from BaseMac: " + infor.Eth5GMAC);
+
+
+                    infor.FSAN = _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LCS5_SSID_SN_FSAN");
                     DisplayMsg(LogType.Log, "Get FSAN From SFCS is:" + infor.FSAN);
-                    DisplayMsg(LogType.Log, "Get Calix FW From SFCS is:" + infor.CalixFWver);
-                    DisplayMsg(LogType.Log, "Get PartNumber From SFCS is:" + infor.PartNumber);
-                    DisplayMsg(LogType.Log, "Get PartNumber_100 From SFCS is:" + infor.PartNumber_100);
-                    DisplayMsg(LogType.Log, "MFG date is:" + infor.MFGDate);
-                    DisplayMsg(LogType.Log, "GPON pw is:" + infor.GPON);
-                    DisplayMsg(LogType.Log, "FWver is:" + infor.FWver);
+
+                    //string name = Func.ReadINI("Setting", "SFCS", "Calix_Name", "@LCS5_CLX_FW_VER_21");
+                    infor.CalixFWver = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "CalixFWver", "23.4.905.34"); // _Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, name);
+                    DisplayMsg(LogType.Log, "Get Calix FW From Setting is:" + infor.CalixFWver);
+
+                    infor.PartNumber = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "PartNumber", "3000301302"); //_Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LCS5_300_PN").Substring(0, 10);
+                    DisplayMsg(LogType.Log, "Get PartNumber From Setting is:" + infor.PartNumber);
+
+                    infor.PartNumber_100 = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "PartNumber_100", "1000590702"); //_Sfcs_Query.GetFromSfcs(status_ATS.txtPSN.Text, "@LCS5_100_PN").Substring(0, 10);
+                    DisplayMsg(LogType.Log, "Get PartNumber_100 From Setting is:" + infor.PartNumber_100);
+
+                    infor.MFGDate = DateTime.Now.ToString("MM/dd/yyyy");
+                    infor.MFGDate = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "MFGDate", "08/09/2023");
+                    DisplayMsg(LogType.Log, "MFG date From Setting is:" + infor.MFGDate);
+
+                    infor.GPON = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "GPON", "0");
+                    DisplayMsg(LogType.Log, "GPON is:" + infor.GPON);
+
+                    infor.ModuleId = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "ModuleId", "0");
+                    DisplayMsg(LogType.Log, "ModuleId is:" + infor.ModuleId);
+
+                    infor.FWver = Func.ReadINI("Setting", "LCS5_Infor", "MFG_FWver", "v1.1.1");
+                    DisplayMsg(LogType.Log, "FWver From Setting is:" + infor.FWver);
+                    //string FWname = Func.ReadINI("Setting", "SFCS", "MFGFW_Name", "@LCS5_MFG_FW_VER_18");
+                    //GetFromSfcs(FWname, out infor.FWver);
+                    //infor.FWver = infor.FWver.Substring(0, infor.FWver.Length - 10);                   
+
+                    infor.HWver = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "HWver", "02");
+                    DisplayMsg(LogType.Log, "HWver From Setting is:" + infor.HWver);
+
+                    #region Check Rule
+                    bool result = false;
+
+                    #region SN rule
+                    string SNStart = Func.ReadINI("Setting", "Check_Rule", "SNStart", "63");
+                    result = false;
+                    result = infor.SerialNumber.Length == 12 ? true : false;
+                    result = result && infor.SerialNumber.Substring(0, 2) == SNStart ? true : false;
+                    result = result && CheckRule(infor.SerialNumber, "[0-9]{12}") ? true : false;
+                    if (!result)
+                    {
+                        warning = "SN Rule Fail";
+                        DisplayMsg(LogType.Log, $"Check SN rule fail. SN must start is {SNStart} and the character set is '0123456789' excluding 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', length = 12");
+                        return;
+                    }
+                    DisplayMsg(LogType.Log, $"SN rule: SN must start with {SNStart} and the character set is '0123456789' excluding 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', length = 12");
+                    DisplayMsg(LogType.Log, "Check SN rule OK");
+                    #endregion
+
+                    #region MAC rule
+                    result = false;
+                    result = infor.BaseMAC.Length == 12 ? true : false;
+                    result = result && CheckRule(infor.BaseMAC, "[0-9A-F]{12}");
+                    // 09.25.2023 sara add follow Jed require by mail
+                    result = result && (infor.BaseMAC.StartsWith("B89470") || infor.BaseMAC.StartsWith("04BC9F") || infor.BaseMAC.StartsWith("1C8B76") ||
+                                       infor.BaseMAC.StartsWith("142103") || infor.BaseMAC.StartsWith("4C4341") || infor.BaseMAC.StartsWith("E46CD1"));
+                    if (!result)
+                    {
+                        warning = "MAC Rule fail";
+                        DisplayMsg(LogType.Log, "Check MAC_Rule fail. MAC length = 12 and the character set is '0123456789ABCDEF' excluding 'GHIJKLMNOPQRSTUVWXYZ' and MAC must start with B89470 or 04BC9F or 1C8B76 or 142103 or 4C4341 or E46CD1");
+                        return;
+                    }
+                    DisplayMsg(LogType.Log, "MAC rule: MAC length = 12 and the character set is '0123456789ABCDEF' excluding 'GHIJKLMNOPQRSTUVWXYZ' and MAC must start with B89470 or 04BC9F or 1C8B76 or 142103 or 4C4341 or E46CD1");
+                    DisplayMsg(LogType.Log, "Check MAC Rule OK");
+                    #endregion
+
+                    #region FSAN rule
+                    string FSANStart = Func.ReadINI("Setting", "Check_Rule", "FSANStart", "CXNK");
+                    result = false;
+                    result = infor.FSAN.Length == 12 ? true : false;
+                    result = result && infor.FSAN.Substring(0, 4) == FSANStart ? true : false;
+                    result = result && CheckRule(infor.FSAN, "[0-9A-F]{8}");
+                    if (!result)
+                    {
+                        warning = "FSAN Rule Fail";
+                        DisplayMsg(LogType.Log, $"Check LCS3_SSID_SN_FSAN rule fail. LCS3_SSID_SN_FSAN must start is {FSANStart}, length = 12, and the character set is '0123456789ABCDEF' excluding 'GHIJKLMNOPQRSTUVWXYZ'");
+                        return;
+                    }
+                    DisplayMsg(LogType.Log, $"LCS5_SSID_SN_FSAN must start is {FSANStart}, length = 12, and the character set is '0123456789ABCDEF' excluding 'GHIJKLMNOPQRSTUVWXYZ'");
+                    DisplayMsg(LogType.Log, "Check LCS5_SSID_SN_FSAN rule OK");
+                    #endregion
+
+                    #endregion
 
                     if (infor.SerialNumber.Length == 12)
                     {
                         SetTextBox(status_ATS.txtPSN, infor.SerialNumber);
-                        SetTextBox(status_ATS.txtSP, infor.BaseMAC);
+                        //SetTextBox(status_ATS.txtSP, infor.BaseMAC);
                         status_ATS.SFCS_Data.PSN = infor.SerialNumber;
                         status_ATS.SFCS_Data.First_Line = infor.SerialNumber;
                     }
@@ -195,18 +282,23 @@ namespace MiniPwrSupply.LCS5
                         return;
                     }
                 }
-                else  // THIEM added for NPI test
+
+                if (Func.ReadINI("Setting", "Setting", "IsDebug", "0") == "1" && status_ATS._testMode == StatusUI2.StatusUI.TestMode.EngMode)
                 {
-                    infor.SerialNumber = "630301000027";
-                    infor.PartNumber = "3000301302";
-                    infor.PartNumber_100 = "1000590701";
-                    infor.BaseMAC = "001122334400";
-                    infor.Eth1MAC = "00:11:22:33:44:00";
-                    infor.Eth2GMAC = "00:11:22:33:44:02";
-                    infor.Eth5GMAC = "00:11:22:33:44:03";
-                    infor.FSAN = "CXNK00DBB4C2";
-                    infor.MFGDate = "08/09/2023";
-                    infor.CalixFWver = "23.4.905.29";
+                    infor.SerialNumber = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "SerialNumber", "630301000027");
+                    infor.PartNumber = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "PartNumber", "3000301302");
+                    infor.PartNumber_100 = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "PartNumber_100", "1000590701");
+                    infor.BaseMAC = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "BaseMAC", "001122334400");
+
+                    infor.Eth1MAC = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "Eth1MAC", "00:11:22:33:44:00");
+                    infor.Eth2GMAC = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "Eth2GMAC", "00:11:22:33:44:02");
+                    infor.Eth5GMAC = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "Eth5GMAC", "00:11:22:33:44:03");
+
+                    infor.FSAN = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "FSAN", "CXNK00DBB4C2");
+                    infor.MFGDate = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "MFGDate", "08/09/2023");
+                    infor.CalixFWver = Func.ReadINI(Application.StartupPath, "Setting", "LCS5_Infor", "CalixFWver", "23.4.905.29");
+                    infor.FWver = Func.ReadINI("Setting", "LCS5_Infor", "MFG_FWver", "v1.1.1");
+
                     infor.ModuleId = "0";
                     infor.HWver = "02";
                     infor.GPON = "0";
@@ -230,39 +322,29 @@ namespace MiniPwrSupply.LCS5
                 else
                 {
                     SwitchRelay(CTRL.OFF);
-                    Thread.Sleep(5000);
+                    Thread.Sleep(3000);
                     SwitchRelay(CTRL.ON);
                 }
 
                 DisplayMsg(LogType.Log, "Power on!!!");
 
-                #region  Write DUT Infor
-                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)//disable for verify test plan
+                #region boot loader
+                if (!BootLoader(uart))
                 {
-                    #region boot loader
-                    if (!BootLoader(uart))
-                    {
-                        //status_ATS.AddDataLog("BootLoader", NG);
-                        AddData("BootLoader", 1);
-                        return;
-                    }
-                    AddData("BootLoader", 0);
-                    #endregion
-
-                    SetDUTInfo(infor, PortType.UART);
+                    AddData("BootLoader", 1);
+                    return;
                 }
+                AddData("BootLoader", 0);
                 #endregion
 
+                SetDUTInfo(infor, PortType.UART);
 
                 this.ChkBootUp(infor);
-                //===================================
+
                 Thread.Sleep(1000);
-                this.WriteHWver(infor);           // add
-                //===================================
-                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)//disable for verify test plan
-                {
-                    CheckDUTInfo(infor, PortType.UART);
-                }
+                this.WriteHWver(infor);
+
+                CheckDUTInfo(infor, PortType.UART);
 
                 CheckLED(PortType.UART);
 
@@ -272,25 +354,16 @@ namespace MiniPwrSupply.LCS5
 
                 EthernetTest(PortType.UART);
 
-                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)//disable for verify test plan
-                {
-                    NvramTest(infor, PortType.UART);
-                }
-                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)//disable for verify test plan
-                {
-                    GenPWD(infor);
-                }
+                NvramTest(infor, PortType.UART);
 
-                //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)//disable for verify test plan
-                {
-                    GetCalixPw(PortType.UART, infor);
-                }
+                GenPWD(infor);
 
+                GetCalixPw(PortType.UART, infor);
 
             }
             catch (Exception ex)
             {
-                DisplayMsg(LogType.Exception, @"PCBA " + ex.Message);
+                DisplayMsg(LogType.Exception, "PCBA " + ex.Message);
                 warning = "Exception";
             }
             finally
@@ -308,62 +381,90 @@ namespace MiniPwrSupply.LCS5
                     SwitchRelay(CTRL.ON);
                 }
             }
-
         }
-        private bool ChkBootUp(DeviceInfor infor)
+        private void WriteHWver(DeviceInfor infor)
         {
             if (!CheckGoNoGo())
             {
+                return;
+            }
+            string getMsg = string.Empty;
+            string keyword = "root@OpenWrt";
+            try
+            {
+                // After booting complete check keyword upon testplan 0828
+                if (WriteOrCheckDeviceInfor(PortType.UART, "Write_HW_version", $"fw_setenv hwver {infor.HWver}", keyword))
+                {
+                    status_ATS.AddDataRaw("LCS5_HW_VER", infor.HWver, infor.HWver, "000000");
+                    SendCommand(PortType.UART, "\r\n", 200);
+                    ChkResponse(PortType.UART, ITEM.NONE, @"root@OpenWrt", out getMsg, 2000);
+                    AddData("WriteHWver", 0);
+                    return;
+                }
+                DisplayMsg(LogType.Error, @"Write Hw version NG FAILED");
+                AddData("WriteHWver", 1);
+                return;
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, @"Write Hw version NG =>" + ex.Message);
+                AddData("WriteHWver", 1);
+                return;
+            }
+        }
+
+        private bool HandlingTelnetPingErr()
+        {
+            DisplayMsg(LogType.Error, @" ---- handling ping via telnet err ----");
+            bool IsPingOK = false;
+            try
+            {
+                IsPingOK = SendAndChk("IsBootUP", PortType.UART, "dmesg | grep qca-wifi loaded", "qca-wifi loaded", 5000, 10 * 1000);
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, @"HandlingTelnetPingErr Exception=>" + ex.Message);
+                AddData("HandlingTelnetPingErr", 1);
                 return false;
             }
-            string res = string.Empty;
-            bool IsBootOK = true;
-            //bool alreadyRetry = false;
-            string keyword = "root@OpenWrt";
-            //string keyword2 = "IPQ5018#";
+            return IsPingOK;
+        }
+
+        private bool ChkBootUp(DeviceInfor infor)
+        {
             DisplayMsg(LogType.Log, "=============== Check BootUp ===============");
+            bool IsBootOK = false;
+            string res = string.Empty;
+            string keyword = "root@OpenWrt";
+            int count = 0;
             try
             {
                 DisplayMsg(LogType.Log, @"entering kernel await delay 88s");
                 Thread.Sleep(88 * 1000);
-            //if (!ChkLinux(alreadyRetry, "qca-wifi loaded"))
-            //{
-            //    DisplayMsg(LogType.Log, "SYSTEM_Fail");
-            //    if (!alreadyRetry)
-            //    {
-            //        SendCommand(PortType.UART, "\r\n", 200);
-            //        ChkResponse(PortType.UART, ITEM.NONE, @"root@OpenWrt", out getMsg, 2000);
 
-            //        alreadyRetry = true;
-            //        goto retry;
-            //    }
-            //    AddData("BootUp", 1);
-            //    return false;
-            //}
             retry:
+
                 if (!ChkLinux(PortType.UART, "qca-wifi loaded", keyword, 70000))
                 {
                     DisplayMsg(LogType.Error, @"cannot enter kernel, dmesg and retry");
                     if (!this.HandlingTelnetPingErr())
                     {
-                        DisplayMsg(LogType.Log, @"catch keyword qca-wifi, enter kernel again");
-                        IsBootOK = false;
-                        goto retry;
+                        if (count++ < 3)
+                        {
+                            DisplayMsg(LogType.Log, @"catch keyword qca-wifi, enter kernel again");
+                            IsBootOK = false;
+                            goto retry;
+                        }
+                        AddData("BootUp", 1);
+                        return IsBootOK;
                     }
-                    //if (SendAndChk("IsBootUP", PortType.UART, "dmesg | grep qca-wifi loaded", "qca-wifi loaded", 5000, 10 * 1000))
-                    //{
-                    //    DisplayMsg(LogType.Log, @"catch keyword qca-wifi loaded, Bootup OK");
-                    //    IsBootOK = true;
-                    //}
-                    //if (!alreadyRetry)
-                    //{
-                    //    SendCommand(PortType.UART, "\r\n", 200);
-                    //    alreadyRetry = true;
-                    //    goto retry;
-                    //}
-
-                    AddData("BootUp", 1);
-                    return false;
+                    else
+                    {
+                        DisplayMsg(LogType.Log, @"dmesg reset ok, enter kernel");
+                        IsBootOK = true;
+                        AddData("BootUp", 0);
+                        return IsBootOK;
+                    }
                 }
                 else
                 {
@@ -377,18 +478,14 @@ namespace MiniPwrSupply.LCS5
                     }
                     else
                     {
-                        DisplayMsg(LogType.Log, @"--------- entering kernel NG; retry again---------");
-                        goto retry;
+                        if (count++ < 3)
+                        {
+                            DisplayMsg(LogType.Log, @"--------- entering kernel NG; retry again---------");
+                            goto retry;
+                        }
+                        AddData("BootUp", 1);
+                        return IsBootOK;
                     }
-                    //if (SendAndChk("IsBootUP", PortType.UART, "dmesg | grep qca-wifi loaded", "qca-wifi loaded", 5000, 10 * 1000))
-                    //{
-                    //    DisplayMsg(LogType.Log, @"catch keyword qca-wifi loaded, Bootup OK");
-                    //}
-                    //else
-                    //{
-                    //    DisplayMsg(LogType.Log, @"ChkBootUp FAIL");
-                    //    return false;
-                    //}
                 }
                 return IsBootOK;
             }
@@ -412,7 +509,7 @@ namespace MiniPwrSupply.LCS5
             }
             catch (Exception ex)
             {
-                DisplayMsg(LogType.Exception, @"CalculateMD5ofString__ " + ex.Message);
+                DisplayMsg(LogType.Exception, ex.ToString());
             }
             return "error";
         }
@@ -472,13 +569,13 @@ namespace MiniPwrSupply.LCS5
         private void GetCalixPw(PortType port, DeviceInfor info)
         {
             string res = "";
-            if (status_ATS._testMode == StatusUI2.StatusUI.TestMode.EngMode || !CheckGoNoGo())
+            if (!CheckGoNoGo())
                 return;
             try
             {
                 DisplayMsg(LogType.Log, "======== Load Calix =========");
-                SendAndChk(port, "tftp -g -r calix.sh 192.168.1.10", "#", out res, 0, 30000);
-                SendAndChk(port, "chmod +x calix.sh", "#", out res, 0, 30000);
+                //SendAndChk(port, "tftp -g -r calix.sh 192.168.1.10", "#", out res, 0, 30000);
+                //SendAndChk(port, "chmod +x calix.sh", "#", out res, 0, 30000);
                 SendAndChk(port, $"./calix.sh {info.FSAN}", "#", out res, 0, 3000);
                 string auth_code = "";
                 foreach (var item in res.Split('\n'))
@@ -503,20 +600,22 @@ namespace MiniPwrSupply.LCS5
                 DisplayMsg(LogType.Exception, @"GenPWD " + ex.Message);
             }
         }
+        /// <summary>
+        /// /
+        /// <param name="keyword"></param>
+        /// <returns></returns>
+
         private bool WriteOrCheckDeviceInfor(PortType portType, string item, string cmd, string keyword)
         {
             string res = "";
             try
             {
                 if (!CheckGoNoGo())
-                {
                     return false;
-                }
                 DisplayMsg(LogType.Log, $"=============== {item} ===============");
 
-                if (!SendAndChk(portType, cmd, keyword, out res, 0, 5000))
+                if (!SendAndChk(portType, cmd, keyword, out res, 0, 3000))
                 {
-                    //this.HandlingTelnetPingErr();
                     AddData(item, 1);
                     return false;
                 }
@@ -617,7 +716,7 @@ namespace MiniPwrSupply.LCS5
             TimeSpan ts;
             string res = string.Empty;
             string log = string.Empty;
-            string keyword1 = "Hit any key to stop autoboot";
+            string keyword1 = "to stop autoboot in  5s";//"Hit any key to stop autoboot";
             string keyword2 = "IPQ5018#";
             try
             {
@@ -640,10 +739,10 @@ namespace MiniPwrSupply.LCS5
 
                     if (log.Contains(keyword1))
                     {
-                        //Thread.Sleep(200);
-                        port.Write("\n"); //Test Plan(0808) amended to add by THIEM
-                        //SendAndChk(PortType.UART, "\r\n", keyword2, out res, 0, 3000);
-                        SendAndChk(PortType.UART, "\n", "#", out res, 1000, 3000);
+                        Thread.Sleep(200);
+                        //port.Write("\n"); //Test Plan(0808) amended to add by THIEM
+                        //SendAndChk(PortType.UART, "\n", keyword2, out res, 0, 3000);
+                        SendAndChk(PortType.UART, "stop", "#", out res, 1000, 3000);
                         if (!res.Contains(keyword2))
                         {
                             return false;
@@ -655,6 +754,74 @@ namespace MiniPwrSupply.LCS5
                     {
                         DisplayMsg(LogType.Error, $"Check {keyword1} timeout");
                         return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, @"BootLoader " + ex.Message);
+                warning = "Exception";
+                return false;
+            }
+        }
+
+        private bool BootLoader_bk(SerialPort port, string keyword1 = "stop autoboot", string keyword2 = "IPQ5018#", int timeOutMs = 100000)
+        {
+            DisplayMsg(LogType.Log, "=============== Check BootLoader ===============");
+            DateTime dt;
+            TimeSpan ts;
+
+            string res = string.Empty;
+            string log = string.Empty;
+
+            dt = DateTime.Now;
+            log = string.Empty;
+            try
+            {
+                bool first = true;
+
+                while (true)
+                {
+                    if (!port.IsOpen)
+                    {
+                        DisplayMsg(LogType.Log, "Open port:" + port.PortName);
+                        port.Open();
+                        Thread.Sleep(100);
+                    }
+
+                    ts = new TimeSpan(DateTime.Now.Ticks - dt.Ticks);
+
+                    if (ts.TotalMilliseconds > timeOutMs)
+                    {
+                        DisplayMsg(LogType.Error, "Check timeout");
+                        return false;
+                    }
+
+                    res = port.ReadExisting();
+
+                    if (res.Length != 0 && res != "\r\n")
+                    {
+                        DisplayMsg(LogType.Log, res);
+                        log += res;
+                    }
+
+                    if (log.Contains(keyword1) && first)
+                    {
+                        Thread.Sleep(200);
+
+                        SendAndChk(PortType.UART, "\r\n", "", out res, 100, 3000);
+                        SendAndChk(PortType.UART, "\r\n", "", out res, 100, 3000);
+
+                        SendAndChk(PortType.UART, "stop", "", out res, 100, 3000);
+
+                        //port.Write("stop"); //Test Plan(0808) amended to add by THIEM
+                        first = false;
+                    }
+
+                    if (log.Contains(keyword2))
+                    {
+                        DisplayMsg(LogType.Log, "Check '" + keyword2 + "' ok");
+                        return true;
                     }
                 }
             }
@@ -696,39 +863,47 @@ namespace MiniPwrSupply.LCS5
 
             try
             {
+                SendAndChk(portType, $"\r\n", keyword, out res, 0, 3000);
+                SendAndChk(portType, $"\r\n", keyword, out res, 0, 3000);
+
                 #region SerialNumber
-                if (WriteOrCheckDeviceInfor(portType, "Write_SN", $"setenv serialno {infor.SerialNumber}", keyword))
+                if (WriteOrCheckDeviceInfor(portType, "Write_SN", $"setenv serialno \"{infor.SerialNumber}\"", keyword))
                     status_ATS.AddDataRaw("LCS5_LABEL_SN", infor.SerialNumber, infor.SerialNumber, "000000");
                 #endregion
 
                 #region base mac
-                if (WriteOrCheckDeviceInfor(portType, "Write_BaseMAC", $"setenv baseMAC {infor.BaseMAC = MACConvert(infor.BaseMAC)}", keyword))
+                if (WriteOrCheckDeviceInfor(portType, "Write_BaseMAC", $"setenv baseMAC \"{infor.BaseMAC = MACConvert(infor.BaseMAC)}\"", keyword))
                 {
                     status_ATS.AddDataRaw("LCS5_BASE_MAC", infor.BaseMAC, infor.BaseMAC, "000000");
+                    status_ATS.AddDataRaw("LCS5_LABEL_BASE_MAC", infor.BaseMAC.Replace(":", ""), infor.BaseMAC.Replace(":", ""), "000000");
+                    status_ATS.AddDataRaw("LCS5_LABEL_ONU_MAC", infor.BaseMAC.Replace(":", ""), infor.BaseMAC.Replace(":", ""), "000000");
 
-                    //status_ATS.AddDataRaw("LCS5_LABEL_ONU_MAC", infor.BaseMAC.Replace(":", ""), infor.BaseMAC.Replace(":", ""), "000000");
                     //status_ATS.AddDataRaw("LCS5_LABEL_MTA_MAC", MACConvert(infor.BaseMAC, 1).Replace(":", ""), MACConvert(infor.BaseMAC, 1).Replace(":", ""), "000000");
                 }
                 #endregion
 
                 #region ETH0 mac
-                if (WriteOrCheckDeviceInfor(portType, "Write_ETH0_MAC", $"setenv eth0addr {infor.Eth1MAC = MACConvert(infor.BaseMAC, 0)}", keyword))
-                    status_ATS.AddDataRaw("LCS5_ETH1_MAC", infor.Eth0MAC, infor.Eth0MAC, "000000");
+                if (WriteOrCheckDeviceInfor(portType, "Write_ETH0_MAC", $"setenv eth0addr \"{infor.Eth0MAC = MACConvert(infor.BaseMAC, 0)}\"", keyword))
+                    status_ATS.AddDataRaw("LCS5_ETH0_MAC", infor.Eth0MAC, infor.Eth0MAC, "000000");
                 #endregion
 
+                //#region ETH1 mac
+                //if (WriteOrCheckDeviceInfor(portType, "Write_ETH1_MAC", $"setenv eth1addr \"{infor.Eth1MAC = MACConvert(infor.BaseMAC, 0)}\"", keyword))
+                //    status_ATS.AddDataRaw("LCS5_ETH1_MAC", infor.Eth1MAC, infor.Eth1MAC, "000000");
+                //#endregion                               
 
                 #region ATH0 wifi2G
-                if (WriteOrCheckDeviceInfor(portType, "Write_WiFi2G_MAC", $"setenv wifi0addr {infor.Eth2GMAC = MACConvert(infor.BaseMAC, 2)}", keyword))
+                if (WriteOrCheckDeviceInfor(portType, "Write_WiFi2G_MAC", $"setenv wifi0addr \"{infor.Eth2GMAC = MACConvert(infor.BaseMAC, 2)}\"", keyword))
                     status_ATS.AddDataRaw("LCS5_ATH0_2G_MAC", infor.Eth2GMAC, infor.Eth2GMAC, "000000");
                 #endregion
 
                 #region ATH0 wifi5G
-                if (WriteOrCheckDeviceInfor(portType, "Write_WiFi5G_MAC", $"setenv wifi1addr {infor.Eth5GMAC = MACConvert(infor.BaseMAC, 3)}", keyword))
+                if (WriteOrCheckDeviceInfor(portType, "Write_WiFi5G_MAC", $"setenv wifi1addr \"{infor.Eth5GMAC = MACConvert(infor.BaseMAC, 3)}\"", keyword))
                     status_ATS.AddDataRaw("LCS5_ATH1_5G_MAC", infor.Eth5GMAC, infor.Eth5GMAC, "000000");
                 #endregion
 
                 #region FSAN
-                if (WriteOrCheckDeviceInfor(portType, "Write_FSAN", $"setenv FSAN {infor.FSAN}", keyword))
+                if (WriteOrCheckDeviceInfor(portType, "Write_FSAN", $"setenv FSAN \"{infor.FSAN}\"", keyword))
                     status_ATS.AddDataRaw("LCS5_SSID_SN_FSAN", infor.FSAN, infor.FSAN, "000000");
                 #endregion
 
@@ -756,31 +931,45 @@ namespace MiniPwrSupply.LCS5
             {
                 //if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode && !isGolden)
                 {
-
-                    #region fw                    
-                    WriteOrCheckDeviceInfor(portType, "Check_FW", $"cat etc/wnc_ver", infor.FWver);
+                    #region HW
+                    WriteOrCheckDeviceInfor(portType, "Check_HWver", $"fw_printenv hwver", infor.HWver);
                     #endregion
-                    #region sn
+
                     #region sn
                     WriteOrCheckDeviceInfor(portType, "Check_SN", $"fw_printenv serialno", infor.SerialNumber);
-                    #region base mac
+                    #endregion
+
+                    #region base mac                   
                     WriteOrCheckDeviceInfor(portType, "Check_BaseMAC", $"fw_printenv baseMAC", infor.BaseMAC);
                     #endregion
 
-                    #region Eth1 MAC
-                    WriteOrCheckDeviceInfor(portType, "Check_Eth1MAC", $"fw_printenv eth1addr", infor.Eth1MAC);
+                    #region Eth0 MAC
+                    WriteOrCheckDeviceInfor(portType, "Check_Eth0MAC", $"fw_printenv eth0addr", infor.Eth0MAC);
                     #endregion
+
+                    //#region Eth1 MAC
+                    //WriteOrCheckDeviceInfor(portType, "Check_Eth1MAC", $"fw_printenv eth1addr", infor.Eth1MAC);
+                    //#endregion
+
                     #region Ath0 MAC 2G
                     WriteOrCheckDeviceInfor(portType, "Check_Eth1MAC", $"fw_printenv wifi0addr", infor.Eth2GMAC);
                     #endregion
+
                     #region Ath1 MAC 5G
                     WriteOrCheckDeviceInfor(portType, "Check_Eth1MAC", $"fw_printenv wifi1addr", infor.Eth5GMAC);
                     #endregion
+
                     #region FSAN
                     WriteOrCheckDeviceInfor(portType, "Check_FSAN", $"fw_printenv FSAN", infor.FSAN);
                     #endregion
-                    #endregion Check Hw version
-                    WriteOrCheckDeviceInfor(portType, "Check_HWver", $"fw_printenv hwver", "hwver=" + infor.HWver);
+
+                    #region fw                    
+                    if (WriteOrCheckDeviceInfor(portType, "Check_FW", $"cat etc/wnc_ver", infor.FWver))
+                    {
+                        status_ATS.AddDataRaw("LCS5_MFG_FW_VER", infor.FWver, infor.FWver, "000000");
+                    }
+
+
                     #endregion
                 }
             }
@@ -820,13 +1009,13 @@ namespace MiniPwrSupply.LCS5
                     return;
                 }
 
-                if (!SendAndChk("EthernetTest", portType, "ethtool eth1 | grep Speed", "2500Mb/s", 0, 5000)) //2500Mb coz laptop
+                if (!SendAndChk("EthernetTest", portType, "ethtool eth0 | grep Speed", "2500Mb/s", 0, 5000)) //2500Mb coz laptop
                 {
                     DisplayMsg(LogType.Log, "Check eth1 speed fail");
                     AddData("EthernetTest", 1);
                     return;
                 }
-                if (!SendAndChk("EthernetTest", portType, "ethtool eth1 | grep \"Link detected\"", "yes", 0, 5000))
+                if (!SendAndChk("EthernetTest", portType, "ethtool eth0 | grep \"Link detected\"", "yes", 0, 5000))
                 {
                     DisplayMsg(LogType.Log, "Check eth1 link detected fail");
                     AddData("EthernetTest", 1);
@@ -949,8 +1138,8 @@ namespace MiniPwrSupply.LCS5
                 if (!usecamera)
                 {
                     DisplayMsg(LogType.Log, "Is the red led on?");
-                    frmYN.Label = "Is the red led on?";
-                    //frmYN.ShowDialog();
+                    frmYN.Label = "Is the red led on? (Led đỏ có sáng không)";
+                    frmYN.ShowDialog();
                     //markup for stress Test
                     if (frmYN.no)
                     {
@@ -968,7 +1157,7 @@ namespace MiniPwrSupply.LCS5
                         warning = "Camera error";
                         return;
                     }
-                    if (!CheckCameraResult("Item_1", "red"))
+                    if (!CheckCameraResult("item_1", "red") || !CheckCameraResult("item_2", "red"))
                     {
                         AddData("RED_LED_ON", 1);
                         return;
@@ -984,8 +1173,8 @@ namespace MiniPwrSupply.LCS5
                 if (!usecamera)
                 {
                     DisplayMsg(LogType.Log, "Is the red led off?");
-                    frmYN.Label = "Is the red led off?";
-                    //frmYN.ShowDialog();
+                    frmYN.Label = "Is the red led off? (Led đỏ có tắt không)";
+                    frmYN.ShowDialog();
                     //markup for stress Test
 
                     if (frmYN.no)
@@ -1004,7 +1193,7 @@ namespace MiniPwrSupply.LCS5
                         warning = "Camera error";
                         return;
                     }
-                    if (!CheckCameraResult("Item_1", "black"))
+                    if (!CheckCameraResult("item_1", "black") || !CheckCameraResult("item_2", "black"))
                     {
                         AddData("RED_LED_OFF", 1);
                         return;
@@ -1020,8 +1209,8 @@ namespace MiniPwrSupply.LCS5
                 if (!usecamera)
                 {
                     DisplayMsg(LogType.Log, "Is the green led on?");
-                    frmYN.Label = "Is the green led on?";
-                    //frmYN.ShowDialog();
+                    frmYN.Label = "Is the green led on? (Led xanh có sáng không)";
+                    frmYN.ShowDialog();
                     //markup for stress Test
 
                     if (frmYN.no)
@@ -1040,7 +1229,7 @@ namespace MiniPwrSupply.LCS5
                         warning = "Camera error";
                         return;
                     }
-                    if (!CheckCameraResult("Item_1", "green"))
+                    if (!CheckCameraResult("item_3", "green") || !CheckCameraResult("item_4", "green"))
                     {
                         AddData("GREEN_LED_ON", 1);
                         return;
@@ -1057,8 +1246,8 @@ namespace MiniPwrSupply.LCS5
                 if (!usecamera)
                 {
                     DisplayMsg(LogType.Log, "Is the green led off?");
-                    frmYN.Label = "Is the green led off?";
-                    //frmYN.ShowDialog();
+                    frmYN.Label = "Is the green led off? (Led xanh có tắt không)";
+                    frmYN.ShowDialog();
                     //markup for stress Test
 
                     if (frmYN.no)
@@ -1077,7 +1266,7 @@ namespace MiniPwrSupply.LCS5
                         warning = "Camera error";
                         return;
                     }
-                    if (!CheckCameraResult("Item_1", "black"))
+                    if (!CheckCameraResult("item_3", "black") || !CheckCameraResult("item_4", "black"))
                     {
                         AddData("GREEN_LED_OFF", 1);
                         return;
@@ -1117,20 +1306,17 @@ namespace MiniPwrSupply.LCS5
                 bool released = false;
                 for (int i = 0; i < 3; i++)
                 {
+                    pressed = false; released = false;
+                    //pressed = true; released = true; // by pass for stress test
                     if (!useShield)
                     {
-                        frmOK.Label = "Press WPS button then click OK";
-                        pressed = true;
-                        released = true;
-                        //frmOK.ShowDialog();
-                        //markup for stress Test
-
+                        frmOK.Label = "Press WPS button then click OK \r\n Nhấn nút WPS sau đó ấn OK";
+                        frmOK.ShowDialog();       // mark up for stress test              
                     }
                     else
                     {
                         //fixture.ControlIO(Fixture.FixtureIO.IO_10, CTRL.ON);
                     }
-
                     SendCommand(portType, "cat /sys/class/gpio/gpio28/value", 0);
                     ChkResponse(portType, ITEM.NONE, "#", out res, 2000);
                     if (res.Contains("0"))
@@ -1138,14 +1324,11 @@ namespace MiniPwrSupply.LCS5
                         pressed = true;
                         DisplayMsg(LogType.Log, "Check WPS Button pressed ok");
                     }
+
                     if (!useShield)
                     {
-                        frmOK.Label = "Release WPS button then click OK";
-                        //frmOK.ShowDialog();
-                        pressed = true;
-                        released = true;
-                        //markup for stress Test
-
+                        frmOK.Label = "Release WPS button then click OK \r\n Nhả nút WPS sau đó ấn OK";
+                        frmOK.ShowDialog();           // mark up for stress test
                     }
                     else
                     {
@@ -1165,6 +1348,7 @@ namespace MiniPwrSupply.LCS5
                         break;
                     }
                 }
+
                 if (!pressed || !released)
                 {
                     DisplayMsg(LogType.Log, "Check WPS button fail");
@@ -1179,6 +1363,69 @@ namespace MiniPwrSupply.LCS5
                 AddData("WPSButton", 1);
             }
         }
+
+        private void CheckAdaptorDetection(PortType portType)
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+            string res = string.Empty;
+            try
+            {
+                DisplayMsg(LogType.Log, $"========================== Check adaptor presence detection ==========================");
+                SendAndChk("AdaptorDetection", portType, "echo 14 > /sys/class/gpio/export", "#", 0, 3000);
+                SendAndChk("AdaptorDetection", portType, "echo in > /sys/class/gpio/gpio14/direction", "#", 0, 3000);
+                SendCommand(portType, "cat /sys/class/gpio/gpio14/value", 0);
+                ChkResponse(portType, ITEM.NONE, "#", out res, 3000);
+                if (res.Contains("1"))
+                {
+                    DisplayMsg(LogType.Log, "Value is 1 check adaptor presence detection pass");
+                    AddData("AdaptorDetection", 0);
+                    return;
+                }
+
+                AddData("AdaptorDetection", 1);
+                return;
+            }
+            catch (Exception ex)
+            {
+                warning = "Exception";
+                DisplayMsg(LogType.Log, "exception: " + ex.ToString());
+            }
+        }
+
+        private void CheckPSEDetection(PortType portType)
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+            string res = string.Empty;
+            try
+            {
+                DisplayMsg(LogType.Log, $"========================== Check PSE presence detection ==========================");
+                SendAndChk("PSEDetection", portType, "echo 16 > /sys/class/gpio/export", "#", 0, 3000);
+                SendAndChk("PSEDetection", portType, "echo in > /sys/class/gpio/gpio16/direction", "#", 0, 3000);
+                SendCommand(portType, "cat /sys/class/gpio/gpio16/value", 0);
+                ChkResponse(portType, ITEM.NONE, "#", out res, 3000);
+
+                if (res.Contains("0"))
+                {
+                    DisplayMsg(LogType.Log, "Value is 0 check PSE presence detection pass");
+                    AddData("PSEDetection", 0);
+                    return;
+                }
+
+                AddData("PSEDetection", 1);
+                return;
+            }
+            catch (Exception ex)
+            {
+                warning = "Exception";
+                DisplayMsg(LogType.Log, "exception: " + ex.ToString());
+            }
+        }
         private void ResetButton(PortType portType)
         {
             if (!CheckGoNoGo())
@@ -1189,7 +1436,6 @@ namespace MiniPwrSupply.LCS5
             try
             {
                 string res = "";
-
                 #region RESET
                 DisplayMsg(LogType.Log, $"========================== Reset Button ==========================");
 
@@ -1201,14 +1447,12 @@ namespace MiniPwrSupply.LCS5
                 bool released = false;
                 for (int i = 0; i < 5; i++)
                 {
+                    pressed = false; released = false;
+                    //pressed = true; released = true; // by pass for stress test
                     if (!useShield)
                     {
-                        frmOK.Label = "Press and hold reset button then click OK";
-                        //frmOK.ShowDialog();
-                        pressed = true;
-                        released = true;
-
-                        //markup for stress Test
+                        frmOK.Label = "Press and hold reset button then click OK \r\n Nhấn và giữ nút reset sau đó ấn OK";
+                        frmOK.ShowDialog();     // mark up for stress test                  
                     }
                     else
                     {
@@ -1221,14 +1465,11 @@ namespace MiniPwrSupply.LCS5
                         pressed = true;
                         DisplayMsg(LogType.Log, "Check Reset Button pressed ok");
                     }
+
                     if (!useShield)
                     {
-                        frmOK.Label = "Release reset button then click OK";
-                        //frmOK.ShowDialog();
-                        pressed = true;
-                        released = true;
-                        //markup for stress Test
-
+                        frmOK.Label = "Release reset button then click OK \r\n Nhả nút reset sau đó ấn OK";
+                        frmOK.ShowDialog();       //  mark up for stress test                                        
                     }
                     else
                     {
@@ -1241,6 +1482,7 @@ namespace MiniPwrSupply.LCS5
                         released = true;
                         DisplayMsg(LogType.Log, "Check Reset Button released ok");
                     }
+
                     if (pressed && released)
                     {
                         AddData("ResetButton", 0);
@@ -1248,6 +1490,7 @@ namespace MiniPwrSupply.LCS5
                         break;
                     }
                 }
+
                 if (!pressed || !released)
                 {
                     DisplayMsg(LogType.Log, "Check Reset button fail");
@@ -1353,7 +1596,7 @@ namespace MiniPwrSupply.LCS5
                 }
                 else
                 {
-                    SendAndChk("Nvram", portType, "wnc_nvram -f a.bin -S 630301000027", "is 630301000027", 0, 3000);
+                    SendAndChk("Nvram", portType, $"wnc_nvram -f a.bin -S {infor.SerialNumber}", $"is {infor.SerialNumber}", 0, 3000);
                 }
 
                 //HW Part Number
@@ -1365,7 +1608,7 @@ namespace MiniPwrSupply.LCS5
                 }
                 else
                 {
-                    SendAndChk("Nvram", portType, "wnc_nvram -f a.bin -H 3000301302", "is 3000301302", 0, 3000);
+                    SendAndChk("Nvram", portType, $"wnc_nvram -f a.bin -H {infor.PartNumber}", $"is {infor.PartNumber}", 0, 3000);
                 }
 
                 if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
@@ -1392,7 +1635,7 @@ namespace MiniPwrSupply.LCS5
                 if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
                 {
                     status_ATS.AddDataRaw("LCS5_100_PN", infor.PartNumber_100, infor.PartNumber_100, "000000");
-                    status_ATS.AddDataRaw("LCS5_LABEL_PN_REV", infor.PartNumber_100.Substring(infor.PartNumber_100.Length - 2, 2), infor.PartNumber_100.Substring(infor.PartNumber_100.Length - 2, 2), "000000");
+                    //status_ATS.AddDataRaw("LCS5_LABEL_PN_REV", infor.PartNumber_100.Substring(infor.PartNumber_100.Length - 2, 2), infor.PartNumber_100.Substring(infor.PartNumber_100.Length - 2, 2), "000000");
                     var regex = "(.{3})(.{5})(.{2})";
                     var replace = "$1-$2 $3";
                     string newString = Regex.Replace(infor.PartNumber_100, regex, replace);
@@ -1446,7 +1689,7 @@ namespace MiniPwrSupply.LCS5
 
                 //Calix MFG version
                 SendAndChk("Nvram", portType, $"wnc_nvram -f a.bin -f '{infor.CalixFWver}'", $"{infor.CalixFWver}", 0, 3000);
-                status_ATS.AddDataRaw("Calix FW version", infor.CalixFWver, infor.CalixFWver, "000000");
+                status_ATS.AddDataRaw("LCS5_CLX_FW_VER", infor.CalixFWver, infor.CalixFWver, "000000");
 
                 //module id
                 SendAndChk("Nvram", portType, $"wnc_nvram -f a.bin -D '{infor.ModuleId}'", $"is:{infor.ModuleId}", 0, 3000);
@@ -1457,6 +1700,17 @@ namespace MiniPwrSupply.LCS5
                 SendAndChk(portType, "hexdump -C /dev/mmcblk0p27", "root@OpenWrt", out res, 0, 3000);
                 SendAndChk(portType, "dd if=/dev/mmcblk0p27 of=/a.bin", "root@OpenWrt", out res, 0, 3000);
                 SendAndChk(portType, "wnc_nvram -r a.bin -A", "root@OpenWrt", out res, 0, 3000);
+
+                if (string.IsNullOrEmpty(infor.BaseMAC))
+                {
+                    DisplayMsg(LogType.Log, "BaseMAC is empty");
+                    AddData("Nvram", 1);
+                    return;
+                }
+                DisplayMsg(LogType.Log, $"infor.BaseMAC: {infor.BaseMAC}");
+                string baseMac = ConvertStringToMACFormat(infor.BaseMAC.Replace(":", "").Replace("-", "")).Replace(":", "-").ToLower();
+                DisplayMsg(LogType.Log, $"Base MAC: {baseMac}");
+
                 bool rs = false;
                 rs = CheckNvram(res, "Version: 2");
                 rs = rs && CheckNvram(res, "ID: 92");
@@ -1467,7 +1721,7 @@ namespace MiniPwrSupply.LCS5
                 rs = rs && CheckNvram(res, infor.PartNumber_100);
                 rs = rs && CheckNvram(res, infor.MFGDate);
                 rs = rs && CheckNvram(res, "MAC quantity is 5");
-                rs = rs && CheckNvram(res, ConvertStringToMACFormat(infor.BaseMAC).Replace(":", "-").ToLower());
+                rs = rs && CheckNvram(res, "Base MAC address is " + baseMac);
                 rs = rs && CheckNvram(res, infor.FSAN);
                 rs = rs && CheckNvram(res, "GPON password is " + infor.GPON);
                 rs = rs && CheckNvram(res, "Country code is US");
@@ -1734,15 +1988,17 @@ namespace MiniPwrSupply.LCS5
             {
                 return;
             }
-            string FWversion = "(*&^%";// Func.ReadINI("Setting", "PCBA", "FWver", "BSP P1.3.2.4-3 QSDK SPF-12.0CS");
-            string name = Func.ReadINI("Setting", "SFCS", "MFGFW_Name", "@LCS5_MFG_FW_VER_18");
-            string errorItem = "ChkFWVer";
-            string rec = "";
+
             try
             {
                 DisplayMsg(LogType.Log, "========================== Check FW version ==========================");
+                string FWversion = "(*&^%";// Func.ReadINI("Setting", "PCBA", "FWver", "BSP P1.3.2.4-3 QSDK SPF-12.0CS");
+                string name = Func.ReadINI("Setting", "SFCS", "MFGFW_Name", "@LCS5_MFG_FW_VER_18");
                 GetFromSfcs(name, out FWversion);
                 FWversion = FWversion.Substring(0, FWversion.Length - 10); //P3.0.2.5.0
+                string errorItem = "ChkFWVer";
+                string rec = "";
+
                 DisplayMsg(LogType.Log, "FW version in sfcs:" + FWversion);
                 SendCommand(PortType.UART, "cat etc/wnc_ver", 200);
                 ChkResponse(PortType.UART, ITEM.NONE, "root@OpenWrt", out rec, 2000);
@@ -1785,10 +2041,11 @@ namespace MiniPwrSupply.LCS5
                     DisplayMsg(LogType.Log, "Check FW Version NG");
                     return;
                 }
+                //}
             }
             catch (Exception ex)
             {
-                DisplayMsg(LogType.Exception, ex.Message);
+                DisplayMsg(LogType.Exception, ex.ToString());
                 AddData("ChkFWVer", 1);
             }
         }
@@ -1855,7 +2112,7 @@ namespace MiniPwrSupply.LCS5
                 }
                 catch (Exception ex)
                 {
-                    DisplayMsg(LogType.Exception, "Get HW version exception ==> " + ex.Message);
+                    DisplayMsg(LogType.Warning, "Get HW version error");
                     AddData(errorItem, 1);
                     return;
                 }
@@ -1865,7 +2122,7 @@ namespace MiniPwrSupply.LCS5
                 {
                     DisplayMsg(LogType.Log, "check hwver Pass");
                     AddData(errorItem, 0);
-                    status_ATS.AddDataRaw("LCS5_HW_VER", binaryValue, binaryValue, "000000");
+                    status_ATS.AddDataRaw("HW_VER", binaryValue, binaryValue, "000000");
                 }
                 else
                 {
@@ -1907,9 +2164,8 @@ namespace MiniPwrSupply.LCS5
                 status_ATS.AddLog("camera path：" + sExeDirectory);
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception camera)
             {
-                DisplayMsg(LogType.Exception, @"CameraExcpetion " + ex.Message);
                 warning = "Exception";
                 return false;
             }
@@ -2007,52 +2263,6 @@ namespace MiniPwrSupply.LCS5
                 System.Diagnostics.Debug.WriteLine("KillTaskProcess Exception: " + ex.Message);
             }
             return bExist;
-        }
-        private void WriteHWver(DeviceInfor infor)
-        {
-            if (!CheckGoNoGo())
-            {
-                return;
-            }
-            string getMsg = string.Empty;
-            string keyword = "root@OpenWrt";
-            try
-            {
-                // After booting complete check keyword upon testplan 0828
-                if (WriteOrCheckDeviceInfor(PortType.UART, "Write_HW_version", $"fw_setenv hwver {infor.HWver}", keyword))
-                {
-                    status_ATS.AddDataRaw("LCS5_HW_ver", infor.HWver, infor.HWver, "000000");
-                    SendCommand(PortType.UART, "\r\n", 200);
-                    ChkResponse(PortType.UART, ITEM.NONE, @"root@OpenWrt", out getMsg, 2000);
-                    AddData("WriteHWver", 0);
-                    return;
-                }
-                DisplayMsg(LogType.Error, @"Write Hw version NG FAILED");
-                AddData("WriteHWver", 1);
-                return;
-            }
-            catch (Exception ex)
-            {
-                DisplayMsg(LogType.Exception, @"Write Hw version NG =>" + ex.Message);
-                AddData("WriteHWver", 1);
-                return;
-            }
-        }
-        private bool HandlingTelnetPingErr()
-        {
-            DisplayMsg(LogType.Error, @" ---- handling ping via telnet err ----");
-            bool IsPingOK = false;
-            try
-            {
-                IsPingOK = SendAndChk("IsBootUP", PortType.UART, "dmesg | grep qca-wifi loaded", "qca-wifi loaded", 5000, 10 * 1000);
-            }
-            catch (Exception ex)
-            {
-                DisplayMsg(LogType.Exception, @"HandlingTelnetPingErr Exception=>" + ex.Message);
-                AddData("HandlingTelnetPingErr", 1);
-                return false;
-            }
-            return IsPingOK;
         }
     }
 }
