@@ -874,7 +874,7 @@ namespace MiniPwrSupply.LMG1
                 process.Start();
                 DisplayMsg(LogType.Log, "Wait for exit..");
 
-                //// chk IQFACT run or not
+                // chk IQFACT run or not
                 //if (!CheckToolExist(Path.GetDirectoryName(path) + "IQfactRun_Console.exe"))
                 //{
                 //    if (!OpenTestTool(Path.GetDirectoryName(path), "IQfactRun_Console.exe", "", 3000))
