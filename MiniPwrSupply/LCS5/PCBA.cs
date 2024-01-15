@@ -18,10 +18,6 @@ using System.Windows.Forms;
 using WNC.API;
 using static ATS.frmMain;
 using static WNC.UI.FrmRetry;
-//using ATS_Template.CSVs;
-using static System.Collections.Specialized.BitVector32;
-//using WNC.API;
-//using static WNC.UI.FrmRetry;
 
 namespace MiniPwrSupply.LCS5
 {
@@ -444,7 +440,7 @@ namespace MiniPwrSupply.LCS5
 
             retry:
 
-                if (!ChkLinux(PortType.UART, "qca-wifi loaded", keyword, 70000))
+                if (!ChkLinux(PortType.UART, "system ready!", keyword, 100 * 1000))
                 {
                     DisplayMsg(LogType.Error, @"cannot enter kernel, dmesg and retry");
                     if (!this.HandlingTelnetPingErr())
@@ -716,7 +712,8 @@ namespace MiniPwrSupply.LCS5
             TimeSpan ts;
             string res = string.Empty;
             string log = string.Empty;
-            string keyword1 = "to stop autoboot in  5s";//"Hit any key to stop autoboot";
+            //string keyword1 = "to stop autoboot in  5s";//"Hit any key to stop autoboot";
+            string keyword1 = "Hit any key to stop autoboot";
             string keyword2 = "IPQ5018#";
             try
             {
@@ -872,7 +869,7 @@ namespace MiniPwrSupply.LCS5
                 #endregion
 
                 #region base mac
-                if (WriteOrCheckDeviceInfor(portType, "Write_BaseMAC", $"setenv baseMAC \"{infor.BaseMAC = MACConvert(infor.BaseMAC)}\"", keyword))
+                if (WriteOrCheckDeviceInfor(portType, "Write_BaseMAC", $"setenv baseMAC \"{MACConvert(infor.BaseMAC)}\"", keyword))
                 {
                     status_ATS.AddDataRaw("LCS5_BASE_MAC", infor.BaseMAC, infor.BaseMAC, "000000");
                     status_ATS.AddDataRaw("LCS5_LABEL_BASE_MAC", infor.BaseMAC.Replace(":", ""), infor.BaseMAC.Replace(":", ""), "000000");
@@ -997,7 +994,7 @@ namespace MiniPwrSupply.LCS5
 
                 string PC_IP = Func.ReadINI("Setting", "PCBA", "Eth0_PC_IP", "192.168.1.100");
 
-                if (SendAndChk("EthernetTest", portType, $"ping {PC_IP}", "ttl", 0, 5000))
+                if (SendAndChk("EthernetTest", portType, $"ping {PC_IP} -c 1", "0% packet loss", 0, 5000))
                 {
                     //SendAndChk("terminate Ping", portType, $"\0x3", null, 0, 5000);
                     SendCommand(portType, sCtrlC, 500);
@@ -1681,8 +1678,8 @@ namespace MiniPwrSupply.LCS5
                     SendAndChk("Nvram", portType, "wnc_nvram -f a.bin -F " + infor.FSAN, "is " + infor.FSAN, 0, 3000);
                 }
 
-                //gpon_pw
-                SendAndChk("Nvram", portType, $"wnc_nvram -f a.bin -P '0'", "is 0", 0, 3000);
+                //gpon_pw 
+                //SendAndChk("Nvram", portType, $"wnc_nvram -f a.bin -P '0'", "is 0", 0, 3000);
 
                 //country_code
                 SendAndChk("Nvram", portType, "wnc_nvram -f a.bin -c US", "is US", 0, 3000);
@@ -1692,7 +1689,7 @@ namespace MiniPwrSupply.LCS5
                 status_ATS.AddDataRaw("LCS5_CLX_FW_VER", infor.CalixFWver, infor.CalixFWver, "000000");
 
                 //module id
-                SendAndChk("Nvram", portType, $"wnc_nvram -f a.bin -D '{infor.ModuleId}'", $"is:{infor.ModuleId}", 0, 3000);
+                //SendAndChk("Nvram", portType, $"wnc_nvram -f a.bin -D '{infor.ModuleId}'", $"is:{infor.ModuleId}", 0, 3000);
 
                 //Burnin nvram value to nvram partition
                 SendAndChk(portType, "dd if=/dev/zero of=/dev/mmcblk0p27", "root@OpenWrt", out res, 0, 3000);
@@ -1723,10 +1720,10 @@ namespace MiniPwrSupply.LCS5
                 rs = rs && CheckNvram(res, "MAC quantity is 5");
                 rs = rs && CheckNvram(res, "Base MAC address is " + baseMac);
                 rs = rs && CheckNvram(res, infor.FSAN);
-                rs = rs && CheckNvram(res, "GPON password is " + infor.GPON);
+                //rs = rs && CheckNvram(res, "GPON password is " + infor.GPON); // testplan remove
                 rs = rs && CheckNvram(res, "Country code is US");
                 rs = rs && CheckNvram(res, "Calix FW version is " + infor.CalixFWver);
-                rs = rs && CheckNvram(res, "DTM Model ID is:" + infor.ModuleId);
+                //rs = rs && CheckNvram(res, "DTM Model ID is:" + infor.ModuleId);  // testplan remove
 
                 SendAndChk(portType, "rm -f a.bin", "root@OpenWrt", out res, 0, 3000);
 
