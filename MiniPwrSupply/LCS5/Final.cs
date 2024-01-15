@@ -11,6 +11,8 @@ using System.Threading;
 using System.Windows.Forms;
 using WNC.API;
 using CH_RD;
+using static MiniPwrSupply.LCS5.frmConnectInterfaceMain;
+
 namespace MiniPwrSupply.LCS5
 {
     public partial class frmMain
@@ -373,19 +375,22 @@ namespace MiniPwrSupply.LCS5
                 rs = rs && CheckNvram(res, "MAC quantity is 5");
                 rs = rs && CheckNvram(res, ConvertStringToMACFormat(infor.BaseMAC.Replace(":", "").Replace("-", "")).Replace(":", "-").ToLower());
                 rs = rs && CheckNvram(res, "FSAN is " + infor.FSAN);
-                rs = rs && CheckNvram(res, "GPON password is " + infor.GPON);
+                //rs = rs && CheckNvram(res, "GPON password is " + infor.GPON);  // testplan remove
                 rs = rs && CheckNvram(res, "Country code is US");
                 //DisplayMsg(LogType.Log, "Get calixVer from SFCS: " + calixver);
                 //rs = rs && CheckNvram(res, calixver);
                 rs = rs && CheckNvram(res, infor.CalixFWver);
-                rs = rs && CheckNvram(res, "DTM Model ID is:" + infor.ModuleId);
+                //rs = rs && CheckNvram(res, "DTM Model ID is:" + infor.ModuleId);     // testplan remove          
 
                 SendAndChk(PortType.TELNET, "rm -f a.bin", "root@OpenWrt", out res, 0, 3000);
 
-                if (rs)
+                if (!rs)
                 {
-                    AddData("Nvram", 0);
+                    AddData("Nvram", 1);
+                    return;
                 }
+                AddData("Nvram", 0);
+
             }
             catch (Exception ex)
             {
