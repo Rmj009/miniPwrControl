@@ -68,6 +68,9 @@
     <Compile Include="CSV\ICSV.cs" />
     <Compile Include="CSV\ICsvItem.cs" />
     <Compile Include="CSV\LCS5Csv.cs" />
+    <Compile Include="DataSystem\Zooomchart.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="DoWuzhiCmd\RS232.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmd.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmdBase.cs" />
@@ -79,6 +82,9 @@
     <Compile Include="Singleton\WiFi.cs" />
     <Compile Include="Singleton\WiFiObject.cs" />
     <Compile Include="Util\IUtil.cs" />
+    <Compile Include="Util\Statistics.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="_Exception\ConnectHOME.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>

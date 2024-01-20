@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using System.IO;
 using System.Windows.Forms;
+using System.Diagnostics;
+using System.Threading;
+using System.Text.RegularExpressions;
+using WNC.API;
+using EventHandle;
 
 namespace MiniPwrSupply.Instrument
 {
@@ -49,19 +50,33 @@ namespace MiniPwrSupply.Instrument
 
         public bool SetParameter(string ToolPath)
         {
-            //Func.WriteINI(Path.GetDirectoryName(ToolPath), "123", "A", "B", "1");
+            try
+            {
+                Func.WriteINI(Path.GetDirectoryName(ToolPath), "123", "A", "B", "1");
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, ex.Message);
+            }
             return true;
         }
 
         public bool Start()
         {
-            DisplayMsg(LogType.Log, "Test ATSuite");
-            if (File.Exists(SummaryPath))
+            try
             {
-                File.Delete(SummaryPath);
-                DisplayMsg(LogType.Log, "Delete " + SummaryPath);
+                DisplayMsg(LogType.Log, "Test ATSuite");
+                if (File.Exists(SummaryPath))
+                {
+                    File.Delete(SummaryPath);
+                    DisplayMsg(LogType.Log, "Delete " + SummaryPath);
+                }
+                CheckAndEnableTools(ToolPath);
             }
-            CheckAndEnableTools(ToolPath);
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, @"Sart() NG >>> " + ex.Message);
+            }
             return SetParameter(ToolPath);
         }
 
@@ -72,43 +87,61 @@ namespace MiniPwrSupply.Instrument
         }
 
         /// <returns>回應為true代表有出現Summary log而不是指PASS/FAIL</returns>
-        public bool WaitResult(int timeOutMs)
+        public bool WaitResult(int timeOutMs, string logAll_csv)
         {
             DateTime dt = DateTime.Now;
             string SummaryContent = string.Empty;
-            DisplayMsg(LogType.Log, $"Current timeout 'ATSuite.exe exits in setting is : '{timeOutMs}'");
+            //int retryConfirm = 0;
             while (true)
             {
                 TimeSpan ts = new TimeSpan(DateTime.Now.Ticks - dt.Ticks);
                 if (ts.TotalMilliseconds > timeOutMs)
                 {
-                    DisplayMsg(LogType.Error, "Wait ATSuite.exe test result timeout!!"); //tool跑太久 delay 10s 太多次
+                    DisplayMsg(LogType.Error, "Wait ATSuite.exe test result timeout!!");
                     return false;
                 }
-                if (!CheckToolExist(Path.GetFileNameWithoutExtension(this.ToolPath)) && !File.Exists(SummaryPath)) //copy from LS04 ATS
-                {
-                    DisplayMsg(LogType.Log, "The tool is closed!! Goto retry");    //TOOL提前結束  大約兩分鐘左右關閉ATSuite
-                    return false;
-                }
-                if (File.Exists(SummaryPath))
+                if (File.Exists(SummaryPath)) // once the ATSuite done the job
                 {
                     SummaryContent = File.ReadAllText(SummaryPath);
                     DisplayMsg(LogType.Log, "SummaryContent : " + SummaryContent);
                     //if (SummaryContent.Contains("PASS"))
-                    if (SummaryContent.Contains("P A S S"))
+                    if (SummaryContent.Contains("PASS") || SummaryContent.Contains("FAIL")) // FAIL
                     {
-                        return true;
+                        Thread.Sleep(5000);
+                        if (File.Exists(logAll_csv))
+                        {
+                            return true;
+                        }
+                        continue;
                     }
                     else
                     {
+                        MessageBox.Show(" debug WHY false??");
                         return false;
                     }
                 }
                 else
                 {
-                    DisplayMsg(LogType.Log, "Delay 1s");
-                    System.Threading.Thread.Sleep(1 * 1000);
+                    Thread.Sleep(1000);
                 }
+                //if (File.Exists(SummaryPath))
+                //{
+                //    SummaryContent = File.ReadAllText(SummaryPath);
+                //    DisplayMsg(LogType.Log, "SummaryContent : " + SummaryContent);
+                //    //if (SummaryContent.Contains("PASS"))
+                //    if (SummaryContent.Contains("**** P A S S ****") || SummaryContent.Contains("FAIL"))
+                //    {
+                //        return true;
+                //    }
+                //    else
+                //    {
+                //        return false;
+                //    }
+                //}
+                //else
+                //{
+                //    System.Threading.Thread.Sleep(1000);
+                //}
             }
         }
 
@@ -119,48 +152,37 @@ namespace MiniPwrSupply.Instrument
 
         private void CheckAndEnableTools(string toolsPath)
         {
-            if (toolsPath.Trim().Length == 0)
+            try
             {
-                return;
-            }
+                if (toolsPath.Trim().Length == 0)
+                {
+                    return;
+                }
 
-            string[] toolPathList = toolsPath.Split(new char[] { ',' });
-            string tool = "";
-            foreach (string toolPath in toolPathList)
-            {
-                if (!File.Exists(toolPath))
+                string[] toolPathList = toolsPath.Split(new char[] { ',' });
+
+                foreach (string toolPath in toolPathList)
                 {
-                    DisplayMsg(LogType.Log, $"Check '{toolPath}' not exist!");
-                    continue;
-                }
-                tool = toolPath;
-                if (!CheckToolExist(toolPath))
-                {
-                    OpenTestTool(toolPath);
-                    //DisplayMsg(LogType.Log, "Delay 5s...");
-                    //System.Threading.Thread.Sleep(5 * 1000);
-                    break;
-                }
-                else
-                {
-                    KillTaskProcess("ATSuite");
-                    OpenTestTool(toolPath);
-                    break;
+                    if (!File.Exists(toolPath))
+                    {
+                        continue;
+                    }
+
+                    if (!CheckToolExist(toolPath))
+                    {
+                        OpenTestTool(toolPath);
+                        System.Threading.Thread.Sleep(5 * 1000);
+                    }
+                    else
+                    {
+                        continue;
+                    }
                 }
             }
-            bool check = false;
-            for (int i = 0; i < 5; i++)
+            catch (Exception ex)
             {
-                if (CheckToolExist(tool))
-                {
-                    check = true;
-                    DisplayMsg(LogType.Log, "Check the tool is existed!");
-                    break;
-                }
-                System.Threading.Thread.Sleep(2000);
+                DisplayMsg(LogType.Exception, "CheckAndEnableTools exception >>>" + ex.Message);
             }
-            if (!check)
-            { MessageBox.Show("Open tool fail"); }
         }
 
         private bool CheckToolExist(string toolPath)
@@ -229,4 +251,3 @@ namespace MiniPwrSupply.Instrument
 
     }
 }
-
