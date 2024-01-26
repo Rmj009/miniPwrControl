@@ -1,4 +1,17 @@
-﻿namespace MiniPwrSupply.LCS5
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Windows.Forms;
+using WNC.API;
+
+namespace MiniPwrSupply.LCS5
 {
     public partial class frmMain
     {
@@ -49,14 +62,14 @@
         public void FWSwitch() //MFGToCustomer
         {
             DeviceInfor infor = new DeviceInfor();
-            bool rs = false;
             string keyword = "root@OpenWrt:/#";
-            string res = "";
-            int retryTime = 0;
             string auth_code = "";
-            int rebootPingTime = Convert.ToInt32(Func.ReadINI("Setting", "DelayTime", "RebootPingTime", "30"));
+            //int rebootPingTime = Convert.ToInt32(Func.ReadINI("Setting", "DelayTime", "RebootPingTime", "30"));
+            int rebootPingTime = Convert.ToInt32(Func.ReadINI("Setting", "DelayTime", "Calix_FW", "190"));
+            int delayCalixFW = Convert.ToInt32(Func.ReadINI("Setting", "DelayTime", "Calix_FW", "190"));
             try
             {
+                #region SFCS
                 SFCS_Query _Sfcs_Query = new SFCS_Query();
                 DisplayMsg(LogType.Log, "=========== FW Switch ===========");
 
@@ -102,6 +115,8 @@
                 //DisplayMsg(LogType.Log, $"LCS5_ATH_CODE from 15 line data: {auth_code}");
                 //}
 
+
+                #endregion
                 //if (Func.ReadINI("Setting", "Setting", "IsDebug", "0") == "1" && status_ATS._testMode == StatusUI2.StatusUI.TestMode.EngMode)
                 {
                     //for verify
@@ -172,570 +187,32 @@
                     }
                     Thread.Sleep(15000);
                     DisplayMsg(LogType.Log, "Delay 15000s");
-                    goto Login;
+                    //goto Login;
                 }
 
                 DisplayMsg(LogType.Log, $"delay {delayMFGFW}s before bootup");
                 Thread.Sleep(delayMFGFW * 1000);
-
-
-
-                //===================================================================================
                 if (!ChkInitial(PortType.TELNET, keyword, 250 * 1000))
                 {
                     AddData("BootUp", 1);
                     return;
                 }
                 AddData("BootUp", 0);
-
-                #region Upgrade
-                if (Func.ReadINI("Setting", "FW", "Upgrade", "1") == "1")
-                {
-                    if (false)
-                    {
-                        #region Appendix 7.1.1 NO Check List files 
-                        string tftppath = Path.Combine(Application.StartupPath, "CustomerFW");
-
-                        string squashfsImage = Func.ReadINI("Setting", "FW", "squashfsImage_Path", "c:\\TFTP\\calix-ponsfp_squashfs.img");
-                        string squashfsImage_MD5 = Func.ReadINI("Setting", "FW", "squashfsImage_MD5", "*&^%");
-
-                        string csssImage = Func.ReadINI("Setting", "FW", "csssImage_Path", "csss-firmware.img");
-                        string csssImage_MD5 = Func.ReadINI("Setting", "FW", "csssImage_MD5", "*&^%");
-
-                        string uImage_calix = Func.ReadINI("Setting", "FW", "uImage_calix_Path", "c:\\TFTP\\openwrt-ipq807x-ipq807x_32-ipq807x-full-fit-uImage_calix.itb");
-                        string uImage_calix_MD5 = Func.ReadINI("Setting", "FW", "uImage_calix_MD5", "*&^%");
-
-                        string root_calixImage = Func.ReadINI("Setting", "FW", "root_calixImage_Path", "c:\\TFTP\\openwrt-ipq807x-ipq807x_32-squashfs-root_calix.img");
-                        string root_calixImage_MD5 = Func.ReadINI("Setting", "FW", "root_calixImage_MD5", "*&^%");
-
-                        string v2Image = Func.ReadINI("Setting", "FW", "v2Image_Path", "c:\\TFTP\\wifi_fw_squashfs_v2.img");
-                        string v2Image_MD5 = Func.ReadINI("Setting", "FW", "v2Image_MD5", "*&^%");
-                        //string tftppath = Func.ReadINI("Setting", "TFTP", "Path", "c:\\TFTP\\tftpd32.exe");
-
-                        //string squashfsImage = Func.ReadINI("Setting", "FW", "squashfsImage_Path", "c:\\TFTP\\calix-ponsfp_squashfs.img");
-                        //string squashfsImage_MD5 = Func.ReadINI("Setting", "FW", "squashfsImage_MD5", "*&^%");
-
-                        //string csssImage = Func.ReadINI("Setting", "FW", "csssImage_Path", "csss-firmware.img");
-                        //string csssImage_MD5 = Func.ReadINI("Setting", "FW", "csssImage_MD5", "*&^%");
-
-                        //string uImage_calix = Func.ReadINI("Setting", "FW", "uImage_calix_Path", "c:\\TFTP\\openwrt-ipq807x-ipq807x_32-ipq807x-full-fit-uImage_calix.itb");
-                        //string uImage_calix_MD5 = Func.ReadINI("Setting", "FW", "uImage_calix_MD5", "*&^%");
-
-                        //string root_calixImage = Func.ReadINI("Setting", "FW", "root_calixImage_Path", "c:\\TFTP\\openwrt-ipq807x-ipq807x_32-squashfs-root_calix.img");
-                        //string root_calixImage_MD5 = Func.ReadINI("Setting", "FW", "root_calixImage_MD5", "*&^%");
-
-                        //string v2Image = Func.ReadINI("Setting", "FW", "v2Image_Path", "c:\\TFTP\\wifi_fw_squashfs_v2.img");
-                        //string v2Image_MD5 = Func.ReadINI("Setting", "FW", "v2Image_MD5", "*&^%");
-
-                        //string[] path = { squashfsImage, csssImage, uImage_calix, root_calixImage, v2Image };
-
-                        //foreach (var item in path)
-                        //{
-                        //    if (!File.Exists(item))
-                        //    {
-                        //        DisplayMsg(LogType.Log, $"File {item} not exist");
-                        //        warning = "File not exist";
-                        //        return;
-                        //    }
-                        //}
-
-                        //KillTaskProcess(Path.GetFileNameWithoutExtension(tftppath));
-                        //DisplayMsg(LogType.Log, "TFTP path:" + tftppath);
-                        //if (!CheckToolExist(tftppath))
-                        //    if (!OpenTestTool(Path.GetDirectoryName(tftppath), Path.GetFileName(tftppath), "", 3000))
-                        //    {
-                        //        warning = "Open tftp fail";
-                        //        return;
-                        //    }
-                        this.OpenTftpd32(Path.Combine(Application.StartupPath, "CustomerFW"));
-
-                        #endregion
-
-
-                        #region Appendix 7.1.2 NO Load calix sub-image >>> Download image in tmp folder and check md5sum value              
-                        rs = SendAndChk(PortType.UART, "cd tmp/", "tmp#", out res, 0, 3000);
-                        rs = rs && SendAndChk(PortType.UART, $"tftp -g -r {Path.GetFileName(squashfsImage)} 192.168.1.100", "tmp#", out res, 10000, 50000);
-                        rs = rs && SendAndChk(PortType.UART, $"md5sum {Path.GetFileName(squashfsImage)}", squashfsImage_MD5, out res, 0, 3000);
-                        if (!rs)
-                        {
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-
-                        rs = rs && SendAndChk(PortType.UART, $"tftp -g -r {Path.GetFileName(csssImage)} 192.168.1.100", "tmp#", out res, 10000, 50000);
-                        rs = rs && SendAndChk(PortType.UART, $"md5sum {Path.GetFileName(csssImage)}", csssImage_MD5, out res, 0, 3000);
-                        if (!rs)
-                        {
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-
-                        rs = rs && SendAndChk(PortType.UART, $"tftp -g -r {Path.GetFileName(uImage_calix)} 192.168.1.100", "tmp#", out res, 10000, 50000);
-                        rs = rs && SendAndChk(PortType.UART, $"md5sum {Path.GetFileName(uImage_calix)}", uImage_calix_MD5, out res, 0, 3000);
-                        if (!rs)
-                        {
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-
-                        rs = rs && SendAndChk(PortType.UART, $"tftp -g -r {Path.GetFileName(root_calixImage)} 192.168.1.100", "tmp#", out res, 10000, 50000);
-                        rs = rs && SendAndChk(PortType.UART, $"md5sum {Path.GetFileName(root_calixImage)}", root_calixImage_MD5, out res, 0, 3000);
-                        if (!rs)
-                        {
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-
-                        rs = rs && SendAndChk(PortType.UART, $"tftp -g -r {Path.GetFileName(v2Image)} 192.168.1.100", "tmp#", out res, 10000, 50000);
-                        rs = rs && SendAndChk(PortType.UART, $"md5sum {Path.GetFileName(v2Image)}", v2Image_MD5, out res, 0, 3000);
-                        if (!rs)
-                        {
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-
-                        if (!SendAndChk(PortType.TELNET, "cd ..", keyword, out res, 0, 3000))
-                        {
-                            DisplayMsg(LogType.Log, $"Check {keyword} fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-                        #endregion
-                    }
-
-                    #region 8.4.1 Check boot up partition
-                    if (!SendAndChk(PortType.UART, $"cat /proc/boot_info/bootconfig0/0:HLOS/primaryboot", "0", out res, 0, 3000))
-                    {
-                        DisplayMsg(LogType.Log, "Check '0' fail");
-                        AddData("FWSwitch", 1);
-                        return;
-                    }
-                    if (!SendAndChk(PortType.UART, $"cat /proc/boot_info/bootconfig0/rootfs/primaryboot", "80000000", out res, 3000, 6000))
-                    {
-                        DisplayMsg(LogType.Log, "Check '80000000' fail");
-                        AddData("FWSwitch", 1);
-                        return;
-                    }
-                    if (!SendAndChk(PortType.UART, $"cat /proc/boot_info/bootconfig0/0:WIFIFW/primaryboot", "0", out res, 0, 3000))
-                    {
-                        DisplayMsg(LogType.Log, "Check '0' fail");
-                        AddData("FWSwitch", 1);
-                        return;
-                    }
-                    #endregion
-
-                    if (false)
-                    {
-                        #region NO Upgrade calix sub-image
-                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p23", "200.0MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '200.0MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-                        if (!SendAndChk(PortType.UART, "dd if=/tmp/calix-ponsfp_squashfs.img of=/dev/mmcblk0p23", "19.3MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '19.3MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p26", "200.0MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '200.0MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-                        if (!SendAndChk(PortType.UART, "dd if=/tmp/calix-ponsfp_squashfs.img of=/dev/mmcblk0p26", "19.3MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '19.3MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-
-                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p18", "4.0MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '4.0MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-                        if (!SendAndChk(PortType.UART, "dd if=/tmp/csss-firmware.img of=/dev/mmcblk0p18", "4.0KB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '4.0KB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-
-                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p20", "12.0MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '12.0MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-                        if (!SendAndChk(PortType.UART, "dd if=/tmp/openwrt-ipq807x-ipq807x_32-ipq807x-full-fit-uImage_calix.itb of=/dev/mmcblk0p20", "4.3MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '4.3MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-
-                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p24", "100.0MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '100.0MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-                        if (!SendAndChk(PortType.UART, "dd if=/tmp/openwrt-ipq807x-ipq807x_32-squashfs-root_calix.img of=/dev/mmcblk0p24", "44.5MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '44.5MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-
-                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p25", "4.0MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '4.0MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-                        if (!SendAndChk(PortType.UART, "dd if=/tmp/wifi_fw_squashfs_v2.img of=/dev/mmcblk0p25", "3.9MB", out res, 0, 50000))
-                        {
-                            DisplayMsg(LogType.Log, "Check '3.9MB' fail");
-                            AddData("FWSwitch", 1);
-                            return;
-                        }
-                        #endregion
-                    }
-                }
-                #endregion
-                #region 8.4.1 Switch Firmware to Calix Firmware
-                SendAndChk(PortType.TELNET, "echo 1 > /proc/boot_info/bootconfig0/0:HLOS/primaryboot", keyword, out res, 0, 3000);
-                SendAndChk(PortType.TELNET, "echo 0xf8000000 > /proc/boot_info/bootconfig0/rootfs/primaryboot", keyword, out res, 0, 3000);
-                SendAndChk(PortType.TELNET, "echo 1 > /proc/boot_info/bootconfig0/0:WIFIFW/primaryboot", keyword, out res, 0, 3000);
-                SendAndChk("FWSwitch", PortType.TELNET, "cat /proc/boot_info/bootconfig0/getbinary_bootconfig > /tmp/boot1.bin", keyword, 0, 3000);
-                SendAndChk(PortType.TELNET, "dd if=/dev/zero of=/dev/mmcblk0p2 bs=336 count=1", keyword, out res, 0, 3000);
-                if (!res.Contains("336 bytes"))
-                {
-                    DisplayMsg(LogType.Log, "Check '336 bytes' fail");
-                    AddData("FWSwitch", 1);
-                    return;
-                }
-
-                SendAndChk(PortType.TELNET, "dd if=/tmp/boot1.bin of=/dev/mmcblk0p2 bs=336 count=1", keyword, out res, 0, 3000);
-                if (!res.Contains("336 bytes"))
-                {
-                    DisplayMsg(LogType.Log, "Check '336 bytes' fail");
-                    AddData("FWSwitch", 1);
-                    return;
-                }
-
-                SendAndChk(PortType.TELNET, "dd if=/dev/zero of=/dev/mmcblk0p3 bs=336 count=1", keyword, out res, 0, 3000);
-                if (!res.Contains("336 bytes"))
-                {
-                    DisplayMsg(LogType.Log, "Check '336 bytes' fail");
-                    AddData("FWSwitch", 1);
-                    return;
-                }
-
-                SendAndChk(PortType.TELNET, "dd if=/tmp/boot1.bin of=/dev/mmcblk0p3 bs=336 count=1", keyword, out res, 0, 3000);
-                if (!res.Contains("336 bytes"))
-                {
-                    DisplayMsg(LogType.Log, "Check '336 bytes' fail");
-                    AddData("FWSwitch", 1);
-                    return;
-                }
-                SendAndChk("FWSwitch", PortType.TELNET, "sync", keyword, 1000, 3000);
-                SendCommand(PortType.TELNET, "reboot", 500);
-                //SendCommand(PortType.TELNET, "reboot", 0);
-                //---------------------------------------------------------------------------
-                // =========================================================================
-                this.chkRebootStatus(rebootPingTime);
-                // =========================================================================
-                //---------------------------------------------------------------------------
-                //DateTime dt = DateTime.Now;
-                //while (true)
-                //{
-                //    if (dt.AddSeconds(rebootPingTime) < DateTime.Now)
-                //    {
-                //        warning = "Ping 192.168.1.1 ok in 30s, Reboot fail";
-                //        return;
-                //    }
-                //    if (PromptPing("192.168.1.1", 10000))
-                //        continue;
-                //    else
-                //    {
-                //        DisplayMsg(LogType.Log, "Ping 192.168.1.1 fail, reboot ok.");
-                //        break;
-                //    }
-                //}
-                //---------------------------------------------------------------------------
-                #endregion
-
                 DisplayMsg(LogType.Log, $"Delay {delayCalixFW}s");
                 Thread.Sleep(delayCalixFW * 1000);
-                //---------------------------------------------------------------------------
-                #region Calix FW system
-                this.pingDutCustFW(infor, 200 * 1000);
-            //if (!PromptPing("192.168.1.1", 250 * 1000))
-            //{
-            //    warning = "Ping 192.168.1.1 fail";
-            //    return;
-            //}
-            //DisplayMsg(LogType.Log, "Delay 15s..");
-            //Thread.Sleep(15000);
-            //---------------------------------------------------------------------------
-
-            //#region Check board Infor
-            //infor.FSAN = "CXNK015F0D9D"; //naked
-            //for (int i = 0; i < 3; i++)
-            //{
-            //    ExcuteCurlCommand("http://192.168.1.1/board_info.cmd", 3000, out res);
-            //    if (res.Contains(infor.FSAN))
-            //    {
-            //        DisplayMsg(LogType.Log, $"Check '{infor.FSAN}' ok");
-            //        break;
-            //    }
-            //}
-            //if (!res.Contains(infor.FSAN))
-            //{
-            //    DisplayMsg(LogType.Log, $"Check '{infor.FSAN}' fail");
-            //    AddData("ChkInfor", 1);
-            //    return;
-            //}
-            //#endregion
-
-            Login:
-                string cmd = $"-v -b .\\cookies.txt -c .\\cookies.txt -d \"{auth_code}\" http://192.168.1.1/login.cgi";
-                ExecuteCurlCommand2(cmd, 0, out res);
-                Thread.Sleep(2000);
-
-                //if (!diagPort.Contains(auth_code))
-                //{
-                //    DisplayMsg(LogType.Log, $"Check '{auth_code}' fail");
-                //    AddData("ChkInfor", 1);
-                //    return;
-                //}
-
-                cmd = "-v -b .\\cookies.txt -c .\\cookies.txt http://192.168.1.1/en_ssh.cmd";
-                ExecuteCurlCommand2(cmd, 0, out res);
-                Thread.Sleep(1000);
-                if (!diagPort.Contains("Success"))
-                {
-                    DisplayMsg(LogType.Log, $"Check 'Success' fail");
-                    AddData("ChkInfor", 1);
-                    return;
-                }
-                if (!diagPort.Contains("Closing connection 0"))
-                {
-                    DisplayMsg(LogType.Log, $"'Closing connection 0' fail");
-                    AddData("ChkInfor", 1);
-                    return;
-                }
-                AddData("ChkInfor", 0);
-
-                #region SSH access calix
-                //string calixPw = "25114c89!5upporT";
-                string calixPw = "";
-
-                #region Use plink
-                myCC.Start();
-
-                string sshIp = Func.ReadINI("Setting", "SSH", "IP", "192.168.1.1");
-                int sshPort = Convert.ToInt16(Func.ReadINI("Setting", "SSH", "Port", "30007"));
-                string sshId = Func.ReadINI("Setting", "SSH", "Login_ID", "support");
-                if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
-                {
-                    _Sfcs_Query.Get15Data(infor.SerialNumber, "LCS5_SUPPORT_PWD", ref calixPw);
-                    DisplayMsg(LogType.Log, "Calix pw from sfcs:" + calixPw);
-                }
-                else
-                {
-                    calixPw = Func.ReadINI("Setting", "SSH", "Login_PW", "support");
-                    DisplayMsg(LogType.Log, "Calix pw from setting:" + calixPw);
-                }
-                DisplayMsg(LogType.Log, $"Open SSH with {sshId}@{sshIp}");
-                DisplayMsg(LogType.Log, "Delay 15s");
-                Thread.Sleep(15 * 1000);
-                rs = SendCmdAndGetResp(myCC, $"plink.exe -ssh {sshId}@{sshIp} -pw {calixPw} -P {sshPort}", "#", out res, 20000);
-                if (res.Contains("(y/n)") || res.Contains("\"y\""))
-                {
-                    if (SendCmdAndGetResp(myCC, "y", "#", out res, 10000, 1000))
-                    {
-                        rs = true;//By Syn
-                    }
-                    //SendCmdAndGetResp(myCC, "y", "#", out res, 10000, 1000);
-                    //if (!SendCmdAndGetResp(myCC, "y", "#", out res, 10000, 1000))
-                    //{
-                    //    myCC.Close();
-                    //    Thread.Sleep(1500);
-                    //    myCC.Start();
-                    //    Thread.Sleep(1500);
-                    //    DisplayMsg(LogType.Log, $"Open SSH again with {sshId}@{sshIp}");
-                    //    SendCmdAndGetResp(myCC, $"plink.exe -ssh {sshId}@{sshIp} -pw {calixPw} -P {sshPort}", "#", out res, 20000);
-                    //    if (res.Contains("(y/n)") || res.Contains("\"y\""))
-                    //    {
-                    //        SendCmdAndGetResp(myCC, "y", "#", out res, 10000, 1000);
-                    //    }
-                    //}
-
-                }
-                if (!rs)
-                {
-                    if (retryTime++ < 2)
-                    {   // ------------------------------------------------------------------
-                        //this.pingDutCustFW(250 * 1000);
-                        if (!PromptPing("192.168.1.1 ", 200 * 1000))
-                        {
-                            warning = "Ping 192.168.1.1 fail";
-                            return;
-                        }
-                        DisplayMsg(LogType.Log, "Delay 15s..");
-                        Thread.Sleep(15000);
-                        goto Login;
-                    }
-                    AddData("Login", 1);
-                    return;
-                }
-                #endregion
-
-                #region Remove MFG firmware
-                if (!SendCmdAndGetResp(myCC, "cat /proc/boot_info/bootconfig0/0:HLOS/primaryboot", "\n1", out res))
-                {
-                    DisplayMsg(LogType.Log, "Check '1' fail");
-                    AddData("RemoveMFGFW", 1);
-                    return;
-                }
-                if (!SendCmdAndGetResp(myCC, "cat /proc/boot_info/bootconfig0/rootfs/primaryboot", "\nf8000000", out res))
-                {
-                    DisplayMsg(LogType.Log, "Check 'f8000000' fail");
-                    AddData("RemoveMFGFW", 1);
-                    return;
-                }
-                if (!SendCmdAndGetResp(myCC, "cat /proc/boot_info/bootconfig0/0:WIFIFW/primaryboot", "\n1", out res))
-                {
-                    DisplayMsg(LogType.Log, "Check '1' fail");
-                    AddData("RemoveMFGFW", 1);
-                    return;
-                }
-
-                if (!SendCmdAndGetResp(myCC, "dd if=/dev/zero of=/dev/mmcblk0p19", "#", out res, 50 * 1000))
-                {
-                    DisplayMsg(LogType.Log, "Check '#' fail");
-                    AddData("RemoveMFGFW", 1);
-                    return;
-                }
-                if (!SendCmdAndGetResp(myCC, "dd if=/dev/mmcblk0p20 of=/dev/mmcblk0p19", "#", out res, 50 * 1000))
-                {
-                    DisplayMsg(LogType.Log, "Check '#' fail");
-                    AddData("RemoveMFGFW", 1);
-                    return;
-                }
-                Thread.Sleep(200);
-
-                if (!SendCmdAndGetResp(myCC, "dd if=/dev/zero of=/dev/mmcblk0p21", "#", out res, 50 * 1000))
-                {
-                    DisplayMsg(LogType.Log, "Check '#' fail");
-                    AddData("RemoveMFGFW", 1);
-                    return;
-                }
-                Thread.Sleep(200);
-                if (!SendCmdAndGetResp(myCC, "dd if=/dev/mmcblk0p22 of=/dev/mmcblk0p21", "#", out res, 50 * 1000))
-                {
-                    DisplayMsg(LogType.Log, "Check '#' fail");
-                    AddData("RemoveMFGFW", 1);
-                    return;
-                }
-                Thread.Sleep(200);
-
-                if (!SendCmdAndGetResp(myCC, "dd if=/dev/zero of=/dev/mmcblk0p14", "#", out res, 50 * 1000))
-                {
-                    DisplayMsg(LogType.Log, "Check '#' fail");
-                    AddData("RemoveMFGFW", 1);
-                    return;
-                }
-                Thread.Sleep(200);
-                if (!SendCmdAndGetResp(myCC, "dd if=/dev/mmcblk0p15 of=/dev/mmcblk0p14", "#", out res, 50 * 1000))
-                {
-                    DisplayMsg(LogType.Log, "Check '#' fail");
-                    AddData("RemoveMFGFW", 1);
-                    return;
-                }
-                AddData("RemoveMFGFW", 0);
-                #endregion
-
-                #region Factory reset, power on and check ping               
-                Thread.Sleep(200);
-                if (!SendCmdAndGetResp(myCC, $"p2-factory-reset", "only erasing files", out res, 30 * 1000))
-                    AddData("FactoryReset", 1);
-
-                SendCmdAndGetResp(myCC, "reboot", "", out res, 8000);
-
-                SendCmdAndGetResp(myCC, "reboot", "", out res, 8000);
-                // =========================================================================
-                this.chkRebootStatus(rebootPingTime);
-                // =========================================================================
-                //dt = DateTime.Now;
-                //while (true)
-                //{
-                //    if (dt.AddSeconds(rebootPingTime) < DateTime.Now)
-                //    {
-                //        warning = "Ping 192.168.1.1 ok in 30s, Reboot fail";
-                //        return;
-                //    }
-                //    if (PromptPing("192.168.1.1", 2000))
-                //        continue;
-                //    else
-                //    {
-                //        DisplayMsg(LogType.Log, "Ping 192.168.1.1 fail, reboot ok.");
-                //        break;
-                //    }
-                //}
-
-                //if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
-                //{
-                //    string txPin = Func.ReadINI("Setting", "IO_Board_Control", "Pin0", "0");
-                //    string rev_message = "";
-                //    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
-                //    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
-                //    DisplayMsg(LogType.Log, rev_message);
-                //    Thread.Sleep(2000);
-                //    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
-                //    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
-                //    DisplayMsg(LogType.Log, rev_message);
-                //}
-                DisplayMsg(LogType.Log, $"Delay {delayCalixFW}s after reboot");
-                Thread.Sleep(delayCalixFW * 1000);
-                int chkResult = this.chkRebootStatus(100 * 1000) == true ? 0 : 1;
-                if (chkResult == 0)
-                {
-                    DisplayMsg(LogType.Log, $"ping NG More Delay 60s after reboot and try again");
-                    Thread.Sleep(60 * 1000);
-                    if (!PromptPing("192.168.1.1", 20 * 1000))
-                    {
-                        chkResult = 1;
-                    }
-                }
-                AddData("FactoryReset", chkResult);
-                AddData("FWSwitch", chkResult);
-                //if (!PromptPing("192.168.1.1", 250 * 1000))
-                //    AddData("FactoryReset", 1);
-                //else
-                //    AddData("FactoryReset", 0);
-                #endregion
-                #endregion
-                //if (CheckGoNoGo())
-                //    AddData("FWSwitch", 0);
-                #endregion
-
+                //--------------------------------------
+                this.switch_To_Calix(rebootPingTime);
+                this.LoginCalix_RemoveMfgFW(infor, delayCalixFW, rebootPingTime);
+                this.factoryReset(rebootPingTime, delayCalixFW);
+                // -------------------------------------
             }
             catch (Exception ex)
             {
                 warning = "exception";
-                DisplayMsg(LogType.Log, ex.ToString());
+                DisplayMsg(LogType.Exception, ex.ToString());
             }
             finally
             {
-                if (!myCC.IsProcessExit())
-                    myCC.Close();
                 if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
                 {
                     string txPin = Func.ReadINI("Setting", "IO_Board_Control", "Pin0", "0");
@@ -744,12 +221,6 @@
                     IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
                     DisplayMsg(LogType.Log, rev_message);
                 }
-
-                //======================stress test =======================================
-                //SwitchRelay(CTRL.OFF);
-                //Thread.Sleep(5000); //electric container
-                //SwitchRelay(CTRL.ON);
-                //======================stress test =======================================
             }
         }
 
@@ -962,8 +433,8 @@
                 //DisplayMsg(LogType.Log, "Delay 15s..");
                 //Thread.Sleep(15000);
 
-                DisplayMsg(LogType.Log, $"delay {delayCalixFW}s before bootup");
-                Thread.Sleep(delayCalixFW * 1000);
+                //DisplayMsg(LogType.Log, $"delay {delayCalixFW}s before bootup");
+                //Thread.Sleep(delayCalixFW * 1000);
 
                 #region Check board Infor               
                 string auth_code = string.Empty;
@@ -1499,7 +970,7 @@
             }
             return IsRebootOK;
         }
-        public bool pingDutCustFW(DeviceInfor infor, int timeout)
+        public bool chkBoardInfo(DeviceInfor infor, int timeout)
         {
             bool IsPingOK = false;
             string res = "";
@@ -1602,52 +1073,40 @@
                 KillTaskProcess("tftpd32");
             }
         }
-        public void Appendix713()
+        public void factoryReset(int rebootPingTime, int delayCalixFW)
         {
             string keyword = "root@OpenWrt:/#";
             string res = "";
             try
             {
-                #region 713 Switch Firmware to Calix Firmware
-                SendAndChk(PortType.UART, "echo 0 > /proc/boot_info/bootconfig0/0:HLOS/primaryboot", keyword, out res, 0, 3000);
-                SendAndChk(PortType.UART, "echo 0x80000000 > /proc/boot_info/bootconfig0/rootfs/primaryboot", keyword, out res, 0, 3000);
-                SendAndChk(PortType.UART, "echo 0 > /proc/boot_info/bootconfig0/0:WIFIFW/primaryboot", keyword, out res, 0, 3000);
-                SendAndChk("FWSwitch", PortType.UART, "cat /proc/boot_info/bootconfig0/getbinary_bootconfig > /tmp/boot1.bin", keyword, 0, 3000);
-                SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p2 bs=336 count=1", keyword, out res, 0, 3000);
-                if (!res.Contains("336 bytes"))
+                if (!SendCmdAndGetResp(myCC, $"p2-factory-reset", "only erasing files", out res, 30 * 1000))
                 {
-                    DisplayMsg(LogType.Log, "Check '336 bytes' fail");
-                    AddData("FWSwitch", 1);
-                    return;
+                    AddData("FactoryReset", 1);
                 }
+                SendCmdAndGetResp(myCC, "reboot", "", out res, 8000);
 
-                SendAndChk(PortType.UART, "dd if=/tmp/boot1.bin of=/dev/mmcblk0p2 bs=336 count=1", keyword, out res, 0, 3000);
-                if (!res.Contains("336 bytes"))
+                SendCmdAndGetResp(myCC, "reboot", "", out res, 8000);
+                // =========================================================================
+                this.chkRebootStatus(rebootPingTime);
+                // =========================================================================
+                //---------------------------------------------------------------
+                DisplayMsg(LogType.Log, $"Delay {delayCalixFW}s after reboot");
+                Thread.Sleep(delayCalixFW * 1000);
+                //---------------------------------------------------------------
+                int chkResult = this.chkRebootStatus(100 * 1000) == true ? 0 : 1;
+                if (chkResult == 0)
                 {
-                    DisplayMsg(LogType.Log, "Check '336 bytes' fail");
-                    AddData("FWSwitch", 1);
-                    return;
+                    DisplayMsg(LogType.Log, $"ping NG More Delay 60s after reboot and try again");
+                    Thread.Sleep(60 * 1000);
+                    if (!PromptPing("192.168.1.1", 20 * 1000))
+                    {
+                        chkResult = 1;
+                    }
                 }
-
-                SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p3 bs=336 count=1", keyword, out res, 0, 3000);
-                if (!res.Contains("336 bytes"))
-                {
-                    DisplayMsg(LogType.Log, "Check '336 bytes' fail");
-                    AddData("FWSwitch", 1);
-                    return;
-                }
-
-                SendAndChk(PortType.UART, "dd if=/tmp/boot1.bin of=/dev/mmcblk0p3 bs=336 count=1", keyword, out res, 0, 3000);
-                if (!res.Contains("336 bytes"))
-                {
-                    DisplayMsg(LogType.Log, "Check '336 bytes' fail");
-                    AddData("FWSwitch", 1);
-                    return;
-                }
-                SendAndChk("FWSwitch", PortType.UART, "sync", keyword, 1000, 3000);
-                SendCommand(PortType.UART, "reboot", 500);
-                #endregion
-
+                AddData("FactoryReset", chkResult);
+                //AddData("FWSwitch", chkResult);
+                //if (CheckGoNoGo())
+                //    AddData("FWSwitch", 0);
             }
             catch (Exception ex)
             {
@@ -1662,6 +1121,7 @@
             string keyword = "tmp#";
             int delays = 30 * 1000;
             string auth_code = Func.ReadINI("Setting", "LCS5_Infor", "Auth_Code", "!@#$%^");
+            string testItem = "downloadImageInTmp";
             try
             {
                 //string tftppath = Path.Combine(Application.StartupPath, "CustomerFW");
@@ -1726,14 +1186,517 @@
                 Thread.Sleep(30000);
                 #endregion
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                DisplayMsg(LogType.Exception, $"{testItem} >>> " + ex.Message);
+                return;
             }
         }
         #endregion
         #endregion
+        public void switch_To_Calix(int rebootPingTime)
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+            string res = string.Empty;
+            string keyword = "";
+            //8.4.1 Switch Firmware to Calix Firmware
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            sw.Reset();
+            sw.Start();
+            string item = $"switch_To_Calix";
+            FWswitch_SELF.CalcTimeConsumption(() => {
+                try
+                {
+                    SendAndChk(PortType.TELNET, "echo 1 > /proc/boot_info/bootconfig0/0:HLOS/primaryboot", keyword, out res, 0, 3000);
+                    SendAndChk(PortType.TELNET, "echo 0xf8000000 > /proc/boot_info/bootconfig0/rootfs/primaryboot", keyword, out res, 0, 3000);
+                    SendAndChk(PortType.TELNET, "echo 1 > /proc/boot_info/bootconfig0/0:WIFIFW/primaryboot", keyword, out res, 0, 3000);
+                    SendAndChk(item, PortType.TELNET, "cat /proc/boot_info/bootconfig0/getbinary_bootconfig > /tmp/boot1.bin", keyword, 0, 3000);
+                    SendAndChk(PortType.TELNET, "dd if=/dev/zero of=/dev/mmcblk0p2 bs=336 count=1", keyword, out res, 0, 3000);
+                    if (!res.Contains("336 bytes"))
+                    {
+                        DisplayMsg(LogType.Log, "Check '336 bytes' fail");
+                        AddData(item, 1);
+                        return;
+                    }
 
+                    SendAndChk(PortType.TELNET, "dd if=/tmp/boot1.bin of=/dev/mmcblk0p2 bs=336 count=1", keyword, out res, 0, 3000);
+                    if (!res.Contains("336 bytes"))
+                    {
+                        DisplayMsg(LogType.Log, "Check '336 bytes' fail");
+                        AddData(item, 1);
+                        return;
+                    }
+
+                    SendAndChk(PortType.TELNET, "dd if=/dev/zero of=/dev/mmcblk0p3 bs=336 count=1", keyword, out res, 0, 3000);
+                    if (!res.Contains("336 bytes"))
+                    {
+                        DisplayMsg(LogType.Log, "Check '336 bytes' fail");
+                        AddData(item, 1);
+                        return;
+                    }
+
+                    SendAndChk(PortType.TELNET, "dd if=/tmp/boot1.bin of=/dev/mmcblk0p3 bs=336 count=1", keyword, out res, 0, 3000);
+                    if (!res.Contains("336 bytes"))
+                    {
+                        DisplayMsg(LogType.Log, "Check '336 bytes' fail");
+                        AddData(item, 1);
+                        return;
+                    }
+                    SendAndChk(item, PortType.TELNET, "sync", keyword, 1000, 3000);
+                    SendCommand(PortType.TELNET, "reboot", 500);
+                    SendCommand(PortType.TELNET, "reboot", 0);
+                    this.chkRebootStatus(rebootPingTime);
+                }
+                catch (Exception ex)
+                {
+                    DisplayMsg(LogType.Exception, $"{item} >>> " + ex.Message);
+                    return;
+                }
+            }, item);
+            sw.Stop();
+        }
+        public void LoginCalix_RemoveMfgFW(DeviceInfor infor, int delayCalixFW, int rebootPingTime)
+        {
+            if (!CheckGoNoGo())
+            {
+                return;
+            }
+            bool rs = false;
+            string calixPw = string.Empty;
+            string res = string.Empty;
+            string sshIp = Func.ReadINI("Setting", "SSH", "IP", "192.168.1.1");
+            int sshPort = Convert.ToInt16(Func.ReadINI("Setting", "SSH", "Port", "30007"));
+            string sshId = Func.ReadINI("Setting", "SSH", "Login_ID", "support");
+            string testItem = "LoginCalix_RemoveMfgFW";
+            int retryTime = 0;
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            sw.Reset();
+            sw.Start();
+            string item = $"LoginCalix_RemoveMfgFW";
+            FWswitch_SELF.CalcTimeConsumption(() => {
+                try
+                {
+                    this.chkBoardInfo(infor, 200 * 1000);
+                //while (retryTime++ < 2)
+                //{
+
+                //}
+                Login:
+                    if (this.EnableSSH())
+                    {
+                        myCC.Start();
+                    }
+                    #region SSH_Login
+                    if (status_ATS._testMode != StatusUI2.StatusUI.TestMode.EngMode)
+                    {
+                        _Sfcs_Query.Get15Data(infor.SerialNumber, "LCS5_SUPPORT_PWD", ref calixPw);
+                        DisplayMsg(LogType.Log, "Calix pw from sfcs:" + calixPw);
+                    }
+                    else
+                    {
+                        calixPw = Func.ReadINI("Setting", "SSH", "Login_PW", "support");
+                        DisplayMsg(LogType.Log, "Calix pw from setting:" + calixPw);
+                    }
+                    DisplayMsg(LogType.Log, $"Open SSH with {sshId}@{sshIp}");
+                    DisplayMsg(LogType.Log, "--- Delay 15s after OPEN SSH ---");
+                    Thread.Sleep(15 * 1000);
+                    rs = SendCmdAndGetResp(myCC, $"plink.exe -ssh {sshId}@{sshIp} -pw {calixPw} -P {sshPort}", "#", out res, 20000);
+                    if (res.Contains("(y/n)") || res.Contains("\"y\""))
+                    {
+                        if (SendCmdAndGetResp(myCC, "y", "#", out res, 10000, 1000))
+                        {
+                            rs = true;//By Syn
+                        }
+                    }
+                    if (!rs)
+                    {
+                        if (retryTime++ < 2)
+                        {   // ------------------------------------------------------------------
+                            //this.pingDutCustFW(250 * 1000);
+                            if (!PromptPing("192.168.1.1 ", 200 * 1000))
+                            {
+                                warning = "Ping 192.168.1.1 fail";
+                                return;
+                            }
+                            DisplayMsg(LogType.Log, "Delay 15s..");
+                            Thread.Sleep(15000);
+                            goto Login;
+                        }
+                        AddData("Login", 1);
+                        return;
+                    }
+                    #endregion
+
+                    #region Remove MFG firmware
+                    if (!SendCmdAndGetResp(myCC, "cat /proc/boot_info/bootconfig0/0:HLOS/primaryboot", "\n1", out res))
+                    {
+                        DisplayMsg(LogType.Log, "Check '1' fail");
+                        AddData("RemoveMFGFW", 1);
+                        return;
+                    }
+                    if (!SendCmdAndGetResp(myCC, "cat /proc/boot_info/bootconfig0/rootfs/primaryboot", "\nf8000000", out res))
+                    {
+                        DisplayMsg(LogType.Log, "Check 'f8000000' fail");
+                        AddData("RemoveMFGFW", 1);
+                        return;
+                    }
+                    if (!SendCmdAndGetResp(myCC, "cat /proc/boot_info/bootconfig0/0:WIFIFW/primaryboot", "\n1", out res))
+                    {
+                        DisplayMsg(LogType.Log, "Check '1' fail");
+                        AddData("RemoveMFGFW", 1);
+                        return;
+                    }
+
+                    if (!SendCmdAndGetResp(myCC, "dd if=/dev/zero of=/dev/mmcblk0p19", "#", out res, 50 * 1000))
+                    {
+                        DisplayMsg(LogType.Log, "Check '#' fail");
+                        AddData("RemoveMFGFW", 1);
+                        return;
+                    }
+                    if (!SendCmdAndGetResp(myCC, "dd if=/dev/mmcblk0p20 of=/dev/mmcblk0p19", "#", out res, 50 * 1000))
+                    {
+                        DisplayMsg(LogType.Log, "Check '#' fail");
+                        AddData("RemoveMFGFW", 1);
+                        return;
+                    }
+                    Thread.Sleep(200);
+
+                    if (!SendCmdAndGetResp(myCC, "dd if=/dev/zero of=/dev/mmcblk0p21", "#", out res, 50 * 1000))
+                    {
+                        DisplayMsg(LogType.Log, "Check '#' fail");
+                        AddData("RemoveMFGFW", 1);
+                        return;
+                    }
+                    Thread.Sleep(200);
+                    if (!SendCmdAndGetResp(myCC, "dd if=/dev/mmcblk0p22 of=/dev/mmcblk0p21", "#", out res, 50 * 1000))
+                    {
+                        DisplayMsg(LogType.Log, "Check '#' fail");
+                        AddData("RemoveMFGFW", 1);
+                        return;
+                    }
+                    Thread.Sleep(200);
+
+                    if (!SendCmdAndGetResp(myCC, "dd if=/dev/zero of=/dev/mmcblk0p14", "#", out res, 50 * 1000))
+                    {
+                        DisplayMsg(LogType.Log, "Check '#' fail");
+                        AddData("RemoveMFGFW", 1);
+                        return;
+                    }
+                    Thread.Sleep(200);
+                    if (!SendCmdAndGetResp(myCC, "dd if=/dev/mmcblk0p15 of=/dev/mmcblk0p14", "#", out res, 50 * 1000))
+                    {
+                        DisplayMsg(LogType.Log, "Check '#' fail");
+                        AddData("RemoveMFGFW", 1);
+                        return;
+                    }
+                    AddData("RemoveMFGFW", 0);
+                    #endregion
+
+                    Thread.Sleep(200);
+
+                    //if (Func.ReadINI("Setting", "IO_Board_Control", "IO_Control_1", "0") == "1")
+                    //{
+                    //    string txPin = Func.ReadINI("Setting", "IO_Board_Control", "Pin0", "0");
+                    //    string rev_message = "";
+                    //    status_ATS.AddLog("IO_Board_Y" + txPin + " Off...");
+                    //    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
+                    //    DisplayMsg(LogType.Log, rev_message);
+                    //    Thread.Sleep(2000);
+                    //    status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
+                    //    IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
+                    //    DisplayMsg(LogType.Log, rev_message);
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    DisplayMsg(LogType.Exception, $"{testItem} >>> " + ex.Message);
+                    return;
+                }
+                finally
+                {
+                    if (!myCC.IsProcessExit())
+                    {
+                        myCC.Close();
+                    }
+                }
+            }, item);
+            sw.Stop();
+
+        }
+        public bool EnableSSH()
+        {
+            string cmd = string.Empty;
+            string res = string.Empty;
+            string testItem = "EnableSSH";
+            string auth_code = Func.ReadINI("Setting", "LCS5_Infor", "Auth_Code", "!@#$%^");
+            DisplayMsg(LogType.Log, "Authentication code from setting:" + auth_code);
+
+            try
+            {
+                cmd = $"-v -b .\\cookies.txt -c .\\cookies.txt -d \"{auth_code}\" http://192.168.1.1/login.cgi";
+                ExecuteCurlCommand2(cmd, 0, out res);
+                Thread.Sleep(2000);
+
+
+                cmd = "-v -b .\\cookies.txt -c .\\cookies.txt http://192.168.1.1/en_ssh.cmd";
+                ExecuteCurlCommand2(cmd, 0, out res);
+                Thread.Sleep(1000);
+                if (!diagPort.Contains("Success"))
+                {
+                    DisplayMsg(LogType.Log, $"Check 'Success' fail");
+                    AddData(testItem, 1);
+                    return false;
+                }
+                if (!diagPort.Contains("Closing connection 0"))
+                {
+                    DisplayMsg(LogType.Log, $"'Closing connection 0' fail");
+                    AddData(testItem, 1);
+                    return false;
+                }
+                AddData(testItem, 0);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DisplayMsg(LogType.Exception, $"{testItem} >>> " + ex.Message);
+                return false;
+            }
+        }
+        public void UpgradeFw()
+        {
+            bool rs = false;
+            string res = "";
+            string keyword = "";
+            try
+            {
+                #region Upgrade
+                if (Func.ReadINI("Setting", "FW", "Upgrade", "1") == "1")
+                {
+                    if (false)
+                    {
+                        #region Appendix 7.1.1 NO Check List files 
+                        string tftppath = Path.Combine(Application.StartupPath, "CustomerFW");
+
+                        string squashfsImage = Func.ReadINI("Setting", "FW", "squashfsImage_Path", "c:\\TFTP\\calix-ponsfp_squashfs.img");
+                        string squashfsImage_MD5 = Func.ReadINI("Setting", "FW", "squashfsImage_MD5", "*&^%");
+
+                        string csssImage = Func.ReadINI("Setting", "FW", "csssImage_Path", "csss-firmware.img");
+                        string csssImage_MD5 = Func.ReadINI("Setting", "FW", "csssImage_MD5", "*&^%");
+
+                        string uImage_calix = Func.ReadINI("Setting", "FW", "uImage_calix_Path", "c:\\TFTP\\openwrt-ipq807x-ipq807x_32-ipq807x-full-fit-uImage_calix.itb");
+                        string uImage_calix_MD5 = Func.ReadINI("Setting", "FW", "uImage_calix_MD5", "*&^%");
+
+                        string root_calixImage = Func.ReadINI("Setting", "FW", "root_calixImage_Path", "c:\\TFTP\\openwrt-ipq807x-ipq807x_32-squashfs-root_calix.img");
+                        string root_calixImage_MD5 = Func.ReadINI("Setting", "FW", "root_calixImage_MD5", "*&^%");
+
+                        string v2Image = Func.ReadINI("Setting", "FW", "v2Image_Path", "c:\\TFTP\\wifi_fw_squashfs_v2.img");
+                        string v2Image_MD5 = Func.ReadINI("Setting", "FW", "v2Image_MD5", "*&^%");
+                        //string tftppath = Func.ReadINI("Setting", "TFTP", "Path", "c:\\TFTP\\tftpd32.exe");
+
+                        //string squashfsImage = Func.ReadINI("Setting", "FW", "squashfsImage_Path", "c:\\TFTP\\calix-ponsfp_squashfs.img");
+                        //string squashfsImage_MD5 = Func.ReadINI("Setting", "FW", "squashfsImage_MD5", "*&^%");
+
+                        //string csssImage = Func.ReadINI("Setting", "FW", "csssImage_Path", "csss-firmware.img");
+                        //string csssImage_MD5 = Func.ReadINI("Setting", "FW", "csssImage_MD5", "*&^%");
+
+                        //string uImage_calix = Func.ReadINI("Setting", "FW", "uImage_calix_Path", "c:\\TFTP\\openwrt-ipq807x-ipq807x_32-ipq807x-full-fit-uImage_calix.itb");
+                        //string uImage_calix_MD5 = Func.ReadINI("Setting", "FW", "uImage_calix_MD5", "*&^%");
+
+                        //string root_calixImage = Func.ReadINI("Setting", "FW", "root_calixImage_Path", "c:\\TFTP\\openwrt-ipq807x-ipq807x_32-squashfs-root_calix.img");
+                        //string root_calixImage_MD5 = Func.ReadINI("Setting", "FW", "root_calixImage_MD5", "*&^%");
+
+                        //string v2Image = Func.ReadINI("Setting", "FW", "v2Image_Path", "c:\\TFTP\\wifi_fw_squashfs_v2.img");
+                        //string v2Image_MD5 = Func.ReadINI("Setting", "FW", "v2Image_MD5", "*&^%");
+
+                        //string[] path = { squashfsImage, csssImage, uImage_calix, root_calixImage, v2Image };
+
+                        //foreach (var item in path)
+                        //{
+                        //    if (!File.Exists(item))
+                        //    {
+                        //        DisplayMsg(LogType.Log, $"File {item} not exist");
+                        //        warning = "File not exist";
+                        //        return;
+                        //    }
+                        //}
+
+                        //KillTaskProcess(Path.GetFileNameWithoutExtension(tftppath));
+                        //DisplayMsg(LogType.Log, "TFTP path:" + tftppath);
+                        //if (!CheckToolExist(tftppath))
+                        //    if (!OpenTestTool(Path.GetDirectoryName(tftppath), Path.GetFileName(tftppath), "", 3000))
+                        //    {
+                        //        warning = "Open tftp fail";
+                        //        return;
+                        //    }
+                        this.OpenTftpd32(Path.Combine(Application.StartupPath, "CustomerFW"));
+
+                        #endregion
+
+
+                        #region Appendix 7.1.2 NO Load calix sub-image >>> Download image in tmp folder and check md5sum value              
+                        rs = SendAndChk(PortType.UART, "cd tmp/", "tmp#", out res, 0, 3000);
+                        rs = rs && SendAndChk(PortType.UART, $"tftp -g -r {Path.GetFileName(squashfsImage)} 192.168.1.100", "tmp#", out res, 10000, 50000);
+                        rs = rs && SendAndChk(PortType.UART, $"md5sum {Path.GetFileName(squashfsImage)}", squashfsImage_MD5, out res, 0, 3000);
+                        if (!rs)
+                        {
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+
+                        rs = rs && SendAndChk(PortType.UART, $"tftp -g -r {Path.GetFileName(csssImage)} 192.168.1.100", "tmp#", out res, 10000, 50000);
+                        rs = rs && SendAndChk(PortType.UART, $"md5sum {Path.GetFileName(csssImage)}", csssImage_MD5, out res, 0, 3000);
+                        if (!rs)
+                        {
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+
+                        rs = rs && SendAndChk(PortType.UART, $"tftp -g -r {Path.GetFileName(uImage_calix)} 192.168.1.100", "tmp#", out res, 10000, 50000);
+                        rs = rs && SendAndChk(PortType.UART, $"md5sum {Path.GetFileName(uImage_calix)}", uImage_calix_MD5, out res, 0, 3000);
+                        if (!rs)
+                        {
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+
+                        rs = rs && SendAndChk(PortType.UART, $"tftp -g -r {Path.GetFileName(root_calixImage)} 192.168.1.100", "tmp#", out res, 10000, 50000);
+                        rs = rs && SendAndChk(PortType.UART, $"md5sum {Path.GetFileName(root_calixImage)}", root_calixImage_MD5, out res, 0, 3000);
+                        if (!rs)
+                        {
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+
+                        rs = rs && SendAndChk(PortType.UART, $"tftp -g -r {Path.GetFileName(v2Image)} 192.168.1.100", "tmp#", out res, 10000, 50000);
+                        rs = rs && SendAndChk(PortType.UART, $"md5sum {Path.GetFileName(v2Image)}", v2Image_MD5, out res, 0, 3000);
+                        if (!rs)
+                        {
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+
+                        if (!SendAndChk(PortType.TELNET, "cd ..", keyword, out res, 0, 3000))
+                        {
+                            DisplayMsg(LogType.Log, $"Check {keyword} fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+                        #endregion
+                    }
+
+                    #region 8.4.1 Check boot up partition
+                    if (!SendAndChk(PortType.UART, $"cat /proc/boot_info/bootconfig0/0:HLOS/primaryboot", "0", out res, 0, 3000))
+                    {
+                        DisplayMsg(LogType.Log, "Check '0' fail");
+                        AddData("FWSwitch", 1);
+                        return;
+                    }
+                    if (!SendAndChk(PortType.UART, $"cat /proc/boot_info/bootconfig0/rootfs/primaryboot", "80000000", out res, 3000, 6000))
+                    {
+                        DisplayMsg(LogType.Log, "Check '80000000' fail");
+                        AddData("FWSwitch", 1);
+                        return;
+                    }
+                    if (!SendAndChk(PortType.UART, $"cat /proc/boot_info/bootconfig0/0:WIFIFW/primaryboot", "0", out res, 0, 3000))
+                    {
+                        DisplayMsg(LogType.Log, "Check '0' fail");
+                        AddData("FWSwitch", 1);
+                        return;
+                    }
+                    #endregion
+
+                    if (false)
+                    {
+                        #region NO Upgrade calix sub-image
+                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p23", "200.0MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '200.0MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+                        if (!SendAndChk(PortType.UART, "dd if=/tmp/calix-ponsfp_squashfs.img of=/dev/mmcblk0p23", "19.3MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '19.3MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p26", "200.0MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '200.0MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+                        if (!SendAndChk(PortType.UART, "dd if=/tmp/calix-ponsfp_squashfs.img of=/dev/mmcblk0p26", "19.3MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '19.3MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+
+                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p18", "4.0MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '4.0MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+                        if (!SendAndChk(PortType.UART, "dd if=/tmp/csss-firmware.img of=/dev/mmcblk0p18", "4.0KB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '4.0KB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+
+                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p20", "12.0MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '12.0MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+                        if (!SendAndChk(PortType.UART, "dd if=/tmp/openwrt-ipq807x-ipq807x_32-ipq807x-full-fit-uImage_calix.itb of=/dev/mmcblk0p20", "4.3MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '4.3MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+
+                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p24", "100.0MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '100.0MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+                        if (!SendAndChk(PortType.UART, "dd if=/tmp/openwrt-ipq807x-ipq807x_32-squashfs-root_calix.img of=/dev/mmcblk0p24", "44.5MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '44.5MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+
+                        if (!SendAndChk(PortType.UART, "dd if=/dev/zero of=/dev/mmcblk0p25", "4.0MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '4.0MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+                        if (!SendAndChk(PortType.UART, "dd if=/tmp/wifi_fw_squashfs_v2.img of=/dev/mmcblk0p25", "3.9MB", out res, 0, 50000))
+                        {
+                            DisplayMsg(LogType.Log, "Check '3.9MB' fail");
+                            AddData("FWSwitch", 1);
+                            return;
+                        }
+                        #endregion
+                    }
+                }
+                #endregion
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
+        }
     }
 }
