@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Collections;
+using static System.Net.Mime.MediaTypeNames;
+using System.IO;
 
 namespace ControlSystem
 {
@@ -18,7 +20,7 @@ namespace ControlSystem
         DataTable dtWarning;
         public Statistics(DataTable dtAll, DataTable dtPass, DataTable dtNG, DataTable dtWarning)
         {
-            InitializeComponent();
+            
             this.dtAll = new DataTable();
             this.dtPass = new DataTable();
             this.dtNG = new DataTable();
@@ -255,6 +257,107 @@ namespace ControlSystem
         {
             ZoomChart zoomchart = new ZoomChart("不良Item比例：", dtAll, dtPass, dtNG, dtWarning);
             zoomchart.ShowDialog();
+        }
+        private void ReadExcelFileToArray()
+        {
+            string filePath = string.Empty;
+            string filePath_new = string.Empty;
+            string fileExt = string.Empty;
+
+            if (fileExt.CompareTo(".xls") == 0 || fileExt.CompareTo(".xlsx") == 0)
+            {
+                try
+                {
+                    int iDatacount_Columns = 0;
+                    int iDatacount_Rows = 0;
+                    Excel_APP_GRR = new Excel.Application();
+                    Excel_WB1_GRR = Excel_APP_GRR.Workbooks.Open(Directory.GetCurrentDirectory() + "\\Two way anova & GRR_test.xlsx");
+                    Excel_APP_GRR_LAWI = new Excel.Application();
+                    Excel_APP_GRR_LAWI.Visible = true;
+                    Excel_WB1_GRR_LAWI = Excel_APP_GRR_LAWI.Workbooks.Open(Directory.GetCurrentDirectory() + "\\" + WNC.API.Func.ReadINI("setting", "setting", "File_Name", "") + ".xlsx");
+                    Excel_WS1_GRR_LAWI = Excel_WB1_GRR_LAWI.Worksheets[1];
+                    int iStart = Convert.ToInt32(WNC.API.Func.ReadINI("setting", "setting", "Start", ""));
+                    int iEnd = Convert.ToInt32(WNC.API.Func.ReadINI("setting", "setting", "End", ""));
+                    for (int Y = iStart; Y <= iEnd; Y++)
+                    {
+                        Minitab_GRR_LAWI(1, Y);
+                        Excel_WS1_GRR_LAWI.Cells[4, Y] = sGRR_Tolerance;
+                    }
+                    if (File.Exists(filePath_new + ".xlsx"))
+                        File.Delete(filePath_new + ".xlsx");
+                    Excel_WB1_GRR_LAWI.SaveAs(filePath_new, Excel.XlFileFormat.xlOpenXMLWorkbook, System.Reflection.Missing.Value, System.Reflection.Missing.Value, false, false,
+        Excel.XlSaveAsAccessMode.xlExclusive, false, false, System.Reflection.Missing.Value, System.Reflection.Missing.Value, System.Reflection.Missing.Value);
+                    Excel_WB1_GRR.Close(0);
+                    Excel_APP_GRR.Quit();
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(Excel_APP_GRR);
+                    Excel_WS1_GRR = null;
+                    Excel_WB1_GRR = null;
+                    Excel_APP_GRR = null;
+                    Excel_WB1_GRR_LAWI.Close(0);
+                    Excel_APP_GRR_LAWI.Quit();
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(Excel_APP_GRR_LAWI);
+                    Excel_WS1_GRR_LAWI = null;
+                    Excel_WB1_GRR_LAWI = null;
+                    Excel_APP_GRR_LAWI = null;
+                    bTestEnd = true;
+                    this.Invoke(new UpdateLableHandler(printResult), new object[] { text });
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message.ToString());
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please choose .xls or .xlsx file only.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Error); //custom messageBox to show error  
+            }
+        }
+
+
+        private void Minitab_GRR_LAWI(int X_axis, int Y_axis)
+        {
+            try
+            {
+                object misValue = System.Reflection.Missing.Value;
+                //Excel_WS1_GRR = ((Excel.Worksheet)Excel_WB1_GRR.Worksheets[1]);
+                Excel_WS1_GRR = Excel_WB1_GRR.Worksheets[1];
+                //Excel_WS1_GRR_LAWI = Excel_WB1_GRR_LAWI.Worksheets[1];
+                Excel_APP_GRR.Visible = false;
+                bool bGRR_data_valid = true;
+                //Excel.Range Range_GRR = Excel_WS1_GRR.Range["A1"];
+                Excel_WS1_GRR.Cells[2, 5] = Excel_WS1_GRR_LAWI.Cells[2, Y_axis];//USL
+                Excel_WS1_GRR.Cells[2, 6] = Excel_WS1_GRR_LAWI.Cells[3, Y_axis];//LSL
+                int iValue_count = 0;
+                for (int i = 1; i <= 90; i++)
+                {
+                    //if (Excel_WS1_GRR_LAWI.Cells[i + 4, Y_axis] != "" && Excel_WS1_GRR_LAWI.Cells[i + 4, Y_axis] != null)
+                    //{
+                    Excel_WS1_GRR.Cells[i + 1, 3] = Excel_WS1_GRR_LAWI.Cells[i + 4, Y_axis];
+                    //}
+                    //else
+                    //{
+                    //    i--;
+                    //}
+                    //iValue_count++;
+                }
+                Excel_WS1_GRR = ((Excel.Worksheet)Excel_WB1_GRR.Worksheets[6]);
+                //string sdfsdf = Excel_WS1_GRR.Range["E2"].Value.ToString();
+                if (bGRR_data_valid)
+                {
+                    sGRR_Tolerance = Excel_WS1_GRR.Cells[2, 5].Value.ToString();
+                }
+                else
+                {
+                    sGRR_Tolerance = "N/A(資料不足90筆)";
+                }
+                //Excel_WB1_GRR.Close(false, misValue, misValue);
+            }
+            catch
+            {
+                //MessageBox.Show(ex.Message);
+                //throw new Exception(ex.Message);                
+                sGRR_Tolerance = "N/A(資料不足90筆)";
+            }
         }
 
     }
