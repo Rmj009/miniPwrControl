@@ -15,7 +15,7 @@ using WNC.API;
 
 namespace MiniPwrSupply.LMG1
 {
-    public partial class LMG1_RF
+    public partial class frmMain
     {
         private string _RFTool = "";
         private string _RFLog = "";
@@ -802,9 +802,6 @@ namespace MiniPwrSupply.LMG1
                 }
 
                 _RFTimeOutSec = Convert.ToInt32(Func.ReadINI("Setting", "RF", $"TimeOutSec_{testItem.ToString()}", "180"));
-                // =================== debug CheckWiFiLog =================================
-                //_RFTimeOutSec = Convert.ToInt32(2700);
-                // =================== debug CheckWiFiLog =================================
                 DisplayMsg(LogType.Log, $"Tool: {_RFTool}");
                 DisplayMsg(LogType.Log, $"Log: {_RFLog}");
                 DisplayMsg(LogType.Log, $"TestPlan: {_RFTestPlan}");
@@ -821,6 +818,14 @@ namespace MiniPwrSupply.LMG1
                 {
                     DisplayMsg(LogType.Log, "Delete " + _RFLog);
                     File.Delete(_RFLog);
+                }
+
+                //Rena_20240108, back up TXCalDataLogFile.txt
+                string TXCalDataLog = Path.GetDirectoryName(_RFTool) + "\\Log\\TXCalDataLogFile.txt";
+                if (File.Exists(TXCalDataLog))
+                {
+                    DisplayMsg(LogType.Log, "Delete " + TXCalDataLog);
+                    File.Delete(TXCalDataLog);
                 }
 
                 // ping DUT
@@ -874,7 +879,7 @@ namespace MiniPwrSupply.LMG1
                 process.Start();
                 DisplayMsg(LogType.Log, "Wait for exit..");
 
-                // chk IQFACT run or not
+                //// chk IQFACT run or not
                 //if (!CheckToolExist(Path.GetDirectoryName(path) + "IQfactRun_Console.exe"))
                 //{
                 //    if (!OpenTestTool(Path.GetDirectoryName(path), "IQfactRun_Console.exe", "", 3000))
@@ -1024,7 +1029,8 @@ namespace MiniPwrSupply.LMG1
                 string temp_log = path + "\\temp.txt";
                 string _SN = status_ATS.txtPSN.Text;
                 //string _MAC = status_ATS.txtSP.Text;
-
+                string backup_time = DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+                string backup_file = "";
                 DisplayMsg(LogType.Log, $"Analyze {testItem.ToString()} Log");
 
                 if (File.Exists(temp_log))
@@ -1039,14 +1045,20 @@ namespace MiniPwrSupply.LMG1
                     DisplayMsg(LogType.Log, "Copy " + _RFLog + " to " + temp_log);
                     File.Copy(_RFLog, temp_log);
                     Thread.Sleep(1000);
-
-                    string sTime = DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
-                    string backup_file = backup_fd + "\\logOutput_" + _SN + "_" + sTime + ".txt";
+                    backup_file = backup_fd + "\\logOutput_" + _SN + "_" + backup_time + ".txt";
                     DisplayMsg(LogType.Log, "Backup log in " + backup_file);
                     Directory.CreateDirectory(backup_fd);
                     File.Copy(_RFLog, backup_file, true);
                 }
-
+                //Rena_20240108, back up TXCalDataLogFile.txt
+                string TXCalDataLog = Path.GetDirectoryName(_RFTool) + "\\Log\\TXCalDataLogFile.txt";
+                if (File.Exists(TXCalDataLog))
+                {
+                    backup_file = backup_fd + "\\TXCalDataLogFile_" + _SN + "_" + backup_time + ".txt";
+                    DisplayMsg(LogType.Log, "Backup TXCalDataLogFile.txt in " + backup_file);
+                    Directory.CreateDirectory(backup_fd);
+                    File.Copy(TXCalDataLog, backup_file, true);
+                }
                 DisplayMsg(LogType.Log, "Read data from " + temp_log);
                 DisplayMsg(LogType.Log, File.ReadAllText(temp_log));
 
@@ -1723,7 +1735,6 @@ namespace MiniPwrSupply.LMG1
                     IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "2", ref rev_message);
                     DisplayMsg(LogType.Log, rev_message);
 
-                    //Thread.Sleep(3000);
                     Thread.Sleep(6000);
                     status_ATS.AddLog("IO_Board_Y" + txPin + " On...");
                     IO_Board_Control1.ConTrolIOPort_write(Int32.Parse(txPin), "1", ref rev_message);
