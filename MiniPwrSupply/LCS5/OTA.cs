@@ -8,6 +8,8 @@ using System.Threading;
 using NationalInstruments.VisaNS;
 using System.IO.Ports;
 using System.Text.RegularExpressions;
+using MiniPwrSupply.Singleton;
+using static MiniPwrSupply.LCS5.frmConnectInterfaceMain;
 
 namespace MiniPwrSupply.LCS5
 {
@@ -40,8 +42,9 @@ namespace MiniPwrSupply.LCS5
                 }
                 else if (Func.ReadINI("Setting", "Port", "RelayBoard", "Disable").ToUpper() == "ENABLE")
                 {
+                    int delaySwitch = Convert.ToInt32(Func.ReadINI("Setting", "DelayTime", "switch", "100"));
                     SwitchRelay(CTRL.OFF);
-                    Thread.Sleep(5000); //electric container
+                    Thread.Sleep(delaySwitch); //electric container
                     SwitchRelay(CTRL.ON);
                 }
                 else
@@ -52,12 +55,19 @@ namespace MiniPwrSupply.LCS5
                 DisplayMsg(LogType.Log, $"delay {delayMFGFW}s before bootup");
                 Thread.Sleep(delayMFGFW * 1000);
 
+
                 #region BootUp
                 if (!ChkInitial(PortType.TELNET, keyword, 100 * 1000))
                 {
                     AddData("BootUp", 1);
                     return;
                 }
+                if (!SendAndChk(PortType.TELNET, "dmesg |grep \"qca-wifi loaded\"", "] qca-wifi loaded", out res, 0, 3000, 3))
+                {
+                    AddData("BootUp", 1);
+                    return;
+                }
+                DisplayMsg(LogType.Log, "Check keyword 'qca-wifi loaded' ok ");
                 AddData("BootUp", 0);
                 #endregion
 
