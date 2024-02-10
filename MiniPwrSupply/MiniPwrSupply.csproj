@@ -74,6 +74,12 @@
     <Compile Include="DoWuzhiCmd\RS232.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmd.cs" />
     <Compile Include="DoWuzhiCmd\WuzhiCmdBase.cs" />
+    <Compile Include="FormAnalysis.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormAnalysis.Designer.cs">
+      <DependentUpon>FormAnalysis.cs</DependentUpon>
+    </Compile>
     <Compile Include="LCS5\ConnectInterface.cs" />
     <Compile Include="LCS5\Final.cs" />
     <Compile Include="LCS5\FWSwitch.cs" />
