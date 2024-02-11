@@ -320,4 +320,3 @@
         private System.Windows.Forms.ComboBox comboBox7;
     }
 }
-}

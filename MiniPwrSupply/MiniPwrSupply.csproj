@@ -85,6 +85,7 @@
     <Compile Include="LCS5\FWSwitch.cs" />
     <Compile Include="LCS5\OTA.cs" />
     <Compile Include="LMG1\FWswitch.cs" />
+    <Compile Include="LV75C\RF.cs" />
     <Compile Include="Singleton\WiFi.cs" />
     <Compile Include="Singleton\WiFiObject.cs" />
     <Compile Include="Util\IUtil.cs" />
