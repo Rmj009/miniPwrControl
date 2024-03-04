@@ -80,11 +80,13 @@
     <Compile Include="FormAnalysis.Designer.cs">
       <DependentUpon>FormAnalysis.cs</DependentUpon>
     </Compile>
+    <Compile Include="IMQX\PCBA.cs" />
     <Compile Include="LCS5\ConnectInterface.cs" />
     <Compile Include="LCS5\Final.cs" />
     <Compile Include="LCS5\FWSwitch.cs" />
     <Compile Include="LCS5\OTA.cs" />
     <Compile Include="LMG1\FWswitch.cs" />
+    <Compile Include="LV75C\PCBA.cs" />
     <Compile Include="LV75C\RF.cs" />
     <Compile Include="Singleton\WiFi.cs" />
     <Compile Include="Singleton\WiFiObject.cs" />
