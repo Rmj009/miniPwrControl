@@ -81,6 +81,7 @@
       <DependentUpon>FormAnalysis.cs</DependentUpon>
     </Compile>
     <Compile Include="IMQX\PCBA.cs" />
+    <Compile Include="IMQX\RF.cs" />
     <Compile Include="LCS5\ConnectInterface.cs" />
     <Compile Include="LCS5\Final.cs" />
     <Compile Include="LCS5\FWSwitch.cs" />
